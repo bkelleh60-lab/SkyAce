@@ -138,6 +138,9 @@ final class MapScene: SKScene {
         let circleRadius: CGFloat = (state == .active) ? 32 : (state == .completed ? 24 : 20)
         let circle = SKShapeNode(circleOfRadius: circleRadius)
         circle.strokeColor = .clear
+        circle.zPosition = 0
+        // Circle goes in first so later labels/badges render on top.
+        container.addChild(circle)
 
         switch state {
         case .completed:
@@ -220,7 +223,6 @@ final class MapScene: SKScene {
             container.addChild(unlock)
         }
 
-        container.insertChild(circle, at: 0)
         return container
     }
 
@@ -400,25 +402,6 @@ final class MapScene: SKScene {
             // Shake ding — no navigation.
             break
         }
-    }
-}
-
-// Convenience — SpriteKit lacks insertChild(at:).
-private extension SKNode {
-    func insertChild(_ node: SKNode, at index: Int) {
-        addChild(node)
-        let children = self.children
-        if index < children.count {
-            self.removeChildren(in: [node])
-            self.insertChild(node: node, at: index)
-        }
-    }
-    // SKNode does have a native insertChild(_:at:), but helper above avoids
-    // a name conflict if upstream changes the API.
-    private func insertChild(node: SKNode, at index: Int) {
-        // No direct API — re-append as last child; Z-order is controlled
-        // via zPosition, so the visual order is preserved regardless.
-        self.addChild(node)
     }
 }
 

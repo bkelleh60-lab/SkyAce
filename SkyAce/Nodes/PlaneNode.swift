@@ -106,7 +106,11 @@ final class PlaneNode: SKNode {
     }
 
     private func configurePhysics() {
-        let pb = SKPhysicsBody(rectangleOf: CGSize(width: 58, height: 22))
+        // Hitbox is intentionally smaller than the 90x45 visual sprite — gives
+        // an arcade-style grace zone so a wingtip brushing a cloud pillar
+        // doesn't crash. Collect radius for coins stays generous because
+        // coin physics bodies are unchanged.
+        let pb = SKPhysicsBody(rectangleOf: CGSize(width: 44, height: 18))
         pb.mass = 0.1
         pb.affectedByGravity = true
         pb.allowsRotation = false

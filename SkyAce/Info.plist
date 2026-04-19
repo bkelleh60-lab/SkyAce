@@ -42,8 +42,13 @@
 		<string>PlusJakartaSans-Bold.ttf</string>
 		<string>PlusJakartaSans-ExtraBold.ttf</string>
 		<string>PlusJakartaSans-ExtraBoldItalic.ttf</string>
-		<string>BeVietnamPro-Regular.ttf</string>
-		<string>BeVietnamPro-Medium.ttf</string>
+		<string>PlusJakartaSans-Medium.ttf</string>
+		<string>PlusJakartaSans-Regular.ttf</string>
 	</array>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
 </dict>
 </plist>

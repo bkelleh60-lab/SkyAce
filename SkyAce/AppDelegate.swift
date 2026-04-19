@@ -1,5 +1,4 @@
 import UIKit
-import CoreText
 
 @main
 final class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -9,8 +8,9 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
 
-        // Register bundled TTFs for SpriteKit/UIKit label use.
-        registerBundledFonts()
+        // Fonts are auto-registered from Info.plist's UIAppFonts — no manual
+        // CTFontManagerRegisterFontsForURL needed, and doing both causes
+        // "file already registered" faults.
 
         // Kick off entitlement verification against StoreKit on every launch.
         // This is the authoritative source for the IAP flag; the UserDefaults
@@ -28,25 +28,5 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
         return .portrait
-    }
-
-    // MARK: - Font registration
-
-    /// Load TTF files from the app bundle. Fonts that aren't present (e.g.
-    /// during early development) are silently skipped; SkyFonts falls back
-    /// to system fonts in that case.
-    private func registerBundledFonts() {
-        let candidates = [
-            ("PlusJakartaSans-Bold",            "ttf"),
-            ("PlusJakartaSans-ExtraBold",       "ttf"),
-            ("PlusJakartaSans-ExtraBoldItalic", "ttf"),
-            ("BeVietnamPro-Regular",            "ttf"),
-            ("BeVietnamPro-Medium",             "ttf")
-        ]
-        for (name, ext) in candidates {
-            guard let url = Bundle.main.url(forResource: name, withExtension: ext) else { continue }
-            var error: Unmanaged<CFError>?
-            CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error)
-        }
     }
 }

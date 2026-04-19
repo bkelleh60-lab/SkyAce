@@ -95,14 +95,16 @@ enum SkyFonts {
     }
 
     static func body(_ size: CGFloat, medium: Bool = false) -> UIFont {
-        let name = medium ? "BeVietnamPro-Medium" : "BeVietnamPro-Regular"
+        let name = medium ? "PlusJakartaSans-Medium" : "PlusJakartaSans-Regular"
         return UIFont(name: name, size: size) ?? .systemFont(ofSize: size, weight: medium ? .medium : .regular)
     }
 
-    // SpriteKit uses font names as strings on SKLabelNode
+    // SpriteKit uses font names as strings on SKLabelNode. Body text uses
+    // Plus Jakarta Sans Regular/Medium — Be Vietnam Pro isn't bundled so
+    // referring to it by name would fall back to system font and log faults.
     static let headlineName        = "PlusJakartaSans-ExtraBold"
     static let headlineItalicName  = "PlusJakartaSans-ExtraBoldItalic"
     static let boldName            = "PlusJakartaSans-Bold"
-    static let bodyName            = "BeVietnamPro-Regular"
-    static let bodyMediumName      = "BeVietnamPro-Medium"
+    static let bodyName            = "PlusJakartaSans-Regular"
+    static let bodyMediumName      = "PlusJakartaSans-Medium"
 }

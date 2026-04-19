@@ -31,6 +31,10 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private var lastPatternSpawn: TimeInterval = 0
     private var lastUpdateTime: TimeInterval = 0
     private var obstaclePatternIndex = 0
+    /// The gap center Y of the most recently spawned obstacle pair. Coin
+    /// lines in `obstacleCourse` mode align to this so collecting them
+    /// doesn't force the plane into a pillar.
+    private var lastObstacleGapY: CGFloat?
 
     // Input
     private var isTouchingScreen = false
@@ -365,6 +369,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         obstacle.position = CGPoint(x: size.width + 80, y: 0)
         obstacle.zPosition = 1
         worldNode.addChild(obstacle)
+        lastObstacleGapY = obstacle.gapCenterY
 
         let speed = plane.horizontalSpeed * challenge.speedMultiplier
         let distance = size.width + 200
@@ -376,16 +381,27 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func spawnCoinLine() {
-        // A short horizontal chain of 4 coins just to sweeten obstacle runs.
-        let y = CGFloat.random(in: size.height * 0.25...size.height * 0.75)
+        // Align coin-chain Y to the last pillar's gap when available so
+        // collecting coins doesn't steer the plane into a pillar. Start the
+        // chain clearly past the pillar's X column (pillar is 60 wide at
+        // width+80, so its right edge sits around width+110).
+        let gapWander: CGFloat = 24
+        let centerY: CGFloat
+        if let gap = lastObstacleGapY {
+            centerY = gap + CGFloat.random(in: -gapWander...gapWander)
+        } else {
+            centerY = CGFloat.random(in: size.height * 0.25...size.height * 0.75)
+        }
+        let startX = size.width + 160  // was +40 — placed coins inside the pillar column
+
         for i in 0..<4 {
             let coin = CoinNode()
-            coin.position = CGPoint(x: size.width + 40 + CGFloat(i) * 40, y: y)
+            coin.position = CGPoint(x: startX + CGFloat(i) * 40, y: centerY)
             coin.zPosition = 2
             worldNode.addChild(coin)
 
             let speed = plane.horizontalSpeed * challenge.speedMultiplier
-            let distance = size.width + 260
+            let distance = size.width + 320
             let duration = TimeInterval(distance / speed)
             coin.run(SKAction.sequence([
                 SKAction.moveBy(x: -distance, y: 0, duration: duration),

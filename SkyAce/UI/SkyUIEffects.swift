@@ -257,6 +257,18 @@ enum SkySprites {
     static let iconMissionsWhite = "icon_missions_white"
     static let pilotAvatar       = "pilot_avatar"
 
+    // Free Flight City landmarks (Resources/Sprites/).
+    static let cityTowerBlue     = "city_tower_blue"
+    static let cityHouseRed      = "city_house_red"
+    static let cityClockTower    = "city_clock_tower"
+    static let cityFlowerHouse   = "city_flower_house"
+
+    // Free Flight Mountain landmarks (Resources/Sprites/).
+    static let mountainSnowDome    = "mountain_snow_dome"
+    static let mountainPineGrove   = "mountain_pine_grove"
+    static let mountainJaggedPeaks = "mountain_jagged_peaks"
+    static let mountainSkyIsland   = "mountain_sky_island"
+
     /// Returns an SKTexture for `name` if the image exists in the asset catalog
     /// or in `Resources/Sprites/` (bundled as a folder reference), otherwise
     /// nil. Callers should fall back to programmatic art when nil is returned.

@@ -1,39 +1,100 @@
 import SpriteKit
 
-/// Paid-only sandbox. Blue-sky gradient with snow-capped peaks, eagles on
-/// bezier paths, and light snowfall particles.
-final class FreeFlightMountainScene: SKScene {
+/// Free Flight Mountain — "Mountain Expedition" sandbox.
+///
+/// Paid-only. Cold blue-sky range with drifting snowfall and 4 distinctive
+/// hero landmarks that spawn one at a time in random order (snow dome,
+/// pine grove, jagged peaks + gold nuggets, floating sky island + waterfall).
+/// Collecting from each landmark fills a stamp slot; all 4 stamps triggers
+/// a +100 coin bonus with confetti. No fail state — boundaries and
+/// background scenery can't crash the plane.
+final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
+
+    // MARK: - Landmark catalog
+
+    private enum Landmark: Int, CaseIterable {
+        case snowDome, pineGrove, jaggedPeaks, skyIsland
+
+        var spriteName: String {
+            switch self {
+            case .snowDome:    return SkySprites.mountainSnowDome
+            case .pineGrove:   return SkySprites.mountainPineGrove
+            case .jaggedPeaks: return SkySprites.mountainJaggedPeaks
+            case .skyIsland:   return SkySprites.mountainSkyIsland
+            }
+        }
+        var displaySize: CGSize {
+            switch self {
+            case .snowDome:    return CGSize(width: 180, height: 180)
+            case .pineGrove:   return CGSize(width: 200, height: 180)
+            case .jaggedPeaks: return CGSize(width: 200, height: 180)
+            case .skyIsland:   return CGSize(width: 200, height: 260)
+            }
+        }
+        var fallbackColor: UIColor {
+            switch self {
+            case .snowDome:    return SkyColors.primaryContainer
+            case .pineGrove:   return UIColor(hex: 0x0F4A28)
+            case .jaggedPeaks: return UIColor(hex: 0x1F3A5A)
+            case .skyIsland:   return UIColor(hex: 0xF5D76A)
+            }
+        }
+        /// Y of the sprite's CENTER in the scene. Ground-anchored for
+        /// mountains, sky-anchored for the floating island.
+        func centerY(for sceneSize: CGSize) -> CGFloat {
+            switch self {
+            case .snowDome, .pineGrove, .jaggedPeaks:
+                return 80 + displaySize.height / 2           // sit on the valley floor
+            case .skyIsland:
+                return sceneSize.height * 0.58               // floats in the sky
+            }
+        }
+    }
+
+    // MARK: - State
 
     private let worldNode = SKNode()
     private var plane: PlaneNode!
     private var isTouching = false
     private var lastUpdateTime: TimeInterval = 0
 
-    private var farPeaks  = SKNode()
-    private var mainPeaks = SKNode()
-    private var treeLine  = SKNode()
-    private var valley    = SKNode()
-    private var cloudWisps = SKNode()
+    private var farPeaks       = SKNode()
+    private var cloudWisps     = SKNode()
+    private var valley         = SKNode()
+    private var landmarkLayer  = SKNode()
+
+    private var lastLandmarkSpawn: TimeInterval = 0
+    private let landmarkSpawnInterval: TimeInterval = 12
+    private let landmarkScrollSpeed: CGFloat = 100
+    private var lastSpawnedLandmark: Landmark?
+
+    private var collectedStamps: Set<Landmark> = []
+    private var stampCardHUD: StampCardHUD!
+
+    private var topSafeInset: CGFloat = 0
+
+    // MARK: - Lifecycle
 
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimary
         physicsWorld.gravity = CGVector(dx: 0, dy: -5.0)
-        physicsWorld.contactDelegate = nil
+        physicsWorld.contactDelegate = self
+        topSafeInset = view.safeAreaInsets.top
+        SkyHaptics.prepare()
 
         addChild(worldNode)
         buildSkyGradient()
         buildFarPeaks()
-        buildMainPeaks()
-        buildTreeLine()
-        buildValley()
         buildCloudWisps()
+        buildValley()
+        buildLandmarkLayer()
         buildEagles()
         buildSnow()
         buildPlane()
         buildTopBar()
     }
 
-    // MARK: - Layers
+    // MARK: - Background layers
 
     private func buildSkyGradient() {
         let tex = SKGradientBackgroundNode.gradientTexture(
@@ -46,7 +107,10 @@ final class FreeFlightMountainScene: SKScene {
         bg.zPosition = -100
         worldNode.addChild(bg)
 
-        let topFade = SKSpriteNode(color: UIColor.white.withAlphaComponent(0.5), size: CGSize(width: size.width, height: 120))
+        let topFade = SKSpriteNode(
+            color: UIColor.white.withAlphaComponent(0.5),
+            size: CGSize(width: size.width, height: 120)
+        )
         topFade.anchorPoint = .zero
         topFade.position = CGPoint(x: 0, y: size.height - 120)
         topFade.zPosition = -99
@@ -66,36 +130,18 @@ final class FreeFlightMountainScene: SKScene {
         }
     }
 
-    private func buildMainPeaks() {
-        mainPeaks.zPosition = -60
-        worldNode.addChild(mainPeaks)
-        for _ in 0..<5 {
-            let peakSize = CGSize(width: CGFloat.random(in: 160...240), height: CGFloat.random(in: 180...260))
-            let group = SKNode()
-            let mountain = triangle(size: peakSize, color: UIColor(hex: 0x1F3A5A))
-            mountain.position = .zero
-            group.addChild(mountain)
-
-            let snowHeight = peakSize.height * 0.28
-            let snowTop = triangle(size: CGSize(width: peakSize.width * 0.45, height: snowHeight), color: .white)
-            snowTop.position = CGPoint(x: 0, y: peakSize.height / 2 - snowHeight / 2)
-            group.addChild(snowTop)
-
-            group.position = CGPoint(x: CGFloat.random(in: 0...size.width * 2), y: 120 + peakSize.height / 2)
-            mainPeaks.addChild(group)
-        }
-    }
-
-    private func buildTreeLine() {
-        treeLine.zPosition = -40
-        worldNode.addChild(treeLine)
-        for i in 0..<30 {
-            let tree = triangle(
-                size: CGSize(width: 24, height: 34),
-                color: UIColor(hex: 0x0F4A28)
+    private func buildCloudWisps() {
+        cloudWisps.zPosition = -50
+        worldNode.addChild(cloudWisps)
+        for _ in 0..<3 {
+            let wisp = SKShapeNode(ellipseOf: CGSize(width: 140, height: 24))
+            wisp.fillColor = UIColor.white.withAlphaComponent(0.55)
+            wisp.strokeColor = .clear
+            wisp.position = CGPoint(
+                x: CGFloat.random(in: 0...size.width * 2),
+                y: CGFloat.random(in: size.height * 0.55...size.height * 0.85)
             )
-            tree.position = CGPoint(x: CGFloat(i) * 80 + CGFloat.random(in: -10...10), y: 110)
-            treeLine.addChild(tree)
+            cloudWisps.addChild(wisp)
         }
     }
 
@@ -109,16 +155,9 @@ final class FreeFlightMountainScene: SKScene {
         valley.addChild(strip)
     }
 
-    private func buildCloudWisps() {
-        cloudWisps.zPosition = -50
-        worldNode.addChild(cloudWisps)
-        for _ in 0..<3 {
-            let wisp = SKShapeNode(ellipseOf: CGSize(width: 140, height: 24))
-            wisp.fillColor = UIColor.white.withAlphaComponent(0.55)
-            wisp.strokeColor = .clear
-            wisp.position = CGPoint(x: CGFloat.random(in: 0...size.width * 2), y: CGFloat.random(in: size.height * 0.55...size.height * 0.85))
-            cloudWisps.addChild(wisp)
-        }
+    private func buildLandmarkLayer() {
+        landmarkLayer.zPosition = -40
+        worldNode.addChild(landmarkLayer)
     }
 
     private func buildEagles() {
@@ -135,7 +174,8 @@ final class FreeFlightMountainScene: SKScene {
                 controlPoint: CGPoint(x: size.width / 2, y: eagle.position.y + CGFloat.random(in: -80...80))
             )
             let follow = SKAction.follow(path.cgPath, asOffset: false, orientToPath: false, duration: 14)
-            eagle.run(SKAction.repeatForever(SKAction.sequence([follow, SKAction.run {
+            eagle.run(SKAction.repeatForever(SKAction.sequence([follow, SKAction.run { [weak self] in
+                guard let self = self else { return }
                 eagle.position = CGPoint(x: -40, y: CGFloat.random(in: self.size.height * 0.5...self.size.height * 0.82))
             }])))
         }
@@ -173,8 +213,11 @@ final class FreeFlightMountainScene: SKScene {
         plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID)
         plane.position = CGPoint(x: size.width * 0.28, y: size.height / 2)
         plane.zPosition = 10
-        plane.physicsBody?.contactTestBitMask = 0
-        plane.physicsBody?.categoryBitMask = 0
+        // Sandbox: keep coin/ring contact but drop obstacle/boundary so
+        // nothing in the scene can crash the plane.
+        plane.physicsBody?.categoryBitMask = PhysicsCategory.plane
+        plane.physicsBody?.contactTestBitMask = PhysicsCategory.coin | PhysicsCategory.ring
+        plane.physicsBody?.collisionBitMask = 0
         worldNode.addChild(plane)
     }
 
@@ -193,25 +236,125 @@ final class FreeFlightMountainScene: SKScene {
     // MARK: - Top bar
 
     private func buildTopBar() {
-        let label = SKLabelNode(text: "MOUNTAIN RANGE")
+        let barCenterY = size.height - topSafeInset - 20
+
+        let exit = SkyPillButton(
+            title: "EXIT",
+            style: .surface,
+            size: CGSize(width: 76, height: 32)
+        ) { SkyNavigator.shared.showMenu() }
+        exit.position = CGPoint(x: 52, y: barCenterY)
+        exit.zPosition = 200
+        addChild(exit)
+
+        let label = SKLabelNode(text: "MOUNTAIN EXPEDITION")
         label.fontName = SkyFonts.headlineName
         label.fontSize = 13
         label.fontColor = SkyColors.skOnPrimary
         label.horizontalAlignmentMode = .left
         label.verticalAlignmentMode = .center
-        label.position = CGPoint(x: 100, y: size.height - 40)
+        label.position = CGPoint(x: 100, y: barCenterY)
         label.zPosition = 200
         addChild(label)
 
-        let exit = SkyPillButton(title: "EXIT", style: .surface, size: CGSize(width: 76, height: 32)) {
-            SkyNavigator.shared.showMenu()
-        }
-        exit.position = CGPoint(x: 52, y: size.height - 40)
-        exit.zPosition = 200
-        addChild(exit)
+        stampCardHUD = StampCardHUD(slotCount: Landmark.allCases.count)
+        stampCardHUD.position = CGPoint(
+            x: size.width - stampCardHUD.cardSize.width / 2 - 12,
+            y: barCenterY
+        )
+        stampCardHUD.zPosition = 200
+        addChild(stampCardHUD)
     }
 
-    // MARK: - Update / touch
+    // MARK: - Landmark spawn
+
+    private func spawnLandmarkIfDue(currentTime: TimeInterval) {
+        guard currentTime - lastLandmarkSpawn >= landmarkSpawnInterval else { return }
+        lastLandmarkSpawn = currentTime
+
+        var candidates = Landmark.allCases
+        if let last = lastSpawnedLandmark, candidates.count > 1 {
+            candidates.removeAll { $0 == last }
+        }
+        guard let chosen = candidates.randomElement() else { return }
+        lastSpawnedLandmark = chosen
+
+        let node = buildLandmarkNode(chosen)
+        node.position = CGPoint(x: size.width + 180, y: chosen.centerY(for: size))
+        landmarkLayer.addChild(node)
+
+        let travel: CGFloat = size.width + 440
+        let duration = TimeInterval(travel / landmarkScrollSpeed)
+        node.run(SKAction.sequence([
+            SKAction.moveBy(x: -travel, y: 0, duration: duration),
+            SKAction.removeFromParent()
+        ]))
+    }
+
+    private func buildLandmarkNode(_ landmark: Landmark) -> SKNode {
+        let container = SKNode()
+        container.name = "landmark-\(landmark.rawValue)"
+
+        let spriteSize = landmark.displaySize
+        if let sprite = SkySprites.sprite(named: landmark.spriteName, size: spriteSize) {
+            sprite.zPosition = 0
+            container.addChild(sprite)
+        } else {
+            let shape = SKShapeNode(rectOf: spriteSize, cornerRadius: 10)
+            shape.fillColor = landmark.fallbackColor
+            shape.strokeColor = .clear
+            shape.zPosition = 0
+            container.addChild(shape)
+        }
+
+        switch landmark {
+        case .snowDome:
+            // 4 coins in an arc curving over the snowy dome.
+            let arc: [(CGFloat, CGFloat)] = [(-70, 50), (-25, 90), (25, 90), (70, 50)]
+            for (dx, dy) in arc {
+                let coin = CoinNode()
+                coin.position = CGPoint(x: dx, y: dy)
+                container.addChild(coin)
+            }
+
+        case .pineGrove:
+            // 3 coins hidden between the treetops.
+            let spots: [(CGFloat, CGFloat)] = [(-55, 50), (0, 70), (55, 50)]
+            for (dx, dy) in spots {
+                let coin = CoinNode()
+                coin.position = CGPoint(x: dx, y: dy)
+                container.addChild(coin)
+            }
+
+        case .jaggedPeaks:
+            // Treasure run — 3 oversized gold coins at the base of the peaks.
+            let nuggets: [(CGFloat, CGFloat)] = [(-50, -50), (0, -60), (50, -50)]
+            for (dx, dy) in nuggets {
+                let coin = CoinNode()
+                coin.setScale(1.4)
+                coin.position = CGPoint(x: dx, y: dy)
+                container.addChild(coin)
+            }
+
+        case .skyIsland:
+            // Ring in the waterfall's path, plus 2 coins floating above the
+            // grass top.
+            let ring = RingNode()
+            ring.position = CGPoint(x: 0, y: -100)
+            container.addChild(ring)
+
+            let topCoins: [(CGFloat, CGFloat)] = [(-40, 90), (40, 90)]
+            for (dx, dy) in topCoins {
+                let coin = CoinNode()
+                coin.position = CGPoint(x: dx, y: dy)
+                container.addChild(coin)
+            }
+        }
+
+        return container
+    }
+
+    // MARK: - Update
 
     override func update(_ currentTime: TimeInterval) {
         let delta: TimeInterval = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
@@ -224,10 +367,10 @@ final class FreeFlightMountainScene: SKScene {
         plane.position.x += (size.width * 0.28 - plane.position.x) * 0.12
 
         scrollLayer(farPeaks, speed: 20, delta: delta)
-        scrollLayer(mainPeaks, speed: 55, delta: delta)
         scrollLayer(cloudWisps, speed: 30, delta: delta)
-        scrollLayer(treeLine, speed: 120, delta: delta)
         scrollLayer(valley, speed: 190, delta: delta)
+
+        spawnLandmarkIfDue(currentTime: currentTime)
     }
 
     private func scrollLayer(_ layer: SKNode, speed: CGFloat, delta: TimeInterval) {
@@ -238,6 +381,91 @@ final class FreeFlightMountainScene: SKScene {
             }
         }
     }
+
+    // MARK: - Contact (coin / ring collection)
+
+    func didBegin(_ contact: SKPhysicsContact) {
+        let (planeBody, otherBody): (SKPhysicsBody, SKPhysicsBody) = {
+            if contact.bodyA.categoryBitMask == PhysicsCategory.plane { return (contact.bodyA, contact.bodyB) }
+            return (contact.bodyB, contact.bodyA)
+        }()
+        guard planeBody.categoryBitMask == PhysicsCategory.plane else { return }
+
+        switch otherBody.categoryBitMask {
+        case PhysicsCategory.coin:
+            if let coin = otherBody.node as? CoinNode {
+                coin.collect()
+                ProgressManager.shared.addCoins(1)
+                coin.run(AudioManager.shared.sfxAction(SkySFX.coinCollect))
+                SkyHaptics.collect()
+                stampCollectedAncestor(of: coin)
+            }
+        case PhysicsCategory.ring:
+            if let ring = otherBody.node as? RingNode {
+                ring.physicsBody = nil
+                ring.run(SKAction.sequence([
+                    SKAction.group([
+                        SKAction.scale(to: 1.4, duration: 0.25),
+                        SKAction.fadeOut(withDuration: 0.25)
+                    ]),
+                    SKAction.removeFromParent()
+                ]))
+                ProgressManager.shared.addCoins(5)
+                ring.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+                SkyHaptics.collect()
+                stampCollectedAncestor(of: ring)
+            }
+        default:
+            break
+        }
+    }
+
+    private func stampCollectedAncestor(of node: SKNode) {
+        var n: SKNode? = node
+        while let current = n {
+            if let name = current.name, name.hasPrefix("landmark-"),
+               let raw = Int(name.replacingOccurrences(of: "landmark-", with: "")),
+               let landmark = Landmark(rawValue: raw) {
+                recordStamp(for: landmark)
+                return
+            }
+            n = current.parent
+        }
+    }
+
+    private func recordStamp(for landmark: Landmark) {
+        guard !collectedStamps.contains(landmark) else { return }
+        collectedStamps.insert(landmark)
+        stampCardHUD.stamp(index: landmark.rawValue)
+
+        if collectedStamps.count == Landmark.allCases.count {
+            triggerTourComplete()
+        }
+    }
+
+    private func triggerTourComplete() {
+        ProgressManager.shared.addCoins(100)
+        SkyHaptics.win()
+
+        let center = CGPoint(x: size.width / 2, y: size.height * 0.55)
+        LandmarkCelebration.emitConfetti(at: center, in: self)
+        LandmarkCelebration.showBanner(
+            title: "EXPEDITION COMPLETE!",
+            subtitle: "+100 BONUS COINS",
+            at: center,
+            in: self
+        )
+
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: 2.4),
+            SKAction.run { [weak self] in
+                self?.collectedStamps.removeAll()
+                self?.stampCardHUD.reset()
+            }
+        ]))
+    }
+
+    // MARK: - Touch
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }

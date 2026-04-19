@@ -302,10 +302,14 @@ enum SkySprites {
             let sprite = SKSpriteNode(texture: tex, size: CGSize(width: size, height: size))
             return sprite
         }
+        // NOTE: intentionally do NOT set fontName. Plus Jakarta Sans doesn't
+        // include emoji glyphs, so forcing it onto an emoji-only label made
+        // the glyph fall back to odd/partial rendering (⚙ appeared as a
+        // yellow starburst instead of a gear). The default nil fontName lets
+        // iOS composite emoji via Apple Color Emoji as expected.
         let label = SKLabelNode(text: fallbackEmoji)
         label.fontSize = size
         label.fontColor = color
-        label.fontName = SkyFonts.headlineName
         label.verticalAlignmentMode = .center
         label.horizontalAlignmentMode = .center
         return label

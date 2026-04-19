@@ -8,9 +8,16 @@ final class MenuScene: SKScene {
 
     private var worldSelectOverlay: SKNode?
 
+    /// iOS safe-area insets, populated on didMove so top-bar content clears
+    /// the Dynamic Island / notch and the nav bar clears the home indicator.
+    private var topSafeInset: CGFloat = 0
+    private var bottomSafeInset: CGFloat = 0
+
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimary
         SkyHaptics.prepare()
+        topSafeInset = view.safeAreaInsets.top
+        bottomSafeInset = view.safeAreaInsets.bottom
         buildGradient()
         buildClouds()
         buildTopBar()
@@ -58,19 +65,23 @@ final class MenuScene: SKScene {
     // MARK: - Top bar (pilot avatar + title + coin pill + gear)
 
     private func buildTopBar() {
-        // Opaque light strip behind the header so the avatar + title read
-        // against the sky gradient, matching the mockup's white bar.
-        let barHeight: CGFloat = 92
+        // The bar extends from the very top of the screen down past the
+        // safe-area inset — that way the light surface color fills behind
+        // the Dynamic Island, and the notch just sits in its usual spot
+        // without interrupting our header visually. All content is
+        // positioned BELOW the safe inset so it stays fully visible.
+        let contentHeight: CGFloat = 72
+        let barHeight = topSafeInset + contentHeight
         let barY = size.height - barHeight / 2
         let bar = SKSpriteNode(color: SkyColors.surface, size: CGSize(width: size.width, height: barHeight))
         bar.position = CGPoint(x: size.width / 2, y: barY)
         bar.zPosition = 30
         addChild(bar)
 
-        // Pilot avatar — circular, top-left.
+        // Pilot avatar — circular, top-left, below the safe-area inset.
         let avatarSize: CGFloat = 52
         let avatarX: CGFloat = 44
-        let avatarY = barY - 6
+        let avatarY = size.height - topSafeInset - contentHeight / 2
 
         let avatarRing = SKShapeNode(circleOfRadius: avatarSize / 2 + 3)
         avatarRing.fillColor = SkyColors.primaryContainer
@@ -251,7 +262,8 @@ final class MenuScene: SKScene {
 
     private func buildNavBar() {
         let bar = SkyTabBar(active: .home, width: size.width)
-        bar.position = CGPoint(x: size.width / 2, y: SkyTabBar.barHeight / 2)
+        // Lift above the home indicator so tap targets aren't under it.
+        bar.position = CGPoint(x: size.width / 2, y: bottomSafeInset + SkyTabBar.barHeight / 2)
         bar.zPosition = 40
         bar.name = "navBar"
         addChild(bar)

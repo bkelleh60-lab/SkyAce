@@ -24,7 +24,7 @@ final class GameViewController: UIViewController {
         super.viewDidLoad()
         SkyNavigator.shared.attach(view: skView, presenter: self)
         SkyNavigator.shared.showMenu()
-        AudioManager.shared.playMusic(SkyMusic.menu, fileExtension: "mp3")
+        AudioManager.shared.playMusic(SkyMusic.menu, fileExtension: "wav")
     }
 
     override var prefersStatusBarHidden: Bool { true }
@@ -129,8 +129,7 @@ final class SkyNavigator {
         view.presentScene(scene, transition: transition)
 
         if let music = music {
-            let ext = music.hasSuffix("_music") ? "mp3" : "mp3"
-            AudioManager.shared.playMusic(music, fileExtension: ext)
+            AudioManager.shared.playMusic(music, fileExtension: "wav")
         }
     }
 }

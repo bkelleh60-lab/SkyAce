@@ -45,7 +45,7 @@ final class AudioManager {
     // MARK: - Music
 
     /// Starts a looping track. No-op if the same track is already playing.
-    func playMusic(_ fileName: String, fileExtension: String = "mp3", volume: Float = 0.6) {
+    func playMusic(_ fileName: String, fileExtension: String = "wav", volume: Float = 0.6) {
         guard musicEnabled else { return }
         let trackKey = "\(fileName).\(fileExtension)"
         if currentTrack == trackKey, musicPlayer?.isPlaying == true { return }

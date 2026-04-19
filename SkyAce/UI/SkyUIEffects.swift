@@ -304,3 +304,40 @@ enum SkySprites {
         return label
     }
 }
+
+// MARK: - SkyHaptics
+
+/// Haptic feedback helpers. Thin wrapper over `UIImpactFeedbackGenerator` and
+/// `UINotificationFeedbackGenerator` with kid-friendly intensity choices and
+/// pre-warming for low-latency firing. Call `SkyHaptics.prepare()` once on
+/// scene `didMove(to:)` — each generator takes ~1.5 seconds to "warm up" after
+/// a cold first call; preparing avoids a noticeable delay on first tap.
+enum SkyHaptics {
+    private static let light = UIImpactFeedbackGenerator(style: .light)
+    private static let medium = UIImpactFeedbackGenerator(style: .medium)
+    private static let heavy = UIImpactFeedbackGenerator(style: .heavy)
+    private static let notification = UINotificationFeedbackGenerator()
+
+    /// Pre-warm all haptic engines. Cheap — safe to call every scene load.
+    static func prepare() {
+        light.prepare()
+        medium.prepare()
+        heavy.prepare()
+        notification.prepare()
+    }
+
+    /// Subtle tap for button presses.
+    static func uiTap()    { light.impactOccurred(intensity: 0.6) }
+
+    /// Satisfying pop for coin / ring collection.
+    static func collect()  { light.impactOccurred(intensity: 0.9) }
+
+    /// Plane takes a hit — sharp, communicates danger.
+    static func hit()      { heavy.impactOccurred() }
+
+    /// Level completed. Success-pattern notification haptic.
+    static func win()      { notification.notificationOccurred(.success) }
+
+    /// Mission failed. Error-pattern notification haptic.
+    static func fail()     { notification.notificationOccurred(.error) }
+}

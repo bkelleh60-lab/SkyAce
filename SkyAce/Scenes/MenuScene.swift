@@ -9,6 +9,7 @@ final class MenuScene: SKScene {
 
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimary
+        SkyHaptics.prepare()
         buildGradient()
         buildClouds()
         buildFlyingPlane()
@@ -523,6 +524,7 @@ final class SkyPillButton: SKNode {
 
     func handleTap() {
         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
+        SkyHaptics.uiTap()
         run(SKAction.sequence([
             SKAction.scale(to: 0.96, duration: 0.05),
             SKAction.scale(to: 1.0, duration: 0.08)

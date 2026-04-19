@@ -67,6 +67,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         backgroundColor = SkyColors.skPrimaryContainer
         physicsWorld.gravity = CGVector(dx: 0, dy: -5.0)
         physicsWorld.contactDelegate = self
+        SkyHaptics.prepare()
 
         addChild(worldNode)
         setupCamera()
@@ -487,6 +488,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 state.collectCoin()
                 ProgressManager.shared.addCoins(1)
                 coin.run(AudioManager.shared.sfxAction(SkySFX.coinCollect))
+                SkyHaptics.collect()
                 flashCoinPill()
             }
         case PhysicsCategory.obstacle, PhysicsCategory.boundary:
@@ -499,6 +501,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private func handleHit(node: SKNode?) {
         plane.playHitFlash()
         plane.run(AudioManager.shared.sfxAction(SkySFX.hit))
+        SkyHaptics.hit()
         let dead = state.registerHit()
         if dead {
             triggerFailSequence()
@@ -524,6 +527,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private func triggerFailSequence() {
         guard !runHasFinished else { return }
         runHasFinished = true
+        SkyHaptics.fail()
 
         // Red vignette flash.
         let vignette = SKSpriteNode(color: UIColor.systemRed.withAlphaComponent(0.0), size: size)
@@ -555,6 +559,8 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func triggerWinSequence() {
+        SkyHaptics.win()
+
         // Coin burst.
         for _ in 0..<16 {
             let coin = CoinNode()

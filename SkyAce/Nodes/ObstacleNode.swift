@@ -50,14 +50,13 @@ final class ObstacleNode: SKNode {
         let container = SKNode()
 
         // Prefer bundled cloud sprites for the correct gap-facing flat edge.
-        // The asset is stretched to the pillar's full dimensions; a future
-        // pass can implement 9-slice scaling via SKSpriteNode.centerRect if
-        // artwork demands it.
+        // 9-slice (`centerRect`) keeps the top/bottom caps undistorted while
+        // the middle third stretches vertically to fill tall pillars.
         let spriteName = isTop ? SkySprites.cloudPillarTop : SkySprites.cloudPillarBot
-        if let sprite = SkySprites.sprite(
-            named: spriteName,
-            size: CGSize(width: width, height: height)
-        ) {
+        if let tex = SkySprites.texture(named: spriteName) {
+            let sprite = SKSpriteNode(texture: tex)
+            sprite.size = CGSize(width: width, height: height)
+            sprite.centerRect = CGRect(x: 0.25, y: 0.33, width: 0.5, height: 0.34)
             sprite.zPosition = 0
             container.addChild(sprite)
         } else {

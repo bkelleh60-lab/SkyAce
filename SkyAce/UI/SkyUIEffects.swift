@@ -233,22 +233,29 @@ enum SkySprites {
     // UI icons (Assets.xcassets/*.imageset). `*White` variants are used on
     // dark/saturated surfaces (sky gradient, primary buttons, colored tiles);
     // the unsuffixed versions are used on light surfaces.
-    static let tabHangar        = "tab_hangar"
-    static let tabHangarWhite   = "tab_hangar_white"
-    static let tabShop          = "tab_shop"
-    static let tabShopWhite     = "tab_shop_white"
-    static let tabMap           = "tab_map"
-    static let tabMapWhite      = "tab_map_white"
-    static let iconSettings     = "icon_settings"
+    static let tabHangar         = "tab_hangar"
+    static let tabHangarWhite    = "tab_hangar_white"
+    static let tabShop           = "tab_shop"
+    static let tabShopWhite      = "tab_shop_white"
+    static let tabMap            = "tab_map"
+    static let tabMapWhite       = "tab_map_white"
+    static let iconSettings      = "icon_settings"
     static let iconSettingsWhite = "icon_settings_white"
-    static let starFilled       = "star_filled"
-    static let starFilledWhite  = "star_filled_white"
-    static let starEmpty        = "star_empty"
-    static let starEmptyWhite   = "star_empty_white"
-    static let iconCoin         = "icon_coin"
-    static let iconCoinWhite    = "icon_coin_white"
-    static let iconLock         = "icon_lock"
-    static let iconLockWhite    = "icon_lock_white"
+    static let starFilled        = "star_filled"
+    static let starFilledWhite   = "star_filled_white"
+    static let starEmpty         = "star_empty"
+    static let starEmptyWhite    = "star_empty_white"
+    static let iconCoin          = "icon_coin"
+    static let iconCoinWhite     = "icon_coin_white"
+    static let iconLock          = "icon_lock"
+    static let iconLockWhite     = "icon_lock_white"
+    // New glyphs introduced with the redesigned Menu + persistent nav bar.
+    static let iconPlay          = "icon_play"          // white triangle on PLAY CTA
+    static let iconHome          = "icon_home"
+    static let iconHomeWhite     = "icon_home_white"
+    static let iconMissions      = "icon_missions"
+    static let iconMissionsWhite = "icon_missions_white"
+    static let pilotAvatar       = "pilot_avatar"
 
     /// Returns an SKTexture for `name` if the image exists in the asset catalog
     /// or in `Resources/Sprites/` (bundled as a folder reference), otherwise

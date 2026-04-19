@@ -1,8 +1,9 @@
 import SpriteKit
 
-/// Landing screen: sky gradient, drifting clouds, animated plane,
-/// "SKY ACE" logo, PLAY / FREE FLIGHT / UPGRADE SHOP buttons, and the
-/// coin-balance pill + settings gear in the corners.
+/// Home screen: sky gradient, drifting clouds, a pilot-avatar top bar with
+/// the coin balance + settings gear, the user's selected plane as a tilted
+/// hero image, a chunky PLAY CTA, a 2-tile bento row (FREE FLIGHT /
+/// UPGRADE), and the persistent bottom nav bar with Home as the active tab.
 final class MenuScene: SKScene {
 
     private var worldSelectOverlay: SKNode?
@@ -12,10 +13,11 @@ final class MenuScene: SKScene {
         SkyHaptics.prepare()
         buildGradient()
         buildClouds()
-        buildFlyingPlane()
-        buildLogo()
-        buildButtons()
         buildTopBar()
+        buildHeroPlane()
+        buildPlayCTA()
+        buildBentoRow()
+        buildNavBar()
     }
 
     // MARK: - Background
@@ -53,126 +55,224 @@ final class MenuScene: SKScene {
         cloud.run(SKAction.repeatForever(SKAction.sequence([moveLeft, reset])))
     }
 
-    private func buildFlyingPlane() {
-        let plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID)
-        plane.zPosition = -30
-        plane.setScale(0.9)
-        plane.physicsBody = nil
-        addChild(plane)
-
-        let path = UIBezierPath()
-        path.move(to: CGPoint(x: -80, y: size.height * 0.25))
-        path.addCurve(
-            to: CGPoint(x: size.width + 80, y: size.height * 0.35),
-            controlPoint1: CGPoint(x: size.width * 0.33, y: size.height * 0.15),
-            controlPoint2: CGPoint(x: size.width * 0.66, y: size.height * 0.5)
-        )
-
-        let follow = SKAction.follow(path.cgPath, asOffset: false, orientToPath: true, duration: 8)
-        let reset = SKAction.run { plane.position = CGPoint(x: -80, y: self.size.height * 0.25) }
-        plane.run(SKAction.repeatForever(SKAction.sequence([follow, reset])))
-    }
-
-    // MARK: - Logo
-
-    private func buildLogo() {
-        let logo = SKLabelNode(text: "SKY ACE")
-        logo.fontName = SkyFonts.headlineItalicName
-        logo.fontSize = 52
-        logo.fontColor = SkyColors.skOnPrimary
-        logo.position = CGPoint(x: size.width / 2, y: size.height * 0.72)
-        logo.zPosition = 10
-
-        // Drop shadow.
-        let shadow = SKLabelNode(text: "SKY ACE")
-        shadow.fontName = SkyFonts.headlineItalicName
-        shadow.fontSize = 52
-        shadow.fontColor = SkyColors.skOnPrimaryContainer.withAlphaComponent(0.4)
-        shadow.position = CGPoint(x: 2, y: -3)
-        shadow.zPosition = -1
-        logo.addChild(shadow)
-
-        addChild(logo)
-
-        let subtitle = SKLabelNode(text: "Pilot your plane through the skies.")
-        subtitle.fontName = SkyFonts.bodyName
-        subtitle.fontSize = 14
-        subtitle.fontColor = SkyColors.skOnPrimary.withAlphaComponent(0.85)
-        subtitle.position = CGPoint(x: size.width / 2, y: size.height * 0.72 - 36)
-        subtitle.zPosition = 10
-        addChild(subtitle)
-    }
-
-    // MARK: - Buttons
-
-    private func buildButtons() {
-        let centerX = size.width / 2
-        let baseY = size.height * 0.42
-
-        let play = SkyPillButton(
-            title: "PLAY",
-            style: .primary,
-            size: CGSize(width: 240, height: 56)
-        ) { [weak self] in self?.tapPlay() }
-        play.position = CGPoint(x: centerX, y: baseY)
-        play.zPosition = 10
-        addChild(play)
-
-        let freeFlight = SkyPillButton(
-            title: "FREE FLIGHT",
-            style: .secondary,
-            size: CGSize(width: 240, height: 56)
-        ) { [weak self] in self?.tapFreeFlight() }
-        freeFlight.position = CGPoint(x: centerX, y: baseY - 70)
-        freeFlight.zPosition = 10
-        addChild(freeFlight)
-
-        let shop = SkyPillButton(
-            title: "UPGRADE SHOP",
-            style: .surface,
-            size: CGSize(width: 240, height: 56)
-        ) { [weak self] in self?.tapShop() }
-        shop.position = CGPoint(x: centerX, y: baseY - 140)
-        shop.zPosition = 10
-        addChild(shop)
-    }
-
-    // MARK: - Top bar
+    // MARK: - Top bar (pilot avatar + title + coin pill + gear)
 
     private func buildTopBar() {
+        // Opaque light strip behind the header so the avatar + title read
+        // against the sky gradient, matching the mockup's white bar.
+        let barHeight: CGFloat = 92
+        let barY = size.height - barHeight / 2
+        let bar = SKSpriteNode(color: SkyColors.surface, size: CGSize(width: size.width, height: barHeight))
+        bar.position = CGPoint(x: size.width / 2, y: barY)
+        bar.zPosition = 30
+        addChild(bar)
+
+        // Pilot avatar — circular, top-left.
+        let avatarSize: CGFloat = 52
+        let avatarX: CGFloat = 44
+        let avatarY = barY - 6
+
+        let avatarRing = SKShapeNode(circleOfRadius: avatarSize / 2 + 3)
+        avatarRing.fillColor = SkyColors.primaryContainer
+        avatarRing.strokeColor = .clear
+        avatarRing.position = CGPoint(x: avatarX, y: avatarY)
+        avatarRing.zPosition = 31
+        addChild(avatarRing)
+
+        let avatar: SKNode
+        if let sprite = SkySprites.sprite(
+            named: SkySprites.pilotAvatar,
+            size: CGSize(width: avatarSize, height: avatarSize)
+        ) {
+            let mask = SKShapeNode(circleOfRadius: avatarSize / 2)
+            mask.fillColor = .white
+            mask.strokeColor = .clear
+            let crop = SKCropNode()
+            crop.maskNode = mask
+            crop.addChild(sprite)
+            avatar = crop
+        } else {
+            let placeholder = SKShapeNode(circleOfRadius: avatarSize / 2)
+            placeholder.fillColor = SkyColors.surfaceContainer
+            placeholder.strokeColor = .clear
+            let glyph = SKLabelNode(text: "👨‍✈️")
+            glyph.fontSize = 30
+            glyph.verticalAlignmentMode = .center
+            glyph.horizontalAlignmentMode = .center
+            placeholder.addChild(glyph)
+            avatar = placeholder
+        }
+        avatar.position = CGPoint(x: avatarX, y: avatarY)
+        avatar.zPosition = 32
+        addChild(avatar)
+
+        // Title label ("Sky Ace") — primary-container blue.
+        let title = SKLabelNode(text: "Sky Ace")
+        title.fontName = SkyFonts.headlineName
+        title.fontSize = 20
+        title.fontColor = SkyColors.primaryContainer
+        title.verticalAlignmentMode = .baseline
+        title.horizontalAlignmentMode = .left
+        title.position = CGPoint(x: avatarX + avatarSize / 2 + 14, y: avatarY + 4)
+        title.zPosition = 31
+        addChild(title)
+
+        // Coin pill nested under the title.
         let coinPill = SkyCoinPill(coins: ProgressManager.shared.coins)
-        coinPill.position = CGPoint(x: size.width - 66, y: size.height - 44)
-        coinPill.zPosition = 20
+        coinPill.setScale(0.85)
+        coinPill.position = CGPoint(x: avatarX + avatarSize / 2 + 14 + 52, y: avatarY - 16)
+        coinPill.zPosition = 31
         coinPill.name = "coinPill"
         addChild(coinPill)
 
-        // Menu gear sits on the deep sky-blue gradient — use the white variant.
+        // Settings gear (dark navy on the light surface).
         let gear = SkySprites.iconNode(
-            named: SkySprites.iconSettingsWhite,
+            named: SkySprites.iconSettings,
             fallbackEmoji: "⚙",
             size: 28,
-            color: SkyColors.onPrimary
+            color: SkyColors.onSurface
         )
-        gear.position = CGPoint(x: 28, y: size.height - 44)
-        gear.zPosition = 20
+        gear.position = CGPoint(x: size.width - 32, y: avatarY)
+        gear.zPosition = 31
         gear.name = "settingsGear"
         addChild(gear)
+    }
+
+    // MARK: - Hero plane (user's selected, tilted up 12°)
+
+    private func buildHeroPlane() {
+        let plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID)
+        plane.physicsBody = nil
+        plane.setScale(2.0)
+        plane.zRotation = CGFloat.pi / 180 * 12
+        plane.position = CGPoint(x: size.width / 2, y: size.height * 0.60)
+        plane.zPosition = 10
+        addChild(plane)
+    }
+
+    // MARK: - PLAY CTA (chunky arcade button)
+
+    private func buildPlayCTA() {
+        let cta = SkyChunkyButton(
+            title: "PLAY",
+            iconName: SkySprites.iconPlay,
+            size: CGSize(width: min(size.width - 80, 300), height: 88)
+        ) { [weak self] in self?.tapPlay() }
+        cta.position = CGPoint(x: size.width / 2, y: size.height * 0.34)
+        cta.zPosition = 20
+        cta.name = "playCTA"
+        addChild(cta)
+    }
+
+    // MARK: - Bento row (FREE FLIGHT + UPGRADE)
+
+    private func buildBentoRow() {
+        let tileSize = CGSize(width: 138, height: 86)
+        let rowY = size.height * 0.22
+        let gap: CGFloat = 16
+        let totalWidth = tileSize.width * 2 + gap
+
+        let freeFlight = buildBentoTile(
+            title: "FREE FLIGHT",
+            iconSpriteName: SkySprites.tabHangar,
+            iconFallback: "✈",
+            fillColor: SkyColors.secondaryContainer,
+            textColor: SkyColors.onSecondaryContainer,
+            name: "bentoFreeFlight"
+        )
+        freeFlight.position = CGPoint(
+            x: size.width / 2 - totalWidth / 2 + tileSize.width / 2,
+            y: rowY
+        )
+        freeFlight.zPosition = 15
+        addChild(freeFlight)
+
+        let upgrade = buildBentoTile(
+            title: "UPGRADE",
+            iconSpriteName: SkySprites.tabShop,
+            iconFallback: "🛒",
+            fillColor: SkyColors.tertiaryContainer,
+            textColor: SkyColors.onTertiaryContainer,
+            name: "bentoUpgrade"
+        )
+        upgrade.position = CGPoint(
+            x: size.width / 2 + totalWidth / 2 - tileSize.width / 2,
+            y: rowY
+        )
+        upgrade.zPosition = 15
+        addChild(upgrade)
+    }
+
+    private func buildBentoTile(title: String,
+                                iconSpriteName: String,
+                                iconFallback: String,
+                                fillColor: UIColor,
+                                textColor: UIColor,
+                                name: String) -> SKNode {
+        let container = SKNode()
+        container.name = name
+
+        let size = CGSize(width: 138, height: 86)
+        let radius: CGFloat = 28
+
+        let shadow = SkyUIEffects.shadowSprite(size: size, cornerRadius: radius, blur: 18, spread: -2)
+        shadow.position = CGPoint(x: 0, y: -2)
+        shadow.zPosition = -1
+        container.addChild(shadow)
+
+        let tileTexture = SkyUIEffects.gradientTexture(
+            size: size, cornerRadius: radius, top: fillColor, bottom: fillColor
+        )
+        let tile = SKSpriteNode(texture: tileTexture, size: size)
+        container.addChild(tile)
+
+        let icon = SkySprites.iconNode(
+            named: iconSpriteName,
+            fallbackEmoji: iconFallback,
+            size: 28,
+            color: textColor
+        )
+        icon.position = CGPoint(x: 0, y: 12)
+        container.addChild(icon)
+
+        let label = SKLabelNode(text: title)
+        label.fontName = SkyFonts.headlineName
+        label.fontSize = 11
+        label.fontColor = textColor
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        label.position = CGPoint(x: 0, y: -22)
+        container.addChild(label)
+
+        return container
+    }
+
+    // MARK: - Bottom nav bar
+
+    private func buildNavBar() {
+        let bar = SkyTabBar(active: .home, width: size.width)
+        bar.position = CGPoint(x: size.width / 2, y: SkyTabBar.barHeight / 2)
+        bar.zPosition = 40
+        bar.name = "navBar"
+        addChild(bar)
     }
 
     // MARK: - Actions
 
     private func tapPlay() {
-        AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
+        // SkyChunkyButton.handleTap already plays SFX + haptic.
         SkyNavigator.shared.showMap()
     }
 
     private func tapShop() {
         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
+        SkyHaptics.uiTap()
         SkyNavigator.shared.showShop()
     }
 
     private func tapFreeFlight() {
         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
+        SkyHaptics.uiTap()
         showWorldSelect()
     }
 
@@ -352,16 +452,42 @@ final class MenuScene: SKScene {
             return
         }
 
-        // Normal screen taps: dispatched by SkyPillButton directly.
+        // Chunky PLAY button (walk up the tree — tap may hit label/icon).
         for node in tapped {
-            if let button = (node as? SkyPillButton) ?? (node.parent as? SkyPillButton) {
-                button.handleTap()
-                return
+            var n: SKNode? = node
+            while let current = n {
+                if let cta = current as? SkyChunkyButton {
+                    cta.handleTap()
+                    return
+                }
+                n = current.parent
             }
-            if node.name == "settingsGear" {
-                AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-                toggleMusic()
-                return
+        }
+
+        // Named nodes: bento tiles, settings gear, nav tabs.
+        for node in tapped {
+            var n: SKNode? = node
+            while let current = n {
+                switch current.name {
+                case "bentoFreeFlight":
+                    tapFreeFlight()
+                    return
+                case "bentoUpgrade":
+                    tapShop()
+                    return
+                case "settingsGear":
+                    AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
+                    SkyHaptics.uiTap()
+                    toggleMusic()
+                    return
+                default:
+                    break
+                }
+                if let bar = current as? SkyTabBar {
+                    bar.handleTap(sceneLocation: location)
+                    return
+                }
+                n = current.parent
             }
         }
     }

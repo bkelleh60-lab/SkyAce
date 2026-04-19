@@ -303,8 +303,8 @@ final class MapScene: SKScene {
     }
 
     private func buildTabBar() {
-        let bar = SkyTabBar(active: .missions)
-        bar.position = CGPoint(x: size.width / 2, y: 44)
+        let bar = SkyTabBar(active: .missions, width: size.width)
+        bar.position = CGPoint(x: size.width / 2, y: SkyTabBar.barHeight / 2)
         bar.zPosition = 200
         addChild(bar)
     }
@@ -351,7 +351,7 @@ final class MapScene: SKScene {
                 return
             }
             if let bar = (node as? SkyTabBar) ?? (node.parent as? SkyTabBar) {
-                bar.handleTap(at: touch.location(in: bar))
+                bar.handleTap(sceneLocation: location)
                 return
             }
         }
@@ -409,73 +409,4 @@ final class MapScene: SKScene {
     }
 }
 
-/// Glassmorphic bottom tab bar shared by MapScene, ShopScene, HangarScene.
-final class SkyTabBar: SKNode {
-    enum Tab: Int { case hangar, shop, missions }
-
-    let bar: SKShapeNode
-    var active: Tab
-
-    init(active: Tab) {
-        self.active = active
-        self.bar = SKShapeNode(rectOf: CGSize(width: 260, height: 56), cornerRadius: 28)
-        super.init()
-        bar.fillColor = SkyColors.skSurfaceContainerLowest.withAlphaComponent(0.92)
-        bar.strokeColor = .clear
-        addChild(bar)
-
-        let items: [(Tab, String, String, String)] = [
-            (.hangar,   SkySprites.tabHangar, "✈", "HANGAR"),
-            (.shop,     SkySprites.tabShop,   "🛍", "SHOP"),
-            (.missions, SkySprites.tabMap,    "📋", "MISSIONS")
-        ]
-
-        for (index, (tab, spriteName, fallback, title)) in items.enumerated() {
-            let group = SKNode()
-            group.position = CGPoint(x: -90 + CGFloat(index) * 90, y: 0)
-            let icon = SkySprites.iconNode(
-                named: spriteName,
-                fallbackEmoji: fallback,
-                size: 22,
-                color: tab == active ? SkyColors.primary : SkyColors.onSurfaceVariant
-            )
-            icon.position = CGPoint(x: 0, y: 8)
-            icon.alpha = tab == active ? 1.0 : 0.55
-            group.addChild(icon)
-
-            let titleLabel = SKLabelNode(text: title)
-            titleLabel.fontName = SkyFonts.headlineName
-            titleLabel.fontSize = 9
-            titleLabel.fontColor = tab == active ? SkyColors.skPrimary : SkyColors.skOnSurfaceVariant
-            titleLabel.verticalAlignmentMode = .center
-            titleLabel.horizontalAlignmentMode = .center
-            titleLabel.position = CGPoint(x: 0, y: -14)
-            group.addChild(titleLabel)
-
-            group.name = "tab-\(tab.rawValue)"
-            addChild(group)
-        }
-    }
-    required init?(coder aDecoder: NSCoder) { fatalError() }
-
-    func handleTap(at p: CGPoint) {
-        for node in nodes(at: p) {
-            var n: SKNode? = node
-            while let current = n {
-                if let name = current.name, name.hasPrefix("tab-") {
-                    let id = name.replacingOccurrences(of: "tab-", with: "")
-                    if let raw = Int(id), let tab = Tab(rawValue: raw) {
-                        AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-                        switch tab {
-                        case .hangar:   SkyNavigator.shared.showHangar()
-                        case .shop:     SkyNavigator.shared.showShop()
-                        case .missions: SkyNavigator.shared.showMap()
-                        }
-                    }
-                    return
-                }
-                n = current.parent
-            }
-        }
-    }
-}
+// SkyTabBar is defined in UI/SkyTabBar.swift — shared across scenes.

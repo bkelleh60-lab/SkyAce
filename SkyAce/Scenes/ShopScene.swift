@@ -359,8 +359,8 @@ final class ShopScene: SKScene {
     }
 
     private func buildTabBar() {
-        let bar = SkyTabBar(active: .shop)
-        bar.position = CGPoint(x: size.width / 2, y: 44)
+        let bar = SkyTabBar(active: .shop, width: size.width)
+        bar.position = CGPoint(x: size.width / 2, y: SkyTabBar.barHeight / 2)
         bar.zPosition = 200
         addChild(bar)
     }
@@ -498,7 +498,7 @@ final class ShopScene: SKScene {
                 return
             }
             if let bar = (node as? SkyTabBar) ?? (node.parent as? SkyTabBar) {
-                bar.handleTap(at: touch.location(in: bar))
+                bar.handleTap(sceneLocation: touch.location(in: self))
                 return
             }
         }

@@ -7,6 +7,21 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1ACC06C82F94DE72005BEF70 /* PlusJakartaSans-ExtraBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06C42F94DE72005BEF70 /* PlusJakartaSans-ExtraBold.ttf */; };
+		1ACC06C92F94DE72005BEF70 /* PlusJakartaSans-Medium.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06C62F94DE72005BEF70 /* PlusJakartaSans-Medium.ttf */; };
+		1ACC06CA2F94DE72005BEF70 /* PlusJakartaSans-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06C32F94DE72005BEF70 /* PlusJakartaSans-Bold.ttf */; };
+		1ACC06CB2F94DE72005BEF70 /* PlusJakartaSans-ExtraBoldItalic.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06C52F94DE72005BEF70 /* PlusJakartaSans-ExtraBoldItalic.ttf */; };
+		1ACC06CC2F94DE72005BEF70 /* PlusJakartaSans-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06C72F94DE72005BEF70 /* PlusJakartaSans-Regular.ttf */; };
+		1ACC06EB2F94E555005BEF70 /* win.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06EA2F94E555005BEF70 /* win.wav */; };
+		1ACC06EC2F94E555005BEF70 /* coin_collect.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06E12F94E555005BEF70 /* coin_collect.wav */; };
+		1ACC06ED2F94E555005BEF70 /* fail.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06E22F94E555005BEF70 /* fail.wav */; };
+		1ACC06EE2F94E555005BEF70 /* freeflight_mountain_music.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06E42F94E555005BEF70 /* freeflight_mountain_music.wav */; };
+		1ACC06EF2F94E555005BEF70 /* hit.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06E62F94E555005BEF70 /* hit.wav */; };
+		1ACC06F02F94E555005BEF70 /* ui_tap.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06E92F94E555005BEF70 /* ui_tap.wav */; };
+		1ACC06F12F94E555005BEF70 /* menu_music.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06E72F94E555005BEF70 /* menu_music.wav */; };
+		1ACC06F22F94E555005BEF70 /* gameplay_music.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06E52F94E555005BEF70 /* gameplay_music.wav */; };
+		1ACC06F32F94E555005BEF70 /* freeflight_city_music.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06E32F94E555005BEF70 /* freeflight_city_music.wav */; };
+		1ACC06F42F94E555005BEF70 /* ring_pass.wav in Resources */ = {isa = PBXBuildFile; fileRef = 1ACC06E82F94E555005BEF70 /* ring_pass.wav */; };
 		B10001000000000000000101 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000101 /* AppDelegate.swift */; };
 		B10001000000000000000102 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000102 /* GameViewController.swift */; };
 		B10001000000000000000103 /* ParentalGateViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000103 /* ParentalGateViewController.swift */; };
@@ -33,19 +48,24 @@
 		B10001000000000000000509 /* FreeFlightMountainScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000509 /* FreeFlightMountainScene.swift */; };
 		B10002000000000000000601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000601 /* Assets.xcassets */; };
 		B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000602 /* PrivacyInfo.xcprivacy */; };
-		B10002000000000000000701 /* coin_collect.wav in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000701 /* coin_collect.wav */; };
-		B10002000000000000000702 /* ring_pass.wav in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000702 /* ring_pass.wav */; };
-		B10002000000000000000703 /* hit.wav in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000703 /* hit.wav */; };
-		B10002000000000000000704 /* fail.wav in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000704 /* fail.wav */; };
-		B10002000000000000000705 /* win.wav in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000705 /* win.wav */; };
-		B10002000000000000000706 /* ui_tap.wav in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000706 /* ui_tap.wav */; };
-		B10002000000000000000707 /* menu_music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000707 /* menu_music.mp3 */; };
-		B10002000000000000000708 /* gameplay_music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000708 /* gameplay_music.mp3 */; };
-		B10002000000000000000709 /* freeflight_city_music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000709 /* freeflight_city_music.mp3 */; };
-		B10002000000000000000710 /* freeflight_mountain_music.mp3 in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000710 /* freeflight_mountain_music.mp3 */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		1ACC06C32F94DE72005BEF70 /* PlusJakartaSans-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-Bold.ttf"; sourceTree = "<group>"; };
+		1ACC06C42F94DE72005BEF70 /* PlusJakartaSans-ExtraBold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-ExtraBold.ttf"; sourceTree = "<group>"; };
+		1ACC06C52F94DE72005BEF70 /* PlusJakartaSans-ExtraBoldItalic.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-ExtraBoldItalic.ttf"; sourceTree = "<group>"; };
+		1ACC06C62F94DE72005BEF70 /* PlusJakartaSans-Medium.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-Medium.ttf"; sourceTree = "<group>"; };
+		1ACC06C72F94DE72005BEF70 /* PlusJakartaSans-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-Regular.ttf"; sourceTree = "<group>"; };
+		1ACC06E12F94E555005BEF70 /* coin_collect.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = coin_collect.wav; sourceTree = "<group>"; };
+		1ACC06E22F94E555005BEF70 /* fail.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = fail.wav; sourceTree = "<group>"; };
+		1ACC06E32F94E555005BEF70 /* freeflight_city_music.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = freeflight_city_music.wav; sourceTree = "<group>"; };
+		1ACC06E42F94E555005BEF70 /* freeflight_mountain_music.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = freeflight_mountain_music.wav; sourceTree = "<group>"; };
+		1ACC06E52F94E555005BEF70 /* gameplay_music.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = gameplay_music.wav; sourceTree = "<group>"; };
+		1ACC06E62F94E555005BEF70 /* hit.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = hit.wav; sourceTree = "<group>"; };
+		1ACC06E72F94E555005BEF70 /* menu_music.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = menu_music.wav; sourceTree = "<group>"; };
+		1ACC06E82F94E555005BEF70 /* ring_pass.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ring_pass.wav; sourceTree = "<group>"; };
+		1ACC06E92F94E555005BEF70 /* ui_tap.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ui_tap.wav; sourceTree = "<group>"; };
+		1ACC06EA2F94E555005BEF70 /* win.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = win.wav; sourceTree = "<group>"; };
 		F10000000000000000000001 /* SkyAce.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkyAce.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10001000000000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10001000000000000000101 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -74,16 +94,6 @@
 		F10001000000000000000509 /* FreeFlightMountainScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightMountainScene.swift; sourceTree = "<group>"; };
 		F10002000000000000000601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10002000000000000000602 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		F10002000000000000000701 /* coin_collect.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = coin_collect.wav; sourceTree = "<group>"; };
-		F10002000000000000000702 /* ring_pass.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ring_pass.wav; sourceTree = "<group>"; };
-		F10002000000000000000703 /* hit.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = hit.wav; sourceTree = "<group>"; };
-		F10002000000000000000704 /* fail.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = fail.wav; sourceTree = "<group>"; };
-		F10002000000000000000705 /* win.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = win.wav; sourceTree = "<group>"; };
-		F10002000000000000000706 /* ui_tap.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ui_tap.wav; sourceTree = "<group>"; };
-		F10002000000000000000707 /* menu_music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = menu_music.mp3; sourceTree = "<group>"; };
-		F10002000000000000000708 /* gameplay_music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = gameplay_music.mp3; sourceTree = "<group>"; };
-		F10002000000000000000709 /* freeflight_city_music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = freeflight_city_music.mp3; sourceTree = "<group>"; };
-		F10002000000000000000710 /* freeflight_mountain_music.mp3 */ = {isa = PBXFileReference; lastKnownFileType = audio.mp3; path = freeflight_mountain_music.mp3; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,7 +107,7 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		G10003000000000000000001 /* Main */ = {
+		G10003000000000000000001 = {
 			isa = PBXGroup;
 			children = (
 				G10003000000000000000002 /* SkyAce */,
@@ -176,6 +186,11 @@
 			children = (
 				F10002000000000000000601 /* Assets.xcassets */,
 				G10003000000000000000008 /* Sounds */,
+				1ACC06C32F94DE72005BEF70 /* PlusJakartaSans-Bold.ttf */,
+				1ACC06C42F94DE72005BEF70 /* PlusJakartaSans-ExtraBold.ttf */,
+				1ACC06C52F94DE72005BEF70 /* PlusJakartaSans-ExtraBoldItalic.ttf */,
+				1ACC06C62F94DE72005BEF70 /* PlusJakartaSans-Medium.ttf */,
+				1ACC06C72F94DE72005BEF70 /* PlusJakartaSans-Regular.ttf */,
 			);
 			path = Resources;
 			sourceTree = "<group>";
@@ -183,16 +198,16 @@
 		G10003000000000000000008 /* Sounds */ = {
 			isa = PBXGroup;
 			children = (
-				F10002000000000000000701 /* coin_collect.wav */,
-				F10002000000000000000702 /* ring_pass.wav */,
-				F10002000000000000000703 /* hit.wav */,
-				F10002000000000000000704 /* fail.wav */,
-				F10002000000000000000705 /* win.wav */,
-				F10002000000000000000706 /* ui_tap.wav */,
-				F10002000000000000000707 /* menu_music.mp3 */,
-				F10002000000000000000708 /* gameplay_music.mp3 */,
-				F10002000000000000000709 /* freeflight_city_music.mp3 */,
-				F10002000000000000000710 /* freeflight_mountain_music.mp3 */,
+				1ACC06E12F94E555005BEF70 /* coin_collect.wav */,
+				1ACC06E22F94E555005BEF70 /* fail.wav */,
+				1ACC06E32F94E555005BEF70 /* freeflight_city_music.wav */,
+				1ACC06E42F94E555005BEF70 /* freeflight_mountain_music.wav */,
+				1ACC06E52F94E555005BEF70 /* gameplay_music.wav */,
+				1ACC06E62F94E555005BEF70 /* hit.wav */,
+				1ACC06E72F94E555005BEF70 /* menu_music.wav */,
+				1ACC06E82F94E555005BEF70 /* ring_pass.wav */,
+				1ACC06E92F94E555005BEF70 /* ui_tap.wav */,
+				1ACC06EA2F94E555005BEF70 /* win.wav */,
 			);
 			path = Sounds;
 			sourceTree = "<group>";
@@ -265,16 +280,21 @@
 			files = (
 				B10002000000000000000601 /* Assets.xcassets in Resources */,
 				B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */,
-				B10002000000000000000701 /* coin_collect.wav in Resources */,
-				B10002000000000000000702 /* ring_pass.wav in Resources */,
-				B10002000000000000000703 /* hit.wav in Resources */,
-				B10002000000000000000704 /* fail.wav in Resources */,
-				B10002000000000000000705 /* win.wav in Resources */,
-				B10002000000000000000706 /* ui_tap.wav in Resources */,
-				B10002000000000000000707 /* menu_music.mp3 in Resources */,
-				B10002000000000000000708 /* gameplay_music.mp3 in Resources */,
-				B10002000000000000000709 /* freeflight_city_music.mp3 in Resources */,
-				B10002000000000000000710 /* freeflight_mountain_music.mp3 in Resources */,
+				1ACC06C82F94DE72005BEF70 /* PlusJakartaSans-ExtraBold.ttf in Resources */,
+				1ACC06C92F94DE72005BEF70 /* PlusJakartaSans-Medium.ttf in Resources */,
+				1ACC06CA2F94DE72005BEF70 /* PlusJakartaSans-Bold.ttf in Resources */,
+				1ACC06CB2F94DE72005BEF70 /* PlusJakartaSans-ExtraBoldItalic.ttf in Resources */,
+				1ACC06CC2F94DE72005BEF70 /* PlusJakartaSans-Regular.ttf in Resources */,
+				1ACC06EB2F94E555005BEF70 /* win.wav in Resources */,
+				1ACC06EC2F94E555005BEF70 /* coin_collect.wav in Resources */,
+				1ACC06ED2F94E555005BEF70 /* fail.wav in Resources */,
+				1ACC06EE2F94E555005BEF70 /* freeflight_mountain_music.wav in Resources */,
+				1ACC06EF2F94E555005BEF70 /* hit.wav in Resources */,
+				1ACC06F02F94E555005BEF70 /* ui_tap.wav in Resources */,
+				1ACC06F12F94E555005BEF70 /* menu_music.wav in Resources */,
+				1ACC06F22F94E555005BEF70 /* gameplay_music.wav in Resources */,
+				1ACC06F32F94E555005BEF70 /* freeflight_city_music.wav in Resources */,
+				1ACC06F42F94E555005BEF70 /* ring_pass.wav in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -145,10 +145,13 @@ final class MenuScene: SKScene {
         coinPill.name = "coinPill"
         addChild(coinPill)
 
-        let gear = SKLabelNode(text: "⚙")
-        gear.fontSize = 28
-        gear.fontColor = SkyColors.skOnPrimary
-        gear.verticalAlignmentMode = .center
+        // Menu gear sits on the deep sky-blue gradient — use the white variant.
+        let gear = SkySprites.iconNode(
+            named: SkySprites.iconSettingsWhite,
+            fallbackEmoji: "⚙",
+            size: 28,
+            color: SkyColors.onPrimary
+        )
         gear.position = CGPoint(x: 28, y: size.height - 44)
         gear.zPosition = 20
         gear.name = "settingsGear"
@@ -180,17 +183,24 @@ final class MenuScene: SKScene {
         let overlay = SKNode()
         overlay.zPosition = 100
 
-        let dim = SKSpriteNode(color: UIColor.black.withAlphaComponent(0.35), size: size)
+        let dim = SKSpriteNode(color: UIColor.black.withAlphaComponent(0.25), size: size)
         dim.anchorPoint = .zero
         dim.position = .zero
         dim.name = "worldSelectDim"
         overlay.addChild(dim)
 
+        // Glassmorphic card: Gaussian-blurred snapshot of the sky+clouds behind,
+        // tinted with surfaceContainerLowest @ 80%. Capture must happen BEFORE
+        // the overlay is added so the card itself isn't included in the snapshot.
         let cardSize = CGSize(width: min(size.width - 40, 340), height: 360)
-        let card = SKShapeNode(rectOf: cardSize, cornerRadius: 28)
-        card.fillColor = SkyColors.skSurfaceContainerLowest.withAlphaComponent(0.94)
-        card.strokeColor = .clear
+        let card = SkyGlassCard(
+            size: cardSize,
+            cornerRadius: 28,
+            tint: SkyColors.surfaceContainerLowest,
+            tintAlpha: 0.80
+        )
         card.position = CGPoint(x: size.width / 2, y: size.height / 2)
+        card.captureBackdrop(in: self, blurRadius: 20)
         overlay.addChild(card)
 
         let title = SKLabelNode(text: "Choose a World")
@@ -253,9 +263,13 @@ final class MenuScene: SKScene {
             overlay.strokeColor = .clear
             container.addChild(overlay)
 
-            let lock = SKLabelNode(text: "🔒")
-            lock.fontSize = 34
-            lock.verticalAlignmentMode = .center
+            // World-select locked tile has a saturated colored background.
+            let lock = SkySprites.iconNode(
+                named: SkySprites.iconLockWhite,
+                fallbackEmoji: "🔒",
+                size: 34,
+                color: SkyColors.onPrimary
+            )
             lock.position = CGPoint(x: 0, y: 16)
             container.addChild(lock)
 
@@ -426,37 +440,54 @@ final class MenuCloud: SKNode {
 }
 
 /// Coin balance pill — gold background with the current coin count.
+/// Uses the bundled `icon_coin` glyph when available; falls back to a ★.
 final class SkyCoinPill: SKNode {
     private let label: SKLabelNode
+    private let icon: SKNode
 
     init(coins: Int) {
-        self.label = SKLabelNode(text: "★ \(coins)")
+        self.label = SKLabelNode(text: "\(coins)")
+        self.icon = SkySprites.iconNode(
+            named: SkySprites.iconCoin,
+            fallbackEmoji: "★",
+            size: 18,
+            color: SkyColors.onTertiaryContainer
+        )
         super.init()
 
-        let size = CGSize(width: 120, height: 36)
-        let bg = SKShapeNode(rectOf: size, cornerRadius: 18)
+        let pillSize = CGSize(width: 120, height: 36)
+        let bg = SKShapeNode(rectOf: pillSize, cornerRadius: 18)
         bg.fillColor = SkyColors.skTertiaryContainer
         bg.strokeColor = .clear
         addChild(bg)
+
+        icon.position = CGPoint(x: -32, y: 0)
+        addChild(icon)
 
         label.fontName = SkyFonts.headlineName
         label.fontSize = 15
         label.fontColor = SkyColors.skOnTertiaryContainer
         label.verticalAlignmentMode = .center
         label.horizontalAlignmentMode = .center
+        label.position = CGPoint(x: 8, y: 0)
         addChild(label)
     }
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
-    func setCoins(_ coins: Int) { label.text = "★ \(coins)" }
+    func setCoins(_ coins: Int) { label.text = "\(coins)" }
 }
 
 /// The primary pill-shaped action button used across all menu scenes.
+/// Per DESIGN.md:
+///   • Primary CTA: vertical gradient primaryContainer → primary (convex feel).
+///   • All styles: soft ambient shadow beneath (onSurface @ 6%, 24px blur).
+///   • Full-pill roundedness (height/2).
 final class SkyPillButton: SKNode {
     enum Style { case primary, secondary, surface, tertiary, disabled }
 
     let buttonSize: CGSize
-    private let shape: SKShapeNode
+    private let fill: SKSpriteNode
+    private let shadow: SKSpriteNode
     private let label: SKLabelNode
     private let handler: () -> Void
     var style: Style
@@ -465,10 +496,16 @@ final class SkyPillButton: SKNode {
         self.buttonSize = size
         self.style = style
         self.handler = handler
-        self.shape = SKShapeNode(rectOf: size, cornerRadius: size.height / 2)
+        let radius = size.height / 2
+        self.fill = SKSpriteNode(color: .clear, size: size)
+        self.shadow = SkyUIEffects.shadowSprite(size: size, cornerRadius: radius)
         self.label = SKLabelNode(text: title)
         super.init()
-        addChild(shape)
+        shadow.zPosition = -1
+        fill.zPosition = 0
+        label.zPosition = 1
+        addChild(shadow)
+        addChild(fill)
         addChild(label)
         applyStyle()
         configureLabel()
@@ -494,19 +531,33 @@ final class SkyPillButton: SKNode {
     }
 
     private func applyStyle() {
-        shape.strokeColor = .clear
+        let radius = buttonSize.height / 2
+        // Lighter colour on top, darker on bottom — "convex" feel per spec.
+        let (top, bottom): (UIColor, UIColor)
         switch style {
         case .primary:
-            shape.fillColor = SkyColors.skPrimary
+            top = SkyColors.primaryContainer
+            bottom = SkyColors.primary
         case .secondary:
-            shape.fillColor = SkyColors.skSecondaryContainer
+            top = SkyColors.secondaryContainer.lightened(by: 0.10)
+            bottom = SkyColors.secondaryContainer
         case .surface:
-            shape.fillColor = SkyColors.skSurfaceContainerLowest
+            top = SkyColors.surfaceContainerLowest
+            bottom = SkyColors.surfaceContainerLow
         case .tertiary:
-            shape.fillColor = SkyColors.skTertiaryContainer
+            top = SkyColors.tertiaryContainer.lightened(by: 0.10)
+            bottom = SkyColors.tertiaryContainer
         case .disabled:
-            shape.fillColor = SkyColors.skSurfaceContainer
+            top = SkyColors.surfaceContainer
+            bottom = SkyColors.surfaceContainer
         }
+        fill.texture = SkyUIEffects.gradientTexture(
+            size: buttonSize,
+            cornerRadius: radius,
+            top: top,
+            bottom: bottom
+        )
+        fill.size = buttonSize
     }
 
     private func configureLabel() {
@@ -522,5 +573,20 @@ final class SkyPillButton: SKNode {
         case .tertiary:  label.fontColor = SkyColors.skOnTertiaryContainer
         case .disabled:  label.fontColor = SkyColors.skOnSurfaceVariant
         }
+    }
+}
+
+// MARK: - Color lightening helper (used for subtle gradient highlights)
+
+private extension UIColor {
+    func lightened(by amount: CGFloat) -> UIColor {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard getRed(&r, green: &g, blue: &b, alpha: &a) else { return self }
+        return UIColor(
+            red: min(1, r + amount),
+            green: min(1, g + amount),
+            blue: min(1, b + amount),
+            alpha: a
+        )
     }
 }

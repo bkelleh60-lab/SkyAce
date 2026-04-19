@@ -15,20 +15,30 @@ final class RingNode: SKNode {
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
     private func build(tint: UIColor) {
-        let outer = SKShapeNode(circleOfRadius: RingNode.radius)
-        outer.strokeColor = tint
-        outer.lineWidth = 10
-        outer.fillColor = .clear
-        outer.glowWidth = 4
-        outer.zPosition = 1
-        addChild(outer)
+        // Prefer the bundled ring sprite; fall back to stroked circles.
+        let diameter = RingNode.radius * 2
+        if let sprite = SkySprites.sprite(
+            named: SkySprites.ring,
+            size: CGSize(width: diameter, height: diameter)
+        ) {
+            sprite.zPosition = 1
+            addChild(sprite)
+        } else {
+            let outer = SKShapeNode(circleOfRadius: RingNode.radius)
+            outer.strokeColor = tint
+            outer.lineWidth = 10
+            outer.fillColor = .clear
+            outer.glowWidth = 4
+            outer.zPosition = 1
+            addChild(outer)
 
-        let inner = SKShapeNode(circleOfRadius: RingNode.radius - 10)
-        inner.strokeColor = tint.withAlphaComponent(0.5)
-        inner.lineWidth = 2
-        inner.fillColor = .clear
-        inner.zPosition = 2
-        addChild(inner)
+            let inner = SKShapeNode(circleOfRadius: RingNode.radius - 10)
+            inner.strokeColor = tint.withAlphaComponent(0.5)
+            inner.lineWidth = 2
+            inner.fillColor = .clear
+            inner.zPosition = 2
+            addChild(inner)
+        }
 
         // Contact-only — useful if the scene wants "pass-through" detection.
         let pb = SKPhysicsBody(circleOfRadius: RingNode.radius)

@@ -67,12 +67,19 @@ final class ResultsScene: SKScene {
 
         // Stars with staggered spring pop-in.
         let stars = StarRating.stars(forHitsTaken: hitsTaken, completed: true)
+        // Results scene sits on the primary sky-blue gradient — use white variants.
         for i in 0..<3 {
             let filled = i < stars
-            let star = SKLabelNode(text: "★")
-            star.fontName = SkyFonts.headlineName
-            star.fontSize = 56
-            star.fontColor = filled ? SkyColors.skTertiaryContainer : SkyColors.skOnPrimary.withAlphaComponent(0.2)
+            let spriteName = filled ? SkySprites.starFilledWhite : SkySprites.starEmptyWhite
+            let fallbackColor = filled
+                ? SkyColors.tertiaryContainer
+                : SkyColors.onPrimary.withAlphaComponent(0.2)
+            let star = SkySprites.iconNode(
+                named: spriteName,
+                fallbackEmoji: "★",
+                size: 56,
+                color: fallbackColor
+            )
             star.position = CGPoint(x: size.width / 2 - 80 + CGFloat(i) * 80, y: size.height * 0.58)
             star.setScale(0.0)
             addChild(star)

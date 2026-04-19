@@ -6,30 +6,43 @@ final class CoinNode: SKNode {
 
     static let size: CGFloat = 26
 
-    private let bodyShape: SKShapeNode
+    /// Flippable element — either the sprite (when bundled) or the
+    /// programmatic gold circle. Kept as a property so the flip animation
+    /// can scale it on the X axis.
+    private let flippable: SKNode
 
     override init() {
-        self.bodyShape = SKShapeNode(circleOfRadius: CoinNode.size / 2)
+        if let sprite = SkySprites.sprite(
+            named: SkySprites.coin,
+            size: CGSize(width: CoinNode.size, height: CoinNode.size)
+        ) {
+            self.flippable = sprite
+        } else {
+            self.flippable = CoinNode.makeProgrammaticBody()
+        }
         super.init()
-        build()
+        addChild(flippable)
         configurePhysics()
         animate()
     }
 
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
-    private func build() {
-        bodyShape.fillColor = SkyColors.tertiaryContainer
-        bodyShape.strokeColor = .clear
-        bodyShape.zPosition = 1
-        addChild(bodyShape)
+    private static func makeProgrammaticBody() -> SKNode {
+        let container = SKNode()
+
+        let body = SKShapeNode(circleOfRadius: CoinNode.size / 2)
+        body.fillColor = SkyColors.tertiaryContainer
+        body.strokeColor = .clear
+        body.zPosition = 1
+        container.addChild(body)
 
         // Inner ring — adds perceived depth without a border line.
         let inner = SKShapeNode(circleOfRadius: CoinNode.size / 2 - 5)
         inner.fillColor = SkyColors.onTertiaryContainer.withAlphaComponent(0.2)
         inner.strokeColor = .clear
         inner.zPosition = 2
-        addChild(inner)
+        container.addChild(inner)
 
         let star = SKLabelNode(text: "★")
         star.fontColor = SkyColors.onTertiaryContainer
@@ -38,7 +51,9 @@ final class CoinNode: SKNode {
         star.verticalAlignmentMode = .center
         star.horizontalAlignmentMode = .center
         star.zPosition = 3
-        addChild(star)
+        container.addChild(star)
+
+        return container
     }
 
     private func configurePhysics() {
@@ -56,7 +71,7 @@ final class CoinNode: SKNode {
             SKAction.scaleX(to: 0.2, duration: 0.5),
             SKAction.scaleX(to: 1.0, duration: 0.5)
         ])
-        bodyShape.run(SKAction.repeatForever(flip))
+        flippable.run(SKAction.repeatForever(flip))
 
         let bob = SKAction.sequence([
             SKAction.moveBy(x: 0, y: 4, duration: 0.6),

@@ -145,12 +145,12 @@ final class MapScene: SKScene {
         switch state {
         case .completed:
             circle.fillColor = SkyColors.skTertiaryContainer
-            let star = SKLabelNode(text: "★")
-            star.fontName = SkyFonts.headlineName
-            star.fontSize = 20
-            star.fontColor = SkyColors.skOnTertiaryContainer
-            star.verticalAlignmentMode = .center
-            star.horizontalAlignmentMode = .center
+            let star = SkySprites.iconNode(
+                named: SkySprites.starFilled,
+                fallbackEmoji: "★",
+                size: 20,
+                color: SkyColors.onTertiaryContainer
+            )
             container.addChild(star)
 
             let badge = SKShapeNode(rectOf: CGSize(width: 130, height: 26), cornerRadius: 13)
@@ -193,18 +193,22 @@ final class MapScene: SKScene {
 
         case .progressionLocked:
             circle.fillColor = SkyColors.skSurfaceContainerHigh
-            let lock = SKLabelNode(text: "🔒")
-            lock.fontSize = 16
-            lock.verticalAlignmentMode = .center
-            lock.horizontalAlignmentMode = .center
+            let lock = SkySprites.iconNode(
+                named: SkySprites.iconLock,
+                fallbackEmoji: "🔒",
+                size: 16,
+                color: SkyColors.onSurfaceVariant
+            )
             container.addChild(lock)
 
         case .paywallLocked:
             circle.fillColor = SkyColors.skSurfaceContainerHigh
-            let lock = SKLabelNode(text: "🔒")
-            lock.fontSize = 16
-            lock.verticalAlignmentMode = .center
-            lock.horizontalAlignmentMode = .center
+            let lock = SkySprites.iconNode(
+                named: SkySprites.iconLock,
+                fallbackEmoji: "🔒",
+                size: 16,
+                color: SkyColors.onSurfaceVariant
+            )
             container.addChild(lock)
 
             let badge = SKShapeNode(rectOf: CGSize(width: 90, height: 26), cornerRadius: 13)
@@ -420,21 +424,24 @@ final class SkyTabBar: SKNode {
         bar.strokeColor = .clear
         addChild(bar)
 
-        let items: [(Tab, String, String)] = [
-            (.hangar, "✈", "HANGAR"),
-            (.shop, "🛍", "SHOP"),
-            (.missions, "📋", "MISSIONS")
+        let items: [(Tab, String, String, String)] = [
+            (.hangar,   SkySprites.tabHangar, "✈", "HANGAR"),
+            (.shop,     SkySprites.tabShop,   "🛍", "SHOP"),
+            (.missions, SkySprites.tabMap,    "📋", "MISSIONS")
         ]
 
-        for (index, (tab, icon, title)) in items.enumerated() {
+        for (index, (tab, spriteName, fallback, title)) in items.enumerated() {
             let group = SKNode()
             group.position = CGPoint(x: -90 + CGFloat(index) * 90, y: 0)
-            let iconLabel = SKLabelNode(text: icon)
-            iconLabel.fontSize = 22
-            iconLabel.verticalAlignmentMode = .center
-            iconLabel.horizontalAlignmentMode = .center
-            iconLabel.position = CGPoint(x: 0, y: 8)
-            group.addChild(iconLabel)
+            let icon = SkySprites.iconNode(
+                named: spriteName,
+                fallbackEmoji: fallback,
+                size: 22,
+                color: tab == active ? SkyColors.primary : SkyColors.onSurfaceVariant
+            )
+            icon.position = CGPoint(x: 0, y: 8)
+            icon.alpha = tab == active ? 1.0 : 0.55
+            group.addChild(icon)
 
             let titleLabel = SKLabelNode(text: title)
             titleLabel.fontName = SkyFonts.headlineName
@@ -445,7 +452,6 @@ final class SkyTabBar: SKNode {
             titleLabel.position = CGPoint(x: 0, y: -14)
             group.addChild(titleLabel)
 
-            iconLabel.alpha = tab == active ? 1.0 : 0.55
             group.name = "tab-\(tab.rawValue)"
             addChild(group)
         }

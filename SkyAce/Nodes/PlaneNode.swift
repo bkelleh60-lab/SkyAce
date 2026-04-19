@@ -51,7 +51,16 @@ final class PlaneNode: SKNode {
     // MARK: - Build
 
     private static func makeBody(for plane: Plane) -> SKNode {
-        // Simple geometric stand-in — replaced by sprite images later.
+        // Prefer the bundled plane sprite; fall back to programmatic art while
+        // final PNGs are still in production.
+        if let sprite = SkySprites.sprite(named: plane.spriteName, size: CGSize(width: 90, height: 45)) {
+            sprite.zPosition = 10
+            return sprite
+        }
+        return makeProgrammaticBody(for: plane)
+    }
+
+    private static func makeProgrammaticBody(for plane: Plane) -> SKNode {
         let container = SKNode()
         container.zPosition = 10
 
@@ -139,6 +148,11 @@ final class PlaneNode: SKNode {
             SKAction.colorize(with: UIColor.systemRed, colorBlendFactor: 0.6, duration: 0.06),
             SKAction.colorize(withColorBlendFactor: 0.0, duration: 0.2)
         ])
+        // Sprite path: colorize the body sprite directly. (No-op on SKShapeNode.)
+        body.run(flash)
+
+        // Programmatic-fallback path: swap fill on each child SKShapeNode so the
+        // colorize behaviour is visible even when the body is a shape container.
         body.enumerateChildNodes(withName: "*") { node, _ in
             if let shape = node as? SKShapeNode {
                 let original = shape.fillColor
@@ -148,7 +162,6 @@ final class PlaneNode: SKNode {
                     SKAction.run { shape.fillColor = original }
                 ]))
             }
-            node.run(flash)
         }
     }
 

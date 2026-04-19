@@ -21,8 +21,10 @@ final class PlaneNode: SKNode {
     // Stats — set from ProgressManager upgrade levels on init.
     let horizontalSpeed: CGFloat
     let climbVelocity: CGFloat
-    let maxUpVelocity: CGFloat   = -400.0   // SpriteKit Y is inverted w.r.t. this value
-    let maxDownVelocity: CGFloat =  500.0
+    // SpriteKit uses positive-Y-up, so the "up" cap is positive and the
+    // "down" cap is negative. Gravity.dy = -5 pulls velocity.dy toward -∞.
+    let maxUpVelocity:   CGFloat =  500.0
+    let maxDownVelocity: CGFloat = -400.0
 
     let plane: Plane
 
@@ -119,8 +121,8 @@ final class PlaneNode: SKNode {
 
     /// Apply a climb impulse. Called every frame while touch is held.
     func climb() {
-        physicsBody?.velocity.dy = max(climbVelocity, maxUpVelocity)
-        // Tilt up.
+        physicsBody?.velocity.dy = min(climbVelocity, maxUpVelocity)
+        // Tilt nose up.
         let targetRotation: CGFloat = 0.25
         body.zRotation += (targetRotation - body.zRotation) * 0.25
     }
@@ -129,12 +131,12 @@ final class PlaneNode: SKNode {
     func update() {
         guard let pb = physicsBody else { return }
         var v = pb.velocity
-        if v.dy < maxUpVelocity   { v.dy = maxUpVelocity }
-        if v.dy > maxDownVelocity { v.dy = maxDownVelocity }
+        if v.dy > maxUpVelocity   { v.dy = maxUpVelocity }
+        if v.dy < maxDownVelocity { v.dy = maxDownVelocity }
         pb.velocity = v
 
-        // Tilt to match falling.
-        if v.dy > 0 {
+        // Tilt nose down while falling.
+        if v.dy < 0 {
             let targetRotation: CGFloat = -0.3
             body.zRotation += (targetRotation - body.zRotation) * 0.08
         }

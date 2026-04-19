@@ -90,7 +90,7 @@ struct UpgradeState {
 
 enum UpgradeFormulas {
     static let baseHorizontalSpeed: CGFloat = 180.0
-    static let baseClimbVelocity:   CGFloat = -320.0
+    static let baseClimbVelocity:   CGFloat = 320.0
 
     static func horizontalSpeed(engineLevel: Int) -> CGFloat {
         return baseHorizontalSpeed * CGFloat(pow(1.15, Float(engineLevel)))

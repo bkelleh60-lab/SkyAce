@@ -39,14 +39,17 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             case .skyIsland:   return UIColor(hex: 0xF5D76A)
             }
         }
-        /// Y of the sprite's CENTER in the scene. Ground-anchored for
-        /// mountains, sky-anchored for the floating island.
+        /// Y of the sprite's CENTER in the scene. Ground-anchored for the
+        /// mountains (compensating for ~18% painted-shadow padding so the
+        /// visible base actually sits on the valley floor), sky-anchored
+        /// for the floating island.
         func centerY(for sceneSize: CGSize) -> CGFloat {
             switch self {
             case .snowDome, .pineGrove, .jaggedPeaks:
-                return 80 + displaySize.height / 2           // sit on the valley floor
+                let shadowPadding = displaySize.height * 0.18
+                return 80 + displaySize.height / 2 - shadowPadding
             case .skyIsland:
-                return sceneSize.height * 0.58               // floats in the sky
+                return sceneSize.height * 0.58
             }
         }
     }
@@ -307,6 +310,8 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             container.addChild(shape)
         }
 
+        // Collectibles sit at zPosition = 1 so they always render in front
+        // of the landmark sprite (zPosition = 0).
         switch landmark {
         case .snowDome:
             // 4 coins in an arc curving over the snowy dome.
@@ -314,6 +319,7 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             for (dx, dy) in arc {
                 let coin = CoinNode()
                 coin.position = CGPoint(x: dx, y: dy)
+                coin.zPosition = 1
                 container.addChild(coin)
             }
 
@@ -323,6 +329,7 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             for (dx, dy) in spots {
                 let coin = CoinNode()
                 coin.position = CGPoint(x: dx, y: dy)
+                coin.zPosition = 1
                 container.addChild(coin)
             }
 
@@ -333,6 +340,7 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
                 let coin = CoinNode()
                 coin.setScale(1.4)
                 coin.position = CGPoint(x: dx, y: dy)
+                coin.zPosition = 1
                 container.addChild(coin)
             }
 
@@ -341,12 +349,14 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             // grass top.
             let ring = RingNode()
             ring.position = CGPoint(x: 0, y: -100)
+            ring.zPosition = 1
             container.addChild(ring)
 
             let topCoins: [(CGFloat, CGFloat)] = [(-40, 90), (40, 90)]
             for (dx, dy) in topCoins {
                 let coin = CoinNode()
                 coin.position = CGPoint(x: dx, y: dy)
+                coin.zPosition = 1
                 container.addChild(coin)
             }
         }

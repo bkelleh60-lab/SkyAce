@@ -58,6 +58,11 @@ final class ObstacleNode: SKNode {
             sprite.size = CGSize(width: width, height: height)
             sprite.centerRect = CGRect(x: 0.25, y: 0.33, width: 0.5, height: 0.34)
             sprite.zPosition = 0
+            // Subtle cool-blue tint distinguishes obstacle pillars from the
+            // pale decorative clouds in the background so players can read
+            // them as "something to dodge" at a glance.
+            sprite.color = UIColor(hex: 0x8FB1D2)
+            sprite.colorBlendFactor = 0.25
             container.addChild(sprite)
         } else {
             // Fallback: stacked overlapping cloud circles.
@@ -79,8 +84,12 @@ final class ObstacleNode: SKNode {
             }
         }
 
-        // Collision-accurate physics body matching the pillar rect.
-        let pb = SKPhysicsBody(rectangleOf: CGSize(width: width, height: height))
+        // Physics body is narrower than the visual so the fluffy cloud
+        // edges (~10pt of soft puff on each side) read as a grace zone.
+        // Only the dense core of the pillar actually hits the plane.
+        let hitboxWidth  = max(20, width - 20)
+        let hitboxHeight = max(20, height - 12)
+        let pb = SKPhysicsBody(rectangleOf: CGSize(width: hitboxWidth, height: hitboxHeight))
         pb.isDynamic = false
         pb.categoryBitMask = PhysicsCategory.obstacle
         pb.contactTestBitMask = PhysicsCategory.plane

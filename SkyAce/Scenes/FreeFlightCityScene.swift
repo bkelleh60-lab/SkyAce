@@ -235,9 +235,13 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func landmarkCenterY(for landmark: Landmark) -> CGFloat {
-        // Building sits with its bottom edge at the top of the ground strip
-        // (y = 80), so center Y = 80 + displaySize.height / 2.
-        return 80 + landmark.displaySize.height / 2
+        // Each Stitch landmark sprite has a painted drop-shadow occupying
+        // roughly the bottom 18% of the PNG. Anchoring the PNG's bottom
+        // edge to the ground strip makes the *visible* building float ~18%
+        // above the ground. Shifting down by that padding lands the
+        // subject's visual base firmly on the ground.
+        let shadowPadding = landmark.displaySize.height * 0.18
+        return 80 + landmark.displaySize.height / 2 - shadowPadding
     }
 
     private func buildLandmarkNode(_ landmark: Landmark) -> SKNode {
@@ -256,7 +260,9 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
             container.addChild(shape)
         }
 
-        // Attach collectibles specific to each landmark.
+        // Attach collectibles specific to each landmark. Each collectible
+        // gets zPosition = 1 so it always renders in front of the landmark
+        // sprite (zPosition = 0) — no more half-hidden coins.
         switch landmark {
         case .blueTower:
             // 5 coins in a gentle S-curve along the right side of the tower.
@@ -265,6 +271,7 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
                 let xOffset: CGFloat = (i % 2 == 0) ? 80 : 60
                 let coin = CoinNode()
                 coin.position = CGPoint(x: xOffset, y: y)
+                coin.zPosition = 1
                 container.addChild(coin)
             }
 
@@ -273,15 +280,18 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
             let coin = CoinNode()
             coin.position = CGPoint(x: 0, y: -70)
             coin.setScale(1.3)
+            coin.zPosition = 1
             container.addChild(coin)
 
         case .clockTower:
             // Ring at the clock face + bonus coin inside it.
             let ring = RingNode()
             ring.position = CGPoint(x: 0, y: 60)
+            ring.zPosition = 1
             container.addChild(ring)
             let coin = CoinNode()
             coin.position = CGPoint(x: 0, y: 60)
+            coin.zPosition = 2   // sits in front of the ring
             container.addChild(coin)
 
         case .flowerHouse:
@@ -290,6 +300,7 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
             for (dx, dy) in positions {
                 let coin = CoinNode()
                 coin.position = CGPoint(x: dx, y: dy)
+                coin.zPosition = 1
                 container.addChild(coin)
             }
         }

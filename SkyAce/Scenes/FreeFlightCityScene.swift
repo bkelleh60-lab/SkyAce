@@ -51,10 +51,14 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     private var lastUpdateTime: TimeInterval = 0
 
     // Parallax + decor
-    private var distantSilhouettes = SKNode()
-    private var groundStrip        = SKNode()
-    private var birdLayer          = SKNode()
-    private var landmarkLayer      = SKNode()
+    private var farBackground = SKNode()   // Stitch cityscape PNG, slow scroll
+    private var nearForeground = SKNode()  // close warm-tone buildings, fast scroll
+    private var birdLayer      = SKNode()
+    private var landmarkLayer  = SKNode()
+
+    // Tile geometry for the mirror-pair scrolling loop.
+    private var farTileWidth: CGFloat = 0
+    private var nearTileWidth: CGFloat = 0
 
     // Landmark spawn state
     private var lastLandmarkSpawn: TimeInterval = 0
@@ -72,16 +76,16 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     // MARK: - Lifecycle
 
     override func didMove(to view: SKView) {
-        backgroundColor = UIColor(hex: 0xFF9A6C)
+        backgroundColor = UIColor(hex: 0xCDE5FF)
         physicsWorld.gravity = CGVector(dx: 0, dy: -5.0)
         physicsWorld.contactDelegate = self
         topSafeInset = view.safeAreaInsets.top
         SkyHaptics.prepare()
 
         addChild(worldNode)
-        buildSkyGradient()
-        buildDistantSilhouettes()
-        buildGroundStrip()
+        buildSkyFill()
+        buildFarCityBackground()
+        buildNearForeground()
         buildBirds()
         buildLandmarkLayer()
         buildPlane()
@@ -90,43 +94,133 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Background layers
 
-    private func buildSkyGradient() {
+    private func buildSkyFill() {
+        // Full-screen sky gradient anchored behind the painted city layer.
+        // The top colour matches the top pixel of the cityscape PNG so the
+        // seam between painted sky and gradient sky is imperceptible.
         let tex = SKGradientBackgroundNode.gradientTexture(
             size: size,
-            top: UIColor(hex: 0xFF9A6C),
-            bottom: UIColor(hex: 0xFFD4A3)
+            top: UIColor(hex: 0xE8F2FF),
+            bottom: UIColor(hex: 0xCDE5FF)
         )
         let bg = SKSpriteNode(texture: tex, size: size)
         bg.anchorPoint = .zero
-        bg.zPosition = -100
+        bg.zPosition = -110
         worldNode.addChild(bg)
     }
 
-    private func buildDistantSilhouettes() {
-        distantSilhouettes.zPosition = -80
-        worldNode.addChild(distantSilhouettes)
-        for _ in 0..<12 {
-            let h = CGFloat.random(in: 40...100)
-            let w = CGFloat.random(in: 40...80)
-            let rect = SKShapeNode(rectOf: CGSize(width: w, height: h), cornerRadius: 3)
-            rect.fillColor = UIColor(hex: 0x6F3A00).withAlphaComponent(0.35)
-            rect.strokeColor = .clear
-            rect.position = CGPoint(
-                x: CGFloat.random(in: 0...size.width * 1.5),
-                y: 120 + h / 2
+    /// Slow-scrolling far layer: the Stitch-generated cityscape PNG, tiled
+    /// horizontally using a mirror-pair pattern so every tile seam is pixel
+    /// identical (no visible break during scroll).
+    private func buildFarCityBackground() {
+        farBackground.zPosition = -100
+        worldNode.addChild(farBackground)
+
+        guard let tex = SkySprites.texture(named: SkySprites.citySkylineBG) else {
+            // Asset missing — fall back to a neutral mid-sky strip so the
+            // scene still renders without the bright peach placeholder.
+            let strip = SKShapeNode(rectOf: CGSize(width: size.width * 4, height: 120))
+            strip.fillColor = UIColor(hex: 0x9FCEF5)
+            strip.strokeColor = .clear
+            strip.position = CGPoint(x: size.width * 2, y: 60)
+            farBackground.addChild(strip)
+            farTileWidth = size.width
+            return
+        }
+
+        let texSize = tex.size()
+        let targetHeight = size.height * 0.55
+        let targetWidth = targetHeight * (texSize.width / texSize.height)
+        farTileWidth = targetWidth
+
+        // 4 tiles (even count) so the mirror parity survives wrap-around.
+        // Pattern: [A][mirror(A)][A][mirror(A)]. Seams match because:
+        //   - A's right edge pixel == mirror(A)'s left edge pixel (both are
+        //     the rightmost pixel of the source image).
+        //   - mirror(A)'s right edge pixel == A's left edge pixel.
+        let tileCount = 4
+        for i in 0..<tileCount {
+            let tile = SKSpriteNode(
+                texture: tex,
+                size: CGSize(width: targetWidth, height: targetHeight)
             )
-            distantSilhouettes.addChild(rect)
+            tile.anchorPoint = CGPoint(x: 0.5, y: 0)
+            tile.position = CGPoint(
+                x: CGFloat(i) * targetWidth + targetWidth / 2,
+                y: 0
+            )
+            if i % 2 == 1 { tile.xScale = -1 }
+            farBackground.addChild(tile)
         }
     }
 
-    private func buildGroundStrip() {
-        groundStrip.zPosition = -30
-        worldNode.addChild(groundStrip)
-        let base = SKShapeNode(rectOf: CGSize(width: size.width * 3, height: 80))
-        base.fillColor = UIColor(hex: 0x5B2A00)
-        base.strokeColor = .clear
-        base.position = CGPoint(x: size.width, y: 40)
-        groundStrip.addChild(base)
+    /// Fast-scrolling near layer: a continuous grass strip plus warm-tone
+    /// foreground buildings. The content is laid out deterministically across
+    /// `[0, 2 * spread)` as two identical copies so every child can share a
+    /// single wrap distance of `2 * spread` without visual jumps.
+    private func buildNearForeground() {
+        nearForeground.zPosition = -50
+        worldNode.addChild(nearForeground)
+
+        let spread = size.width * 2
+        nearTileWidth = spread
+
+        // Grass strip: 12 short segments per copy form a seamless ribbon.
+        // Individual segments keep every child a comparable size so they
+        // share the wrap threshold used by the buildings.
+        let segmentsPerCopy = 12
+        let segmentWidth = spread / CGFloat(segmentsPerCopy)
+        for copy in 0..<2 {
+            let baseX = CGFloat(copy) * spread
+            for s in 0..<segmentsPerCopy {
+                let seg = SKShapeNode(
+                    rectOf: CGSize(width: segmentWidth + 1, height: 14)
+                )
+                seg.fillColor = UIColor(hex: 0x4FA64F)
+                seg.strokeColor = .clear
+                seg.position = CGPoint(
+                    x: baseX + CGFloat(s) * segmentWidth + segmentWidth / 2,
+                    y: 7
+                )
+                nearForeground.addChild(seg)
+            }
+        }
+
+        // Warm-tone close-up buildings. Heights are capped at 64 so tops stay
+        // below the plane clamp (min y = 140). Fractions are deterministic
+        // across copies so a building's post-wrap neighbour looks identical
+        // to its pre-wrap neighbour.
+        let palette: [UIColor] = [
+            UIColor(hex: 0xC48660),
+            UIColor(hex: 0xA8704A),
+            UIColor(hex: 0xE0A97A),
+            UIColor(hex: 0x8C5A3A)
+        ]
+        struct Slot { let f: CGFloat; let w: CGFloat; let h: CGFloat; let c: Int }
+        let slots: [Slot] = [
+            Slot(f: 0.075, w: 60, h: 46, c: 0),
+            Slot(f: 0.225, w: 78, h: 58, c: 1),
+            Slot(f: 0.375, w: 54, h: 40, c: 2),
+            Slot(f: 0.525, w: 70, h: 52, c: 3),
+            Slot(f: 0.675, w: 56, h: 44, c: 0),
+            Slot(f: 0.875, w: 82, h: 62, c: 1)
+        ]
+        for copy in 0..<2 {
+            let baseX = CGFloat(copy) * spread
+            for slot in slots {
+                let rect = SKShapeNode(
+                    rectOf: CGSize(width: slot.w, height: slot.h),
+                    cornerRadius: 4
+                )
+                rect.fillColor = palette[slot.c]
+                rect.strokeColor = .clear
+                rect.position = CGPoint(
+                    x: baseX + slot.f * spread,
+                    y: 14 + slot.h / 2
+                )
+                nearForeground.addChild(rect)
+            }
+        }
     }
 
     private func buildBirds() {
@@ -240,11 +334,12 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     private func landmarkCenterY(for landmark: Landmark) -> CGFloat {
         // Each Stitch landmark sprite has a painted drop-shadow occupying
         // roughly the bottom 18% of the PNG. Anchoring the PNG's bottom
-        // edge to the ground strip makes the *visible* building float ~18%
-        // above the ground. Shifting down by that padding lands the
-        // subject's visual base firmly on the ground.
+        // edge to the grass strip (y = 14) makes the *visible* building
+        // float ~18% above the grass. Shifting down by that padding lands
+        // the subject's visual base firmly on the grass.
+        let groundBaseline: CGFloat = 14
         let shadowPadding = landmark.displaySize.height * 0.18
-        return 80 + landmark.displaySize.height / 2 - shadowPadding
+        return groundBaseline + landmark.displaySize.height / 2 - shadowPadding
     }
 
     private func buildLandmarkNode(_ landmark: Landmark) -> SKNode {
@@ -326,18 +421,42 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         plane.position.y = min(size.height - 50, max(140, plane.position.y))
         plane.position.x += (size.width * 0.28 - plane.position.x) * 0.12
 
-        // Parallax drift for the back layers (landmarks move themselves via SKAction).
-        scrollLayer(distantSilhouettes, speed: 25, delta: delta)
-        scrollLayer(groundStrip, speed: 200, delta: delta)
+        // Parallax drift (landmarks move themselves via SKAction).
+        // Far layer scrolls slowly for depth; near layer scrolls fast so the
+        // foreground blurs past the plane.
+        scrollLoop(
+            farBackground,
+            speed: 30,
+            totalWidth: farTileWidth * 4,
+            wrapMargin: farTileWidth / 2,
+            delta: delta
+        )
+        scrollLoop(
+            nearForeground,
+            speed: 180,
+            totalWidth: nearTileWidth * 2,
+            wrapMargin: 120,
+            delta: delta
+        )
 
         spawnLandmarkIfDue(currentTime: currentTime)
     }
 
-    private func scrollLayer(_ layer: SKNode, speed: CGFloat, delta: TimeInterval) {
+    /// Scrolls every child left by `speed * delta`. When a child drops past
+    /// `-wrapMargin`, it jumps `totalWidth` to the right. Using the same
+    /// `totalWidth` for every child preserves relative spacing across wraps,
+    /// which keeps the far layer's mirror-tile seam pattern pixel-perfect and
+    /// keeps the near layer's pseudo-random building spacing stable.
+    private func scrollLoop(_ layer: SKNode,
+                            speed: CGFloat,
+                            totalWidth: CGFloat,
+                            wrapMargin: CGFloat,
+                            delta: TimeInterval) {
+        guard totalWidth > 0 else { return }
         layer.children.forEach { node in
             node.position.x -= speed * CGFloat(delta)
-            if node.position.x < -200 {
-                node.position.x += size.width * 2 + 200
+            if node.position.x < -wrapMargin {
+                node.position.x += totalWidth
             }
         }
     }

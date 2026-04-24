@@ -262,6 +262,7 @@ enum SkySprites {
     static let cityHouseRed      = "city_house_red"
     static let cityClockTower    = "city_clock_tower"
     static let cityFlowerHouse   = "city_flower_house"
+    static let citySkylineBG     = "city_skyline_bg"
 
     // Free Flight Mountain landmarks (Resources/Sprites/).
     static let mountainSnowDome    = "mountain_snow_dome"

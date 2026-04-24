@@ -10,7 +10,11 @@ final class GameViewController: UIViewController {
     override func loadView() {
         let view = SKView(frame: UIScreen.main.bounds)
         view.backgroundColor = SkyColors.surface
-        view.ignoresSiblingOrder = true
+        // Render siblings in add-order. Our UI composites (bento tiles, tab
+        // bar buttons, coin pill, etc.) stack background/icon/label at the
+        // same zPosition — with sibling order ignored, SpriteKit occasionally
+        // drew the label beneath its background, producing blank buttons.
+        view.ignoresSiblingOrder = false
         // Performance overlays — disabled for shipping builds.
         #if DEBUG
         view.showsFPS = false

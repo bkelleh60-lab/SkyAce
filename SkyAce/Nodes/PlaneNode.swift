@@ -106,10 +106,11 @@ final class PlaneNode: SKNode {
     }
 
     private func configurePhysics() {
-        // Hitbox is intentionally much smaller than the 90x45 visual sprite —
-        // arcade-style grace zone. A wingtip brushing a cloud should miss;
-        // you only crash when the plane's body is clearly inside the pillar.
-        let pb = SKPhysicsBody(rectangleOf: CGSize(width: 32, height: 14))
+        // Fuselage-only hitbox, ~60% of the 90x45 visual sprite. Excludes
+        // wingtips and the nose so near-misses read as near-misses and only
+        // clear body-on-obstacle contact registers as a crash.
+        let hitboxSize = CGSize(width: 54, height: 27)
+        let pb = SKPhysicsBody(rectangleOf: hitboxSize)
         pb.mass = 0.1
         pb.affectedByGravity = true
         pb.allowsRotation = false
@@ -118,6 +119,10 @@ final class PlaneNode: SKNode {
         pb.contactTestBitMask = PhysicsCategory.obstacle | PhysicsCategory.coin | PhysicsCategory.ring | PhysicsCategory.boundary
         pb.collisionBitMask = 0   // detection only — scene resolves effects
         self.physicsBody = pb
+
+        #if DEBUG
+        print("[PlaneNode] physics body size: \(hitboxSize.width) x \(hitboxSize.height) (60% of 90x45 sprite)")
+        #endif
     }
 
     // MARK: - Control

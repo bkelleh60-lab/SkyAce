@@ -49,46 +49,27 @@ final class ObstacleNode: SKNode {
     private func makePillar(width: CGFloat, height: CGFloat, isTop: Bool) -> SKNode {
         let container = SKNode()
 
-        // Prefer bundled cloud sprites for the correct gap-facing flat edge.
-        // 9-slice (`centerRect`) keeps the top/bottom caps undistorted while
-        // the middle third stretches vertically to fill tall pillars.
-        let spriteName = isTop ? SkySprites.cloudPillarTop : SkySprites.cloudPillarBot
-        if let tex = SkySprites.texture(named: spriteName) {
-            let sprite = SKSpriteNode(texture: tex)
-            sprite.size = CGSize(width: width, height: height)
-            sprite.centerRect = CGRect(x: 0.25, y: 0.33, width: 0.5, height: 0.34)
-            sprite.zPosition = 0
-            // Subtle cool-blue tint distinguishes obstacle pillars from the
-            // pale decorative clouds in the background so players can read
-            // them as "something to dodge" at a glance.
-            sprite.color = UIColor(hex: 0x8FB1D2)
-            sprite.colorBlendFactor = 0.25
-            container.addChild(sprite)
-        } else {
-            // Fallback: stacked overlapping cloud circles.
-            let base = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: width / 2)
-            base.fillColor = SkyColors.surfaceContainerHighest
-            base.strokeColor = .clear
-            base.zPosition = 0
-            container.addChild(base)
+        // Hazard-striped barrier: bright red base with yellow diagonal warning
+        // stripes. Visual language a kid recognizes instantly as "do not touch."
+        // Top and bottom variants render identically so the rule is consistent.
+        let cornerRadius: CGFloat = 10
+        let rectSize = CGSize(width: width, height: height)
 
-            let puffCount = max(3, Int(height / 40))
-            for i in 0..<puffCount {
-                let puff = SKShapeNode(circleOfRadius: width / 2 + 4)
-                puff.fillColor = SkyColors.surfaceContainerHigh
-                puff.strokeColor = .clear
-                let t = (CGFloat(i) / CGFloat(max(1, puffCount - 1))) - 0.5
-                puff.position = CGPoint(x: 0, y: t * height * 0.9)
-                puff.zPosition = -1
-                container.addChild(puff)
-            }
-        }
+        let base = SKShapeNode(rectOf: rectSize, cornerRadius: cornerRadius)
+        base.fillColor = UIColor(red: 0.93, green: 0.20, blue: 0.15, alpha: 1.0)
+        base.strokeColor = UIColor(red: 0.55, green: 0.05, blue: 0.05, alpha: 1.0)
+        base.lineWidth = 2
+        base.zPosition = 0
+        container.addChild(base)
 
-        // Physics body is narrower than the visual so the fluffy cloud
-        // edges (~10pt of soft puff on each side) read as a grace zone.
-        // Only the dense core of the pillar actually hits the plane.
-        let hitboxWidth  = max(20, width - 20)
-        let hitboxHeight = max(20, height - 12)
+        let stripes = makeDiagonalStripes(size: rectSize, cornerRadius: cornerRadius)
+        stripes.zPosition = 1
+        container.addChild(stripes)
+
+        // Physics body inset ~20% from visible edges on both axes, so the plane
+        // only registers a crash when clearly inside the barrier.
+        let hitboxWidth  = max(20, width  * 0.8)
+        let hitboxHeight = max(20, height * 0.8)
         let pb = SKPhysicsBody(rectangleOf: CGSize(width: hitboxWidth, height: hitboxHeight))
         pb.isDynamic = false
         pb.categoryBitMask = PhysicsCategory.obstacle
@@ -96,6 +77,47 @@ final class ObstacleNode: SKNode {
         pb.collisionBitMask = 0
         container.physicsBody = pb
 
+        #if DEBUG
+        print(String(format: "[ObstacleNode] pillar visual: %.0fx%.0f  hitbox: %.0fx%.0f (80%% inset, %@)",
+                     width, height, hitboxWidth, hitboxHeight, isTop ? "top" : "bot"))
+        #endif
+
         return container
+    }
+
+    /// Yellow diagonal warning stripes clipped to a rounded rectangle. Stripes
+    /// are drawn as rotated bars that overrun the bounds, then cropped by the
+    /// rounded-rect mask so they hug the same silhouette as the red base.
+    private func makeDiagonalStripes(size: CGSize, cornerRadius: CGFloat) -> SKCropNode {
+        let crop = SKCropNode()
+
+        let mask = SKShapeNode(rectOf: size, cornerRadius: cornerRadius)
+        mask.fillColor = .white
+        mask.strokeColor = .clear
+        crop.maskNode = mask
+
+        let yellow = UIColor(red: 1.0, green: 0.84, blue: 0.17, alpha: 1.0)
+        let stripeSpacing: CGFloat = 22
+        let stripeWidth:   CGFloat = 10
+        let span = max(size.width, size.height) * 1.6
+        let step = stripeSpacing + stripeWidth
+        let count = Int((span * 2) / step) + 2
+
+        for i in 0..<count {
+            let x = -span + CGFloat(i) * step
+            let path = CGMutablePath()
+            path.move(to:    CGPoint(x: x,                  y: -span))
+            path.addLine(to: CGPoint(x: x + stripeWidth,    y: -span))
+            path.addLine(to: CGPoint(x: x + stripeWidth + span * 2, y: span))
+            path.addLine(to: CGPoint(x: x + span * 2,       y: span))
+            path.closeSubpath()
+
+            let stripe = SKShapeNode(path: path)
+            stripe.fillColor = yellow
+            stripe.strokeColor = .clear
+            crop.addChild(stripe)
+        }
+
+        return crop
     }
 }

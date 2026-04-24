@@ -213,7 +213,10 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func buildPlane() {
-        plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID)
+        // Free-flight baseline: 2x visual scale so the plane reads prominent
+        // against the far peaks and valley floor. Hitbox stays at the
+        // PlaneNode defaults — scale affects only the rendered sprite.
+        plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID, visualScale: 2.0)
         plane.position = CGPoint(x: size.width * 0.28, y: size.height / 2)
         plane.zPosition = 10
         // Sandbox: keep coin/ring contact but drop obstacle/boundary so
@@ -373,7 +376,9 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         if isTouching { plane.climb() }
         plane.update()
 
-        plane.position.y = min(size.height - 40, max(160, plane.position.y))
+        // Top margin bumped to 50pt to keep the 2x-scaled sprite (half-height
+        // ~45pt) fully on-screen at the upper extreme.
+        plane.position.y = min(size.height - 50, max(160, plane.position.y))
         plane.position.x += (size.width * 0.28 - plane.position.x) * 0.12
 
         scrollLayer(farPeaks, speed: 20, delta: delta)

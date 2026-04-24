@@ -152,9 +152,8 @@ final class MenuScene: SKScene {
     // MARK: - Hero plane (user's selected, tilted up 12°)
 
     private func buildHeroPlane() {
-        let plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID)
+        let plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID, visualScale: 2.0)
         plane.physicsBody = nil
-        plane.setScale(2.0)
         plane.zRotation = CGFloat.pi / 180 * 12
         plane.position = CGPoint(x: size.width / 2, y: size.height * 0.60)
         plane.zPosition = 10

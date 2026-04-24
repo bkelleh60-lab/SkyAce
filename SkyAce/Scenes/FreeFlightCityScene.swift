@@ -164,7 +164,10 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func buildPlane() {
-        plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID)
+        // Free-flight baseline: 2x visual scale so the plane reads big against
+        // the distant skyline silhouettes (40-100pt tall) and the 80pt ground
+        // strip. Hitbox is unchanged — scaling applies to the sprite only.
+        plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID, visualScale: 2.0)
         plane.position = CGPoint(x: size.width * 0.28, y: size.height / 2)
         plane.zPosition = 10
         // Sandbox: physics body keeps coin/ring contact detection but
@@ -318,7 +321,9 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         plane.update()
 
         // Clamp plane vertically so it can't fly off-screen top/bottom.
-        plane.position.y = min(size.height - 40, max(140, plane.position.y))
+        // Top margin bumped to 50pt to keep the 2x-scaled sprite (half-height
+        // ~45pt) fully on-screen at the upper extreme.
+        plane.position.y = min(size.height - 50, max(140, plane.position.y))
         plane.position.x += (size.width * 0.28 - plane.position.x) * 0.12
 
         // Parallax drift for the back layers (landmarks move themselves via SKAction).

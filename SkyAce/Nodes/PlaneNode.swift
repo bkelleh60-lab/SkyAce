@@ -32,7 +32,10 @@ final class PlaneNode: SKNode {
 
     // MARK: - Init
 
-    init(planeID: String) {
+    /// - Parameter visualScale: multiplies the rendered sprite size only.
+    ///   Applied to the internal `body` child so the physics body on `self`
+    ///   keeps its original local-space dimensions — collisions do not scale.
+    init(planeID: String, visualScale: CGFloat = 1.0) {
         let plane = PlaneCatalog.plane(forID: planeID)
         self.plane = plane
 
@@ -44,6 +47,7 @@ final class PlaneNode: SKNode {
         self.body = PlaneNode.makeBody(for: plane)
         super.init()
 
+        body.setScale(visualScale)
         addChild(body)
         configurePhysics()
     }

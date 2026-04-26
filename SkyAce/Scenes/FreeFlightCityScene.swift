@@ -73,6 +73,19 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     // Safe area (populated in didMove)
     private var topSafeInset: CGFloat = 0
 
+    // Flyable Y band — mirrors the clamp applied to the plane each frame in
+    // update(). Collectibles must sit inside this band (with a buffer above
+    // the floor) so the plane can actually fly to and through them. Without
+    // the buffer, coins/rings end up below the plane's lower clamp and
+    // either auto-collect on entry or stay forever out of reach.
+    private let planeMinY: CGFloat = 140
+    private var planeMaxY: CGFloat { size.height - 50 }
+    /// Smallest absolute Y a coin or ring is allowed to sit at. 30pt above
+    /// `planeMinY` keeps the plane's hitbox top (~planeMinY + 13.5) clear of
+    /// the collectible's bottom edge, so the plane has to actively climb to
+    /// collect rather than scraping the floor.
+    private var collectibleMinY: CGFloat { planeMinY + 30 }
+
     // MARK: - Lifecycle
 
     override func didMove(to view: SKView) {
@@ -384,41 +397,71 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
 
         // Attach collectibles specific to each landmark. Each collectible
         // gets zPosition = 1 so it always renders in front of the landmark
-        // sprite (zPosition = 0) — no more half-hidden coins.
+        // sprite (zPosition = 0).
+        //
+        // Y offsets are landmark-relative; they're chosen so each
+        // collectible's *absolute* Y (= landmarkCenterY + offset.y) lands
+        // inside the plane's flyable band — i.e. >= collectibleMinY (170).
+        // The hand-picked numbers below are validated by the
+        // `assertCollectiblesInFlyableBand` debug check at the bottom of
+        // this method, so any future tweak that drops one back below the
+        // floor will trip in DEBUG builds.
+        let landmarkCenter = landmarkCenterY(for: landmark)
         switch landmark {
         case .blueTower:
-            // 5 coins in a gentle S-curve along the right side of the tower.
-            let ys: [CGFloat] = [100, 50, 0, -50, -100]
-            for (i, y) in ys.enumerated() {
-                let xOffset: CGFloat = (i % 2 == 0) ? 80 : 60
+            // 5 coins climbing the tower's right side in a gentle S-curve.
+            // Tower spans absolute y ≈ -34..235 (landmarkCenter ≈ 100, h=270).
+            // Offsets keep every coin between the lower flyable boundary
+            // (abs y = 170) and just above the rooftop (abs y ≈ 310).
+            let placements: [(x: CGFloat, y: CGFloat)] = [
+                (80,  70),   // abs y ≈ 170 — bottom of the climb
+                (60, 105),
+                (80, 140),
+                (60, 175),
+                (80, 210)    // abs y ≈ 310 — floats just above the roof
+            ]
+            for (dx, dy) in placements {
                 let coin = CoinNode()
-                coin.position = CGPoint(x: xOffset, y: y)
+                coin.position = CGPoint(x: dx, y: dy)
                 coin.zPosition = 1
                 container.addChild(coin)
             }
 
         case .redHouse:
-            // Single coin floating at the doorway.
+            // Single coin floating above the chimney. The original "doorway"
+            // placement (offset y = -70 → abs y = 8) sat on the grass,
+            // entirely below the plane's lower clamp.
             let coin = CoinNode()
-            coin.position = CGPoint(x: 0, y: -70)
+            coin.position = CGPoint(x: 0, y: 130)   // abs y ≈ 208
             coin.setScale(1.3)
             coin.zPosition = 1
             container.addChild(coin)
 
         case .clockTower:
-            // Ring at the clock face + bonus coin inside it.
+            // Ring centred near the top of the tower with a bonus coin
+            // nested in it. Lifted from offset 60 (abs y ≈ 160 — ring
+            // bottom at 118, well below the plane floor) to offset 110 so
+            // the ring's bottom edge (abs y ≈ 168) sits clear of the
+            // plane's hitbox-top at floor (~153.5). The plane has to
+            // actively climb to fly through the centre at abs y ≈ 210
+            // rather than auto-collect from the floor.
             let ring = RingNode()
-            ring.position = CGPoint(x: 0, y: 60)
+            ring.position = CGPoint(x: 0, y: 110)
             ring.zPosition = 1
             container.addChild(ring)
             let coin = CoinNode()
-            coin.position = CGPoint(x: 0, y: 60)
+            coin.position = CGPoint(x: 0, y: 110)
             coin.zPosition = 2   // sits in front of the ring
             container.addChild(coin)
 
         case .flowerHouse:
-            // 4 coins floating above the roof garden.
-            let positions: [(CGFloat, CGFloat)] = [(-50, 85), (-15, 100), (20, 95), (55, 80)]
+            // 4 coins floating above the roof garden. Original offsets
+            // (80–100) put them at abs y 158–178, low enough that the
+            // plane could collect them while parked at the floor. Bumped
+            // ~25pt to clear the lower flyable boundary (abs y ≥ 183).
+            let positions: [(CGFloat, CGFloat)] = [
+                (-50, 110), (-15, 125), (20, 120), (55, 105)
+            ]
             for (dx, dy) in positions {
                 let coin = CoinNode()
                 coin.position = CGPoint(x: dx, y: dy)
@@ -427,7 +470,28 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
             }
         }
 
+        assertCollectiblesInFlyableBand(container, landmarkCenterY: landmarkCenter)
         return container
+    }
+
+    /// DEBUG-only sanity check: every coin/ring inside `container` must sit
+    /// at an absolute Y >= `collectibleMinY`. Catches future regressions
+    /// where someone tweaks an offset and accidentally drops a collectible
+    /// back into the unreachable floor zone.
+    private func assertCollectiblesInFlyableBand(_ container: SKNode,
+                                                 landmarkCenterY: CGFloat) {
+        #if DEBUG
+        for child in container.children {
+            guard child is CoinNode || child is RingNode else { continue }
+            let absY = landmarkCenterY + child.position.y
+            assert(
+                absY >= collectibleMinY,
+                "Collectible at offset y=\(child.position.y) → abs y=\(absY) " +
+                "is below collectibleMinY=\(collectibleMinY). The plane " +
+                "can't reach it — raise the offset."
+            )
+        }
+        #endif
     }
 
     // MARK: - Update
@@ -440,9 +504,11 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         plane.update()
 
         // Clamp plane vertically so it can't fly off-screen top/bottom.
-        // Top margin bumped to 50pt to keep the 2x-scaled sprite (half-height
-        // ~45pt) fully on-screen at the upper extreme.
-        plane.position.y = min(size.height - 50, max(140, plane.position.y))
+        // Top margin keeps the 2x-scaled sprite (half-height ~45pt) fully
+        // on-screen at the upper extreme; bottom margin keeps the plane
+        // above the foreground buildings (tops cap at y≈78) with room to
+        // spare — collectible placement keys off this same band.
+        plane.position.y = min(planeMaxY, max(planeMinY, plane.position.y))
         plane.position.x += (size.width * 0.28 - plane.position.x) * 0.12
 
         // Parallax drift (landmarks move themselves via SKAction).

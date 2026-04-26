@@ -84,6 +84,7 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
 
         addChild(worldNode)
         buildSkyFill()
+        buildSkyTopBlend()
         buildFarCityBackground()
         buildNearForeground()
         buildBirds()
@@ -107,6 +108,29 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         bg.anchorPoint = .zero
         bg.zPosition = -110
         worldNode.addChild(bg)
+    }
+
+    /// Soft blend along the top edge of the scene. The SKView's UIKit
+    /// background is `SkyColors.surface` (0xF2F7FF) — a touch lighter than
+    /// the sky gradient's top colour (0xE8F2FF) — so any sliver of the
+    /// view that ends up visible above the scene reads as a hard step.
+    /// A short vertical gradient overlay fades the sky up to the surface
+    /// colour so the join is imperceptible regardless of device chrome.
+    private func buildSkyTopBlend() {
+        // ~12% of scene height, clamped so the band stays a soft seam rather
+        // than visibly compressing the sky on small or very tall devices.
+        let blendHeight = min(max(size.height * 0.12, 80), 160)
+        let blendSize = CGSize(width: size.width, height: blendHeight)
+        let tex = SKGradientBackgroundNode.gradientTexture(
+            size: blendSize,
+            top: SkyColors.skSurface,
+            bottom: UIColor(hex: 0xE8F2FF)
+        )
+        let blend = SKSpriteNode(texture: tex, size: blendSize)
+        blend.anchorPoint = CGPoint(x: 0, y: 1)
+        blend.position = CGPoint(x: 0, y: size.height)
+        blend.zPosition = -109
+        worldNode.addChild(blend)
     }
 
     /// Slow-scrolling far layer: the Stitch-generated cityscape PNG, tiled

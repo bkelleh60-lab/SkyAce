@@ -66,12 +66,6 @@ final class GameState {
         didWin = won
     }
 
-    /// Called when the player reaches the "end of the course" marker for
-    /// obstacle courses.
-    func finishObstacleCourse() {
-        finish(won: true)
-    }
-
     // MARK: - Derived
 
     private func checkCoinChainWin() {

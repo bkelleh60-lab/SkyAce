@@ -4,9 +4,7 @@ import SpriteKit
 ///
 /// The plane drifts across a dawn-coloured city skyline while 4 distinctive
 /// hero landmarks spawn one at a time in random order. Each landmark carries
-/// its own coin chain or ring; collecting anything from a landmark fills
-/// its stamp slot. All 4 stamps = +100 coin bonus + confetti celebration,
-/// then the stamp card resets for another lap.
+/// its own coin chain or ring for the player to collect.
 ///
 /// No fail state: the plane can't collide with buildings or boundaries —
 /// only with coins and rings (which trigger collection, not damage).
@@ -66,9 +64,8 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     private let landmarkScrollSpeed: CGFloat = 110
     private var lastSpawnedLandmark: Landmark?
 
-    // Stamps
-    private var collectedStamps: Set<Landmark> = []
-    private var stampCardHUD: StampCardHUD!
+    // Currency HUD (top-right).
+    private var currencyHUD: CurrencyHUD!
 
     // Ring speed boost.
     //
@@ -347,14 +344,16 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         label.zPosition = 200
         addChild(label)
 
-        // Stamp card in the upper-right.
-        stampCardHUD = StampCardHUD(slotCount: Landmark.allCases.count)
-        stampCardHUD.position = CGPoint(
-            x: size.width - stampCardHUD.cardSize.width / 2 - 12,
-            y: barCenterY
-        )
-        stampCardHUD.zPosition = 200
-        addChild(stampCardHUD)
+        // Currency HUD in the upper-right. Available width is whatever sits
+        // between the title label's right edge (with breathing room) and a
+        // 12pt margin from the screen edge.
+        currencyHUD = CurrencyHUD()
+        let rightMargin: CGFloat = 12
+        let availableWidth = max(120, size.width - 220 - rightMargin)
+        currencyHUD.layout(maxWidth: availableWidth)
+        currencyHUD.position = CGPoint(x: size.width - rightMargin, y: barCenterY)
+        currencyHUD.zPosition = 200
+        addChild(currencyHUD)
     }
 
     // MARK: - Landmark spawn
@@ -395,7 +394,6 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
 
     private func buildLandmarkNode(_ landmark: Landmark) -> SKNode {
         let container = SKNode()
-        container.name = "landmark-\(landmark.rawValue)"
 
         let size = landmark.displaySize
         if let sprite = SkySprites.sprite(named: landmark.spriteName, size: size) {
@@ -605,9 +603,9 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
             if let coin = otherBody.node as? CoinNode {
                 coin.collect()
                 ProgressManager.shared.addCoins(1)
+                CurrencyManager.shared.addCoins(1)
                 coin.run(AudioManager.shared.sfxAction(SkySFX.coinCollect))
                 SkyHaptics.collect()
-                stampCollectedAncestor(of: coin)
             }
         case PhysicsCategory.ring:
             if let ring = otherBody.node as? RingNode {
@@ -620,63 +618,14 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
                     SKAction.removeFromParent()
                 ]))
                 ProgressManager.shared.addCoins(5)
+                CurrencyManager.shared.addRings(1)
                 ring.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
                 SkyHaptics.collect()
-                stampCollectedAncestor(of: ring)
                 triggerSpeedBoost()
             }
         default:
             break
         }
-    }
-
-    /// Walk up `node`'s parent tree looking for a node named
-    /// `"landmark-<rawValue>"` — that tells us which landmark the collectible
-    /// belongs to so we can stamp it.
-    private func stampCollectedAncestor(of node: SKNode) {
-        var n: SKNode? = node
-        while let current = n {
-            if let name = current.name, name.hasPrefix("landmark-"),
-               let raw = Int(name.replacingOccurrences(of: "landmark-", with: "")),
-               let landmark = Landmark(rawValue: raw) {
-                recordStamp(for: landmark)
-                return
-            }
-            n = current.parent
-        }
-    }
-
-    private func recordStamp(for landmark: Landmark) {
-        guard !collectedStamps.contains(landmark) else { return }
-        collectedStamps.insert(landmark)
-        stampCardHUD.stamp(index: landmark.rawValue)
-
-        if collectedStamps.count == Landmark.allCases.count {
-            triggerTourComplete()
-        }
-    }
-
-    private func triggerTourComplete() {
-        ProgressManager.shared.addCoins(100)
-        SkyHaptics.win()
-
-        let center = CGPoint(x: size.width / 2, y: size.height * 0.55)
-        LandmarkCelebration.emitConfetti(at: center, in: self)
-        LandmarkCelebration.showBanner(
-            title: "TOUR COMPLETE!",
-            subtitle: "+100 BONUS COINS",
-            at: center,
-            in: self
-        )
-
-        // Reset card after the banner clears so the loop can run again.
-        run(SKAction.sequence([
-            SKAction.wait(forDuration: 2.4),
-            SKAction.run { [weak self] in
-                self?.collectedStamps.removeAll()
-                self?.stampCardHUD.reset()
-            }
-        ]))
     }
 
     // MARK: - Touch

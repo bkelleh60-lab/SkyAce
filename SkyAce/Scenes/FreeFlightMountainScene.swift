@@ -76,6 +76,13 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
 
     private var topSafeInset: CGFloat = 0
 
+    // Ring speed boost. See FreeFlightCityScene for design notes — this
+    // mirrors the same multiplier-on-scroll-speed approach.
+    private let boostPeakMultiplier: CGFloat = 1.75
+    private let boostHoldDuration: TimeInterval = 2.5
+    private let boostTaperDuration: TimeInterval = 0.5
+    private var boostActiveUntil: TimeInterval = 0
+
     // MARK: - Lifecycle
 
     override func didMove(to view: SKView) {
@@ -381,11 +388,27 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         plane.position.y = min(size.height - 50, max(160, plane.position.y))
         plane.position.x += (size.width * 0.28 - plane.position.x) * 0.12
 
-        scrollLayer(farPeaks, speed: 20, delta: delta)
-        scrollLayer(cloudWisps, speed: 30, delta: delta)
-        scrollLayer(valley, speed: 190, delta: delta)
+        let boost = currentBoostMultiplier(at: currentTime)
+        landmarkLayer.speed = boost
+        plane.setBoostIntensity((boost - 1) / (boostPeakMultiplier - 1))
+
+        scrollLayer(farPeaks, speed: 20 * boost, delta: delta)
+        scrollLayer(cloudWisps, speed: 30 * boost, delta: delta)
+        scrollLayer(valley, speed: 190 * boost, delta: delta)
 
         spawnLandmarkIfDue(currentTime: currentTime)
+    }
+
+    private func currentBoostMultiplier(at currentTime: TimeInterval) -> CGFloat {
+        let timeLeft = boostActiveUntil - currentTime
+        guard timeLeft > 0 else { return 1.0 }
+        if timeLeft >= boostTaperDuration { return boostPeakMultiplier }
+        let t = CGFloat(timeLeft / boostTaperDuration)
+        return 1.0 + (boostPeakMultiplier - 1.0) * t
+    }
+
+    private func triggerSpeedBoost() {
+        boostActiveUntil = lastUpdateTime + boostHoldDuration + boostTaperDuration
     }
 
     private func scrollLayer(_ layer: SKNode, speed: CGFloat, delta: TimeInterval) {
@@ -429,6 +452,7 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
                 ring.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
                 SkyHaptics.collect()
                 stampCollectedAncestor(of: ring)
+                triggerSpeedBoost()
             }
         default:
             break

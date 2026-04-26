@@ -65,6 +65,17 @@ struct Challenge {
     var coinChainTarget: Int { 15 }
     var coinChainTotal: Int { 20 }
 
+    /// Total time from level start until the finish line crosses the plane.
+    /// Drives finish-line scheduling in GameScene; each mission type has a
+    /// fixed-length course so the player always has a clear "end" to fly to.
+    var levelDuration: TimeInterval {
+        switch type {
+        case .obstacleCourse: return 30.0
+        case .timeTrial:      return timeTrialDuration
+        case .coinChain:      return 35.0
+        }
+    }
+
     /// Free tier covers the first 3 levels.
     var requiresFullUnlock: Bool { return id > 3 }
 }

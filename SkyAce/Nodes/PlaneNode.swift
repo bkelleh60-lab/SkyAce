@@ -4,11 +4,12 @@ import SpriteKit
 /// contactTestBitMask is used for detection; collisionBitMask is always 0
 /// so SpriteKit never resolves physics contacts itself.
 struct PhysicsCategory {
-    static let plane:    UInt32 = 0b00001   // 1
-    static let obstacle: UInt32 = 0b00010   // 2
-    static let coin:     UInt32 = 0b00100   // 4
-    static let ring:     UInt32 = 0b01000   // 8
-    static let boundary: UInt32 = 0b10000   // 16
+    static let plane:    UInt32 = 0b000001  // 1
+    static let obstacle: UInt32 = 0b000010  // 2
+    static let coin:     UInt32 = 0b000100  // 4
+    static let ring:     UInt32 = 0b001000  // 8
+    static let boundary: UInt32 = 0b010000  // 16
+    static let finish:   UInt32 = 0b100000  // 32
 }
 
 /// Player-controlled plane.
@@ -120,7 +121,7 @@ final class PlaneNode: SKNode {
         pb.allowsRotation = false
         pb.linearDamping = 0.0
         pb.categoryBitMask = PhysicsCategory.plane
-        pb.contactTestBitMask = PhysicsCategory.obstacle | PhysicsCategory.coin | PhysicsCategory.ring | PhysicsCategory.boundary
+        pb.contactTestBitMask = PhysicsCategory.obstacle | PhysicsCategory.coin | PhysicsCategory.ring | PhysicsCategory.boundary | PhysicsCategory.finish
         pb.collisionBitMask = 0   // detection only — scene resolves effects
         self.physicsBody = pb
 

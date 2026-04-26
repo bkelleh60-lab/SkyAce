@@ -36,6 +36,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// doesn't force the plane into a pillar.
     private var lastObstacleGapY: CGFloat?
 
+    // Finish line — scheduled once per run; tracked so we can stop spawning
+    // hazards/coins on its approach and route the cross through didBegin.
+    private var finishLineNode: FinishLineNode?
+    private var finishLineSpawnTime: TimeInterval = .infinity
+
     // Input
     private var isTouchingScreen = false
 
@@ -80,6 +85,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         buildPlane()
         buildHUD()
         buildStartHint()
+        scheduleFinishLine()
     }
 
     // MARK: - Setup
@@ -318,6 +324,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         // Spawn logic per challenge type.
         spawnTick(currentTime: currentTime)
 
+        // Finish-line scheduler. Fires once per run, when the precomputed
+        // approach moment arrives.
+        if finishLineNode == nil && state.elapsedTime >= finishLineSpawnTime {
+            spawnFinishLine()
+        }
+
         // Cull off-screen gameplay nodes.
         cullOffscreenChildren()
 
@@ -329,6 +341,10 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     // MARK: - Spawning
 
     private func spawnTick(currentTime: TimeInterval) {
+        // Stop populating the run once the finish gate is on its way — gives
+        // the player a clean approach without a hazard right at the line.
+        guard finishLineNode == nil else { return }
+
         switch challenge.type {
         case .obstacleCourse:
             if currentTime - lastObstacleSpawn >= challenge.spawnInterval {
@@ -339,11 +355,6 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             if currentTime - lastCoinSpawn >= challenge.spawnInterval * 1.5 {
                 spawnCoinLine()
                 lastCoinSpawn = currentTime
-            }
-
-            // Obstacle courses end after ~30s of flying.
-            if state.elapsedTime >= 30 && !state.isGameOver {
-                state.finishObstacleCourse()
             }
 
         case .timeTrial:
@@ -412,6 +423,68 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 SKAction.removeFromParent()
             ]))
         }
+    }
+
+    // MARK: - Finish line
+
+    /// Distance offscreen-right where the gate first appears, before scrolling
+    /// into view. Acts as the "lead distance" the player effectively gets
+    /// while the gate is still off-screen.
+    private static let finishLineSpawnOffset: CGFloat = 80
+
+    /// Computes when in the run the finish line should spawn so its center
+    /// reaches the plane at exactly `challenge.levelDuration`. Lead distance
+    /// scales with the plane's effective horizontal speed: at base speed
+    /// (180pt/s) the gate is visible for ~1.6s before the cross; at the
+    /// fastest level (×1.6 → ~288pt/s) it's still ~1.0s — enough warning to
+    /// hold altitude through a full-height gate.
+    private func scheduleFinishLine() {
+        let speed = plane.horizontalSpeed * challenge.speedMultiplier
+        guard speed > 0 else { return }
+        let spawnX = size.width + GameScene.finishLineSpawnOffset
+        let crossTravel = spawnX - size.width * 0.25
+        let crossTime = TimeInterval(crossTravel / speed)
+        finishLineSpawnTime = max(0, challenge.levelDuration - crossTime)
+    }
+
+    private func spawnFinishLine() {
+        let finish = FinishLineNode(sceneHeight: size.height)
+        finish.position = CGPoint(x: size.width + GameScene.finishLineSpawnOffset, y: size.height / 2)
+        finish.zPosition = 4
+        worldNode.addChild(finish)
+        finishLineNode = finish
+
+        // Slide all the way off the left edge then remove. Same speed as
+        // obstacles/coins so the world reads as a continuous course.
+        let speed = plane.horizontalSpeed * challenge.speedMultiplier
+        let totalDistance = size.width + GameScene.finishLineSpawnOffset + 160
+        let duration = TimeInterval(totalDistance / max(speed, 1))
+        finish.run(SKAction.sequence([
+            SKAction.moveBy(x: -totalDistance, y: 0, duration: duration),
+            SKAction.removeFromParent()
+        ]))
+    }
+
+    private func handleFinishLineCross() {
+        guard !runHasFinished, !state.isGameOver else { return }
+
+        // Crossing semantics differ by mission type. For obstacle courses
+        // and time trials, reaching the gate is the win. For coin chains
+        // the player must also have hit the coin target — otherwise the
+        // gate marks a fail (out of course, target not met).
+        let won: Bool
+        switch challenge.type {
+        case .obstacleCourse, .timeTrial:
+            won = true
+        case .coinChain:
+            won = state.coinsCollected >= challenge.coinChainTarget
+        }
+
+        if won {
+            finishLineNode?.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        }
+        state.finish(won: won)
+        finishRun()
     }
 
     // MARK: - Coin patterns (time trial + coin chain)
@@ -513,6 +586,8 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             }
         case PhysicsCategory.obstacle, PhysicsCategory.boundary:
             handleHit(node: otherBody.node)
+        case PhysicsCategory.finish:
+            handleFinishLineCross()
         default:
             break
         }

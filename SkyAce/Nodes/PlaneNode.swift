@@ -31,6 +31,14 @@ final class PlaneNode: SKNode {
 
     private let body: SKNode
 
+    /// Speed-trail emitter, lazily attached the first time
+    /// `setBoostIntensity(_:)` is called with a non-zero value. Lives as a
+    /// child of `body` so it inherits the visual scale, and uses the scene
+    /// as `targetNode` so particles stay in world space and read as motion
+    /// past the plane rather than sticking to it.
+    private var boostTrail: SKEmitterNode?
+    private static let boostTrailFullBirthRate: CGFloat = 240
+
     // MARK: - Init
 
     /// - Parameter visualScale: multiplies the rendered sprite size only.
@@ -177,6 +185,59 @@ final class PlaneNode: SKNode {
                     SKAction.run { shape.fillColor = original }
                 ]))
             }
+        }
+    }
+
+    /// Drives the speed-trail emitter behind the plane. `intensity` is a
+    /// 0...1 scalar — 0 hides the trail, 1 emits at full rate. Smooth
+    /// taper is the caller's responsibility (pass 0.6, 0.3, 0.0... over
+    /// time to fade out). The emitter is created lazily on first non-zero
+    /// call so non-Free-Flight scenes never pay for it.
+    func setBoostIntensity(_ intensity: CGFloat) {
+        let clamped = max(0, min(1, intensity))
+        if boostTrail == nil {
+            guard clamped > 0 else { return }
+            boostTrail = makeBoostTrail()
+            body.addChild(boostTrail!)
+        }
+        guard let trail = boostTrail else { return }
+        if trail.targetNode == nil { trail.targetNode = scene }
+        trail.particleBirthRate = PlaneNode.boostTrailFullBirthRate * clamped
+    }
+
+    private func makeBoostTrail() -> SKEmitterNode {
+        let emitter = SKEmitterNode()
+        emitter.particleTexture = SKTexture(image: PlaneNode.boostTrailParticleImage())
+        emitter.particleBirthRate = 0
+        emitter.particleLifetime = 0.45
+        emitter.particleLifetimeRange = 0.15
+        // Body-local: fire from just behind the tail (body sprite is 90 wide,
+        // centred, so the tail sits at x = -45).
+        emitter.position = CGPoint(x: -48, y: 0)
+        emitter.particlePositionRange = CGVector(dx: 4, dy: 14)
+        emitter.emissionAngle = .pi
+        emitter.emissionAngleRange = 0.25
+        emitter.particleSpeed = 220
+        emitter.particleSpeedRange = 60
+        emitter.particleAlpha = 0.85
+        emitter.particleAlphaRange = 0.15
+        emitter.particleAlphaSpeed = -1.6
+        emitter.particleScale = 0.55
+        emitter.particleScaleRange = 0.2
+        emitter.particleScaleSpeed = -0.4
+        emitter.particleColorBlendFactor = 1.0
+        emitter.particleColorSequence = nil
+        emitter.particleColor = UIColor(hex: 0x9FE4FF)
+        emitter.zPosition = -1
+        return emitter
+    }
+
+    private static func boostTrailParticleImage() -> UIImage {
+        let size = CGSize(width: 12, height: 6)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        return renderer.image { ctx in
+            ctx.cgContext.setFillColor(UIColor.white.cgColor)
+            ctx.cgContext.fillEllipse(in: CGRect(origin: .zero, size: size))
         }
     }
 

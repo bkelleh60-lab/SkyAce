@@ -70,6 +70,20 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     private var collectedStamps: Set<Landmark> = []
     private var stampCardHUD: StampCardHUD!
 
+    // Ring speed boost.
+    //
+    // Free-flight forward motion is the world scrolling past a near-stationary
+    // plane, so the boost is implemented as a multiplier on every horizontal
+    // scroll speed (parallax layers + landmark SKAction time via
+    // `landmarkLayer.speed`). On ring collection we extend `boostActiveUntil`
+    // — collecting a second ring while boosted resets the timer instead of
+    // stacking peaks. The taper window at the end of the boost smoothly
+    // interpolates the multiplier back to 1.0 (and fades the trail with it).
+    private let boostPeakMultiplier: CGFloat = 1.75
+    private let boostHoldDuration: TimeInterval = 2.5
+    private let boostTaperDuration: TimeInterval = 0.5
+    private var boostActiveUntil: TimeInterval = 0
+
     // Safe area (populated in didMove)
     private var topSafeInset: CGFloat = 0
 
@@ -511,25 +525,51 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         plane.position.y = min(planeMaxY, max(planeMinY, plane.position.y))
         plane.position.x += (size.width * 0.28 - plane.position.x) * 0.12
 
+        // Boost multiplier scales every horizontal scroll source so the world
+        // accelerates uniformly. landmarkLayer.speed propagates to running
+        // SKActions on its descendants (per SKNode docs), so already-spawned
+        // landmarks accelerate along with newly emitted ones.
+        let boost = currentBoostMultiplier(at: currentTime)
+        landmarkLayer.speed = boost
+        plane.setBoostIntensity((boost - 1) / (boostPeakMultiplier - 1))
+
         // Parallax drift (landmarks move themselves via SKAction).
         // Far layer scrolls slowly for depth; near layer scrolls fast so the
         // foreground blurs past the plane.
         scrollLoop(
             farBackground,
-            speed: 30,
+            speed: 30 * boost,
             totalWidth: farTileWidth * 4,
             wrapMargin: farTileWidth / 2,
             delta: delta
         )
         scrollLoop(
             nearForeground,
-            speed: 180,
+            speed: 180 * boost,
             totalWidth: nearTileWidth * 2,
             wrapMargin: 120,
             delta: delta
         )
 
         spawnLandmarkIfDue(currentTime: currentTime)
+    }
+
+    /// Returns the current speed multiplier — 1.0 when no boost is active,
+    /// `boostPeakMultiplier` during the hold window, then linearly tapering
+    /// back to 1.0 over `boostTaperDuration`.
+    private func currentBoostMultiplier(at currentTime: TimeInterval) -> CGFloat {
+        let timeLeft = boostActiveUntil - currentTime
+        guard timeLeft > 0 else { return 1.0 }
+        if timeLeft >= boostTaperDuration { return boostPeakMultiplier }
+        let t = CGFloat(timeLeft / boostTaperDuration)
+        return 1.0 + (boostPeakMultiplier - 1.0) * t
+    }
+
+    /// Triggers (or refreshes) the speed boost. A second ring during an
+    /// active boost extends the deadline rather than stacking, so peak
+    /// speed is bounded.
+    private func triggerSpeedBoost() {
+        boostActiveUntil = lastUpdateTime + boostHoldDuration + boostTaperDuration
     }
 
     /// Scrolls every child left by `speed * delta`. When a child drops past
@@ -583,6 +623,7 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
                 ring.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
                 SkyHaptics.collect()
                 stampCollectedAncestor(of: ring)
+                triggerSpeedBoost()
             }
         default:
             break

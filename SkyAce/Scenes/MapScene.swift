@@ -11,6 +11,13 @@ final class MapScene: SKScene {
     private let contentNode = SKNode()
     private var contentHeight: CGFloat = 0
 
+    // Layout constants shared by buildLevelList() and scrollToActive().
+    private let nodeSpacing: CGFloat = 150
+    private let topPadding: CGFloat = 120
+    // Computed in didMove() once safe-area insets are available — must reserve
+    // enough room for SkyTabBar + the active level's expanded info card.
+    private var bottomPadding: CGFloat = 120
+
     // Pan-scroll state
     private var lastPanY: CGFloat = 0
     private var scrollVelocity: CGFloat = 0
@@ -23,6 +30,21 @@ final class MapScene: SKScene {
 
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimary
+
+        // Option A: lift the map's layout so its bounds sit above the tab
+        // bar. Chose this over auto-hiding SkyTabBar because the bar is
+        // persistent on every other screen (Menu, Hangar, Shop) — adding a
+        // missions-only show/hide affordance would break that pattern and
+        // add a control with no equivalent elsewhere. Reserve room for:
+        //   - the tab bar's 80pt body + ~12pt of raised "missions" overhang,
+        //   - 155pt for the active level's info card (extends below the node),
+        //   - a small visual padding so the card never visually kisses the bar.
+        let bottomInset = view.safeAreaInsets.bottom
+        let tabBarTop = bottomInset + SkyTabBar.barHeight + 12
+        let activeCardClearance: CGFloat = 155
+        let visualPadding: CGFloat = 24
+        bottomPadding = tabBarTop + activeCardClearance + visualPadding
+
         buildBackground()
         addChild(contentNode)
         buildLevelList()
@@ -66,10 +88,6 @@ final class MapScene: SKScene {
     // MARK: - Level list
 
     private func buildLevelList() {
-        let nodeSpacing: CGFloat = 150
-        let topPadding: CGFloat = 120
-        let bottomPadding: CGFloat = 120
-
         let centerX = size.width / 2
 
         // Path — dashed curve connecting each level node.
@@ -313,8 +331,6 @@ final class MapScene: SKScene {
     // MARK: - Scroll
 
     private func scrollToActive() {
-        let nodeSpacing: CGFloat = 150
-        let bottomPadding: CGFloat = 120
         let activeIndex = max(0, activeLevelID - 1)
         let targetY = bottomPadding + CGFloat(activeIndex) * nodeSpacing
         let desiredOffset = -(targetY - size.height / 2)

@@ -255,6 +255,8 @@ enum SkySprites {
     static let iconHomeWhite     = "icon_home_white"
     static let iconMissions      = "icon_missions"
     static let iconMissionsWhite = "icon_missions_white"
+    static let iconWorldCity     = "icon_world_city"
+    static let iconWorldMountain = "icon_world_mountain"
     static let pilotAvatar       = "pilot_avatar"
 
     // Free Flight City landmarks (Resources/Sprites/).

@@ -22,7 +22,7 @@ final class ShopScene: SKScene {
         buildTopBar()
         buildTabBar()
 
-        if !IAPManager.shared.isFullyUnlocked {
+        if !IAPManager.shared.isContentUnlocked {
             presentPaywallOverlay()
         }
     }
@@ -453,7 +453,7 @@ final class ShopScene: SKScene {
     private func attemptBuy(upgrade: UpgradeState) {
         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
         guard upgrade.kind.isAvailable else { return }
-        if !IAPManager.shared.isFullyUnlocked {
+        if !IAPManager.shared.isContentUnlocked {
             SkyNavigator.shared.showUnlock()
             return
         }

@@ -29,6 +29,7 @@
 		B10001000000000000000201 /* ProgressManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000201 /* ProgressManager.swift */; };
 		B10001000000000000000202 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000202 /* AudioManager.swift */; };
 		B10001000000000000000203 /* IAPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000203 /* IAPManager.swift */; };
+		B10001000000000000000204 /* DebugConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000204 /* DebugConfig.swift */; };
 		B10001000000000000000301 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000301 /* Player.swift */; };
 		B10001000000000000000302 /* Upgrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000302 /* Upgrade.swift */; };
 		B10001000000000000000303 /* Challenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000303 /* Challenge.swift */; };
@@ -80,6 +81,7 @@
 		F10001000000000000000201 /* ProgressManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressManager.swift; sourceTree = "<group>"; };
 		F10001000000000000000202 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
 		F10001000000000000000203 /* IAPManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IAPManager.swift; sourceTree = "<group>"; };
+		F10001000000000000000204 /* DebugConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugConfig.swift; sourceTree = "<group>"; };
 		F10001000000000000000301 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		F10001000000000000000302 /* Upgrade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Upgrade.swift; sourceTree = "<group>"; };
 		F10001000000000000000303 /* Challenge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Challenge.swift; sourceTree = "<group>"; };
@@ -150,6 +152,7 @@
 				F10001000000000000000201 /* ProgressManager.swift */,
 				F10001000000000000000202 /* AudioManager.swift */,
 				F10001000000000000000203 /* IAPManager.swift */,
+				F10001000000000000000204 /* DebugConfig.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -336,6 +339,7 @@
 				B10001000000000000000201 /* ProgressManager.swift in Sources */,
 				B10001000000000000000202 /* AudioManager.swift in Sources */,
 				B10001000000000000000203 /* IAPManager.swift in Sources */,
+				B10001000000000000000204 /* DebugConfig.swift in Sources */,
 				B10001000000000000000301 /* Player.swift in Sources */,
 				B10001000000000000000302 /* Upgrade.swift in Sources */,
 				B10001000000000000000303 /* Challenge.swift in Sources */,

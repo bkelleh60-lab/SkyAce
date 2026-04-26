@@ -334,6 +334,8 @@ final class MenuScene: SKScene {
         let city = worldTile(
             title: "CITY",
             subtitle: "Dawn skyline.",
+            iconAsset: SkySprites.iconWorldCity,
+            iconFallback: "🏙",
             locked: false,
             tileColor: UIColor(hex: 0xFF9A6C)
         )
@@ -346,6 +348,8 @@ final class MenuScene: SKScene {
         let mountain = worldTile(
             title: "MOUNTAIN",
             subtitle: unlocked ? "Alpine peaks." : "Locked",
+            iconAsset: SkySprites.iconWorldMountain,
+            iconFallback: "🏔",
             locked: !unlocked,
             tileColor: SkyColors.primary
         )
@@ -360,7 +364,12 @@ final class MenuScene: SKScene {
         overlay.run(SKAction.fadeIn(withDuration: 0.2))
     }
 
-    private func worldTile(title: String, subtitle: String, locked: Bool, tileColor: UIColor) -> SKNode {
+    private func worldTile(title: String,
+                           subtitle: String,
+                           iconAsset: String,
+                           iconFallback: String,
+                           locked: Bool,
+                           tileColor: UIColor) -> SKNode {
         let container = SKNode()
         let size = CGSize(width: 120, height: 180)
 
@@ -368,6 +377,20 @@ final class MenuScene: SKScene {
         bg.fillColor = tileColor
         bg.strokeColor = .clear
         container.addChild(bg)
+
+        // Unlocked tiles show the world icon centered between title and
+        // subtitle. Locked tiles keep their existing lock + UNLOCK badge
+        // layout so the unlock affordance stays the focal point.
+        if !locked {
+            let icon = SkySprites.iconNode(
+                named: iconAsset,
+                fallbackEmoji: iconFallback,
+                size: 64,
+                color: SkyColors.onPrimary
+            )
+            icon.position = CGPoint(x: 0, y: 6)
+            container.addChild(icon)
+        }
 
         if locked {
             let overlay = SKShapeNode(rectOf: size, cornerRadius: 20)

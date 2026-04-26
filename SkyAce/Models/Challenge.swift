@@ -28,9 +28,32 @@ struct Challenge {
 
     // Derived per-level difficulty knobs.
 
+    /// Base gate width (gap between top/bottom obstacle pairs) before
+    /// per-level scaling. Tune this single value to widen or tighten the
+    /// whole progression at once.
+    static let baseObstacleGap: CGFloat = 200.0
+
+    /// Per-level gate-width multipliers applied to `baseObstacleGap`.
+    /// Indexed by `id - 1` (level 1 → first entry). The curve eases the
+    /// player in (L1 wide, gentle ramp through L3) and tightens steadily
+    /// from L4 onward, ending at 75% for the L10 finale.
+    static let obstacleGapMultipliers: [CGFloat] = [
+        1.20, // L1
+        1.10, // L2
+        1.00, // L3
+        0.95, // L4
+        0.90, // L5
+        0.87, // L6
+        0.84, // L7
+        0.81, // L8
+        0.78, // L9
+        0.75  // L10
+    ]
+
     /// Gap between top/bottom obstacle pairs, narrowing with level.
     var obstacleGap: CGFloat {
-        return 220.0 - CGFloat(10 * (id - 1))
+        let idx = max(0, min(Challenge.obstacleGapMultipliers.count - 1, id - 1))
+        return Challenge.baseObstacleGap * Challenge.obstacleGapMultipliers[idx]
     }
 
     /// Seconds between obstacle spawns, floor 1.0s.

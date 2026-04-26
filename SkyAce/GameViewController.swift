@@ -29,7 +29,43 @@ final class GameViewController: UIViewController {
         SkyNavigator.shared.attach(view: skView, presenter: self)
         SkyNavigator.shared.showMenu()
         AudioManager.shared.playMusic(SkyMusic.menu, fileExtension: "wav")
+        #if DEBUG
+        installDebugUnlockBanner()
+        #endif
     }
+
+    #if DEBUG
+    /// Persistent red badge shown on top of the SKView whenever the IAP
+    /// paywall is being bypassed via `debugUnlockAllContent` (DebugConfig.swift).
+    /// Stripped from Release builds — `#if DEBUG` excludes the entire helper
+    /// and its caller in `viewDidLoad`.
+    private func installDebugUnlockBanner() {
+        guard debugUnlockAllContent else { return }
+
+        let banner = UILabel()
+        banner.text = "DEBUG: All Unlocked"
+        banner.textColor = .white
+        banner.backgroundColor = UIColor.systemRed.withAlphaComponent(0.9)
+        banner.font = UIFont.systemFont(ofSize: 11, weight: .bold)
+        banner.textAlignment = .center
+        banner.layer.cornerRadius = 6
+        banner.layer.masksToBounds = true
+        banner.isUserInteractionEnabled = false
+        banner.accessibilityIdentifier = "DebugUnlockBanner"
+        banner.translatesAutoresizingMaskIntoConstraints = false
+
+        skView.addSubview(banner)
+        NSLayoutConstraint.activate([
+            banner.topAnchor.constraint(equalTo: skView.safeAreaLayoutGuide.topAnchor, constant: 6),
+            banner.trailingAnchor.constraint(equalTo: skView.safeAreaLayoutGuide.trailingAnchor, constant: -8),
+            banner.heightAnchor.constraint(equalToConstant: 20),
+            banner.widthAnchor.constraint(greaterThanOrEqualToConstant: 140)
+        ])
+        // UILabel has no horizontal padding by default — pad the text via
+        // a small inset on either side using attributed string spacing.
+        banner.text = "  DEBUG: All Unlocked  "
+    }
+    #endif
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }

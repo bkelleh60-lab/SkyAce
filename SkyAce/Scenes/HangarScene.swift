@@ -202,7 +202,7 @@ final class HangarScene: SKScene {
         if owned {
             flyButton.setTitle(selected ? "FLY!" : "SELECT")
             flyButton.setStyle(.primary)
-        } else if plane.requiresFullUnlock && !IAPManager.shared.isFullyUnlocked {
+        } else if plane.requiresFullUnlock && !IAPManager.shared.isContentUnlocked {
             flyButton.setTitle("UNLOCK GAME")
             flyButton.setStyle(.tertiary)
         } else {
@@ -238,7 +238,7 @@ final class HangarScene: SKScene {
             return
         }
 
-        if plane.requiresFullUnlock && !IAPManager.shared.isFullyUnlocked {
+        if plane.requiresFullUnlock && !IAPManager.shared.isContentUnlocked {
             SkyNavigator.shared.showUnlock()
             return
         }

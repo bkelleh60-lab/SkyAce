@@ -116,7 +116,7 @@ final class MapScene: SKScene {
     private func levelState(for challenge: Challenge) -> LevelState {
         let completed = ProgressManager.shared.isLevelCompleted(challenge.id)
         let progression = ProgressManager.shared.isLevelProgressionUnlocked(challenge.id)
-        let paywallOK = !challenge.requiresFullUnlock || IAPManager.shared.isFullyUnlocked
+        let paywallOK = !challenge.requiresFullUnlock || IAPManager.shared.isContentUnlocked
 
         if completed { return .completed }
         if !paywallOK { return .paywallLocked }

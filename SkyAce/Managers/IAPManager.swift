@@ -92,6 +92,19 @@ final class IAPManager: ObservableObject {
         return product?.displayPrice ?? "$2.99"
     }
 
+    /// Paywall accessor for UI / scene gating. Returns the verified StoreKit
+    /// entitlement in Release builds. In Debug builds the
+    /// `debugUnlockAllContent` flag (see DebugConfig.swift) can short-circuit
+    /// this to `true` so QA can reach locked content. The StoreKit code path
+    /// above is untouched — this only affects the synchronous read used by
+    /// scenes to draw locked vs unlocked UI.
+    var isContentUnlocked: Bool {
+        #if DEBUG
+        if debugUnlockAllContent { return true }
+        #endif
+        return isFullyUnlocked
+    }
+
     // MARK: - Internals
 
     private func performPurchase(_ product: Product) async -> PurchaseResult {

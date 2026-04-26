@@ -342,7 +342,7 @@ final class MenuScene: SKScene {
         card.addChild(city)
 
         // Mountain tile — requires full unlock.
-        let unlocked = IAPManager.shared.isFullyUnlocked
+        let unlocked = IAPManager.shared.isContentUnlocked
         let mountain = worldTile(
             title: "MOUNTAIN",
             subtitle: unlocked ? "Alpine peaks." : "Locked",
@@ -450,7 +450,7 @@ final class MenuScene: SKScene {
                     if current.name == "worldSelectMountain" {
                         dismissWorldSelect()
                         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-                        if IAPManager.shared.isFullyUnlocked {
+                        if IAPManager.shared.isContentUnlocked {
                             SkyNavigator.shared.showFreeFlightMountain()
                         } else {
                             SkyNavigator.shared.showUnlock()

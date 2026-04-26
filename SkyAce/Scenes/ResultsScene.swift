@@ -114,7 +114,7 @@ final class ResultsScene: SKScene {
             guard let self = self else { return }
             let nextID = self.challenge.id + 1
             if let nextChallenge = ChallengeCatalog.challenge(forID: nextID),
-               !nextChallenge.requiresFullUnlock || IAPManager.shared.isFullyUnlocked {
+               !nextChallenge.requiresFullUnlock || IAPManager.shared.isContentUnlocked {
                 SkyNavigator.shared.showGame(challenge: nextChallenge)
             } else if nextID <= ChallengeCatalog.all.count {
                 SkyNavigator.shared.showUnlock()

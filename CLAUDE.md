@@ -42,11 +42,23 @@ These are non-negotiable and must be respected in every change:
 
 ## Architecture Notes
 
-- Game scenes are managed with SpriteKit `SKScene` subclasses.
-- IAP logic is handled via StoreKit. The purchase trigger point must always present
-  `ParentalGateView` as a `.fullScreenCover` before initiating any transaction.
-- `ParentalGateViewModel` owns all gate logic and must never expose the correct answer
-  in any published property, view state, or console log.
+- The host app is **UIKit + SpriteKit** — there is no SwiftUI in this project.
+  Do not introduce SwiftUI for incidental work; if a feature genuinely needs it,
+  raise it before starting.
+- The root is `GameViewController` (UIKit). Game scenes are SpriteKit `SKScene`
+  subclasses under `SkyAce/Scenes/` and are presented inside an `SKView` hosted
+  by the root view controller.
+- Reusable scene content lives in `SkyAce/Nodes/` (`SKNode`/`SKSpriteNode`
+  subclasses such as `PlaneNode`, `RingNode`, `ObstacleNode`, `FinishLineNode`).
+- Cross-cutting state lives in `SkyAce/Managers/` (`ProgressManager`,
+  `IAPManager`, `AudioManager`, `DebugConfig`). Plain data types live in
+  `SkyAce/Models/`.
+- IAP logic is handled via StoreKit in `Managers/IAPManager.swift`. The purchase
+  trigger point must always present `ParentalGateViewController` modally and
+  only invoke StoreKit from its `onSuccess` callback.
+- `ParentalGateViewController` owns all gate logic. Its operands (`numberA`,
+  `numberB`) and `expectedAnswer` must remain `private` and must never be
+  exposed via accessors, notifications, or `print`/`os_log` output.
 - Progress and level unlock state is managed via `ProgressManager`.
 - Free Flight availability is derived from unlock state — do not duplicate that logic.
 
@@ -55,10 +67,16 @@ These are non-negotiable and must be respected in every change:
 ## Code Style
 
 - Follow standard Swift naming conventions (camelCase for variables/functions, PascalCase for types).
-- Use `ObservableObject` with `@Published` for all SwiftUI view models.
-- Prefer `@StateObject` for owning a view model, `@ObservedObject` for passing one down.
+- UIKit views: build hierarchy programmatically with Auto Layout. Set
+  `translatesAutoresizingMaskIntoConstraints = false` on every view you add
+  (matching the pattern in `ParentalGateViewController`). Do not add Storyboards
+  or XIBs.
+- SpriteKit nodes: encapsulate visuals and per-node behavior inside the node
+  subclass; keep scene files focused on layout, spawning, and physics-contact
+  routing.
 - No force unwraps (`!`) unless accompanied by an inline comment explaining why it is safe.
-- Keep view files focused on layout. Business logic belongs in the view model.
+- Keep view controllers and scenes focused on presentation. Persistent or
+  cross-scene logic belongs in `Managers/`; pure data shapes belong in `Models/`.
 - Write one class/struct per file. File name must match the type name.
 
 ---

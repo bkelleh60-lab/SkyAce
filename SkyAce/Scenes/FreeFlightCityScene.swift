@@ -108,7 +108,6 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
 
         addChild(worldNode)
         buildSkyFill()
-        buildSkyTopBlend()
         buildFarCityBackground()
         buildNearForeground()
         buildBirds()
@@ -120,41 +119,67 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     // MARK: - Background layers
 
     private func buildSkyFill() {
-        // Full-screen sky gradient anchored behind the painted city layer.
-        // The top colour matches the top pixel of the cityscape PNG so the
-        // seam between painted sky and gradient sky is imperceptible.
-        let tex = SKGradientBackgroundNode.gradientTexture(
-            size: size,
-            top: UIColor(hex: 0xE8F2FF),
-            bottom: UIColor(hex: 0xCDE5FF)
-        )
+        // Single seamless sky gradient covering the entire scene.
+        //
+        // The previous attempt at SKY-12 (commit a77300a) added a small
+        // skSurface→0xE8F2FF overlay along the top edge to mask the
+        // SKView/scene boundary, but the actual visible "hard line" was
+        // never at that boundary — it was further down, where the pale
+        // gradient sky meets the **cityscape PNG's** painted sky. The
+        // PNG's top row is 0x3A86CA (a saturated mid-blue), while the
+        // old gradient at that y was ~0xDBECFF (almost white): a 130-unit
+        // step in the red channel that the eye reads as a sharp line.
+        //
+        // Fix: drive the gradient from skSurface at the very top (matches
+        // the SKView's UIKit background, removing any chance of a seam
+        // there) down to 0x3A86CA at the y where the cityscape PNG's
+        // top edge sits (≈45% from the top of the scene, since the PNG
+        // is rendered at 0.55 × scene height anchored at the bottom).
+        // From that point downward the gradient is hidden by the PNG,
+        // so the colour is held constant and the painted sky takes over.
+        let tex = Self.skyGradientTexture(size: size)
         let bg = SKSpriteNode(texture: tex, size: size)
         bg.anchorPoint = .zero
         bg.zPosition = -110
         worldNode.addChild(bg)
     }
 
-    /// Soft blend along the top edge of the scene. The SKView's UIKit
-    /// background is `SkyColors.surface` (0xF2F7FF) — a touch lighter than
-    /// the sky gradient's top colour (0xE8F2FF) — so any sliver of the
-    /// view that ends up visible above the scene reads as a hard step.
-    /// A short vertical gradient overlay fades the sky up to the surface
-    /// colour so the join is imperceptible regardless of device chrome.
-    private func buildSkyTopBlend() {
-        // ~12% of scene height, clamped so the band stays a soft seam rather
-        // than visibly compressing the sky on small or very tall devices.
-        let blendHeight = min(max(size.height * 0.12, 80), 160)
-        let blendSize = CGSize(width: size.width, height: blendHeight)
-        let tex = SKGradientBackgroundNode.gradientTexture(
-            size: blendSize,
-            top: SkyColors.skSurface,
-            bottom: UIColor(hex: 0xE8F2FF)
-        )
-        let blend = SKSpriteNode(texture: tex, size: blendSize)
-        blend.anchorPoint = CGPoint(x: 0, y: 1)
-        blend.position = CGPoint(x: 0, y: size.height)
-        blend.zPosition = -109
-        worldNode.addChild(blend)
+    /// Sky gradient: skSurface (0xF2F7FF) at the sprite top, fading
+    /// linearly to 0x3A86CA at 45% down (where the cityscape PNG's top
+    /// edge sits), then held constant for the lower 55% (which the PNG
+    /// occludes). The 45% stop is the exact colour of the PNG's top row,
+    /// sampled directly from the asset, so the gradient/PNG join is
+    /// continuous.
+    ///
+    /// `start` is set to (0, 0) and `end` to (0, size.height) so that
+    /// — once the rendered image flows through the UIImage→SKTexture
+    /// pipeline and back into scene coordinates — location 0 lands at
+    /// the SPRITE TOP. The shared `SKGradientBackgroundNode.gradientTexture`
+    /// helper uses the opposite endpoints, which is why its `top:`/`bottom:`
+    /// labels are visually inverted relative to the displayed sprite.
+    private static func skyGradientTexture(size: CGSize) -> SKTexture {
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { ctx in
+            let cg = ctx.cgContext
+            let colors = [
+                SkyColors.skSurface.cgColor,
+                UIColor(hex: 0x3A86CA).cgColor,
+                UIColor(hex: 0x3A86CA).cgColor
+            ] as CFArray
+            let locations: [CGFloat] = [0.0, 0.45, 1.0]
+            guard let gradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: colors,
+                locations: locations
+            ) else { return }
+            cg.drawLinearGradient(
+                gradient,
+                start: CGPoint(x: 0, y: 0),
+                end: CGPoint(x: 0, y: size.height),
+                options: []
+            )
+        }
+        return SKTexture(image: image)
     }
 
     /// Slow-scrolling far layer: the Stitch-generated cityscape PNG, tiled

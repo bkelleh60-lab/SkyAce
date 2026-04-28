@@ -215,7 +215,7 @@ final class HangarScene: SKScene {
         previewPlane?.removeFromParent()
         let preview = PlaneNode(planeID: plane.id)
         preview.physicsBody = nil
-        preview.setScale(1.4)
+        preview.setScale(2.1)
         preview.position = .zero
         showcase.addChild(preview)
         previewPlane = preview

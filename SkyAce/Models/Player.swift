@@ -20,8 +20,8 @@ enum PlaneCatalog {
     static let blueSkyChaser = Plane(
         id: "blue_sky_chaser",
         name: "Blue Sky Chaser",
-        subtitle: "Standard Jet Fighter",
-        cost: 0,
+        subtitle: "Standard Jet",
+        cost: 600,
         requiresFullUnlock: false,
         spriteName: SkySprites.planeJet,
         bodyColor: SkyColors.primaryContainer,

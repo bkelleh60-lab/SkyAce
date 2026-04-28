@@ -31,8 +31,8 @@ final class ProgressManager {
             Key.coins:            0,
             Key.completedLevels:  [Int](),
             Key.starRatings:      [String: Int](),
-            Key.ownedPlanes:      ["blue_sky_chaser"],
-            Key.selectedPlane:    "blue_sky_chaser",
+            Key.ownedPlanes:      ["red_baron"],
+            Key.selectedPlane:    "red_baron",
             Key.upgradeLevels:    [String: Int](),
             Key.fullUnlockCached: false,
             Key.musicEnabled:     true,
@@ -113,7 +113,7 @@ final class ProgressManager {
     }
 
     var selectedPlaneID: String {
-        get { defaults.string(forKey: Key.selectedPlane) ?? "blue_sky_chaser" }
+        get { defaults.string(forKey: Key.selectedPlane) ?? "red_baron" }
         set { defaults.set(newValue, forKey: Key.selectedPlane) }
     }
 

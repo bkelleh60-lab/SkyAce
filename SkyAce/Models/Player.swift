@@ -53,9 +53,9 @@ enum PlaneCatalog {
         assetFacesLeft: false
     )
 
-    static let all: [Plane] = [blueSkyChaser, redBaron, silverFalcon]
+    static let all: [Plane] = [redBaron, blueSkyChaser, silverFalcon]
 
     static func plane(forID id: String) -> Plane {
-        return all.first(where: { $0.id == id }) ?? blueSkyChaser
+        return all.first(where: { $0.id == id }) ?? redBaron
     }
 }

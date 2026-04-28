@@ -81,10 +81,14 @@ final class PlaneNode: SKNode {
             return container
         }
         // PLACEHOLDER: Replace with production art asset before App Store
-        // submission. Shadow Dart gets a stealth-fighter silhouette; every
-        // other plane shares the generic propeller-fallback body.
+        // submission. Shadow Dart gets a stealth-fighter silhouette and
+        // Night Hawk gets a stealth-bomber silhouette; every other plane
+        // shares the generic propeller-fallback body.
         if plane.id == "shadow_dart" {
             return makeShadowDartBody(for: plane)
+        }
+        if plane.id == "night_hawk" {
+            return makeNightHawkBody(for: plane)
         }
         return makeProgrammaticBody(for: plane)
     }
@@ -153,6 +157,103 @@ final class PlaneNode: SKNode {
         canopy.fillColor = UIColor(hex: 0xFFD709)
         canopy.strokeColor = .clear
         canopy.zPosition = 4
+        container.addChild(canopy)
+
+        return container
+    }
+
+    private static func makeNightHawkBody(for plane: Plane) -> SKNode {
+        // PLACEHOLDER: Replace with production art asset before App Store
+        // submission. Hand-built B-2 Spirit silhouette — wider and heavier
+        // than the Shadow Dart so the carousel reads them as visually
+        // distinct: this one is a flying-wing bomber, that one a fighter.
+        let container = SKNode()
+        container.zPosition = 10
+
+        // Dual engine exhaust glow — Sky Blue. Two stacked plumes behind the
+        // hull so the read is unmistakably "twin-engine bomber" rather than
+        // single-engine. Drawn first so they sit behind every other layer.
+        for offset in [CGFloat(10), CGFloat(-10)] {
+            let exhaust = SKShapeNode(ellipseOf: CGSize(width: 20, height: 8))
+            exhaust.fillColor = UIColor(hex: 0x00BAFF).withAlphaComponent(0.6)
+            exhaust.strokeColor = .clear
+            exhaust.position = CGPoint(x: -42, y: offset)
+            exhaust.zPosition = 0
+            exhaust.blendMode = .add
+            container.addChild(exhaust)
+        }
+
+        // Broad swept-back flying-wing planform. One continuous shape spans
+        // both wings, drawn through the centerline so the wing roots blend
+        // into the hull rather than reading as two separate pieces.
+        let wingPath = CGMutablePath()
+        wingPath.move(to: CGPoint(x: 12, y: 0))
+        wingPath.addLine(to: CGPoint(x: -34, y: 38))
+        wingPath.addLine(to: CGPoint(x: -48, y: 38))
+        wingPath.addLine(to: CGPoint(x: -16, y: 0))
+        wingPath.addLine(to: CGPoint(x: -48, y: -38))
+        wingPath.addLine(to: CGPoint(x: -34, y: -38))
+        wingPath.closeSubpath()
+        let wings = SKShapeNode(path: wingPath)
+        wings.fillColor = plane.bodyColor
+        wings.strokeColor = .clear
+        wings.zPosition = 1
+        container.addChild(wings)
+
+        // Energetic Orange wing accent stripes — one per wing, set inboard
+        // and angled to follow the leading-edge sweep so they read as paint
+        // detail rather than a separate wing element.
+        for sign: CGFloat in [1, -1] {
+            let stripePath = CGMutablePath()
+            stripePath.move(to: CGPoint(x:  2, y: sign *  8))
+            stripePath.addLine(to: CGPoint(x: -28, y: sign * 30))
+            stripePath.addLine(to: CGPoint(x: -32, y: sign * 30))
+            stripePath.addLine(to: CGPoint(x: -2, y: sign *  8))
+            stripePath.closeSubpath()
+            let stripe = SKShapeNode(path: stripePath)
+            stripe.fillColor = plane.accentColor
+            stripe.strokeColor = .clear
+            stripe.zPosition = 2
+            container.addChild(stripe)
+        }
+
+        // Low-profile angular fuselage with a sharp pointed nose. Sits over
+        // the wing root so the whole silhouette reads as one continuous body.
+        let hullPath = CGMutablePath()
+        hullPath.move(to: CGPoint(x: 44, y: 0))
+        hullPath.addLine(to: CGPoint(x: 24, y: 9))
+        hullPath.addLine(to: CGPoint(x: -30, y: 9))
+        hullPath.addLine(to: CGPoint(x: -36, y: 0))
+        hullPath.addLine(to: CGPoint(x: -30, y: -9))
+        hullPath.addLine(to: CGPoint(x: 24, y: -9))
+        hullPath.closeSubpath()
+        let hull = SKShapeNode(path: hullPath)
+        hull.fillColor = plane.bodyColor
+        hull.strokeColor = .clear
+        hull.zPosition = 3
+        container.addChild(hull)
+
+        // Energetic Orange underside stripe — runs along the bottom of the
+        // hull so the bomber reads as marked, not just dark.
+        let underside = SKShapeNode(rectOf: CGSize(width: 60, height: 2), cornerRadius: 1)
+        underside.fillColor = plane.accentColor
+        underside.strokeColor = .clear
+        underside.position = CGPoint(x: 0, y: -7)
+        underside.zPosition = 4
+        container.addChild(underside)
+
+        // Small cockpit blister near the nose — gives the bomber a head end
+        // without breaking the stealth silhouette.
+        let canopyPath = CGMutablePath()
+        canopyPath.move(to: CGPoint(x: 20, y: 7))
+        canopyPath.addLine(to: CGPoint(x: 12, y: 11))
+        canopyPath.addLine(to: CGPoint(x: -2, y: 11))
+        canopyPath.addLine(to: CGPoint(x: -2, y: 7))
+        canopyPath.closeSubpath()
+        let canopy = SKShapeNode(path: canopyPath)
+        canopy.fillColor = UIColor(hex: 0x00BAFF).withAlphaComponent(0.85)
+        canopy.strokeColor = .clear
+        canopy.zPosition = 5
         container.addChild(canopy)
 
         return container

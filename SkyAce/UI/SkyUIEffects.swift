@@ -227,6 +227,10 @@ enum SkySprites {
     // No PNG is bundled yet — PlaneNode falls back to a programmatic stealth
     // fighter body for the Shadow Dart until commissioned art lands.
     static let planeShadowDart  = "plane_shadow_dart"
+    // PLACEHOLDER: Replace with production art asset before App Store submission.
+    // No PNG is bundled yet — PlaneNode falls back to a programmatic stealth
+    // bomber body for the Night Hawk until commissioned art lands.
+    static let planeNightHawk   = "plane_night_hawk"
 
     // Gameplay sprites (Resources/Sprites/)
     static let coin             = "coin"

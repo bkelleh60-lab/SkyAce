@@ -16,6 +16,11 @@ final class IAPManager: ObservableObject {
 
     static let fullUnlockProductID = "com.skyace.fullunlock"
 
+    /// Posted on the main actor whenever the verified entitlement transitions
+    /// (`false → true` or `true → false`). UIKit-native subscription point for
+    /// long-lived consumers that need to refresh mid-session.
+    static let entitlementDidChange = Notification.Name("IAPEntitlementDidChange")
+
     @Published private(set) var product: Product?
     @Published private(set) var isFullyUnlocked: Bool = false
     @Published private(set) var isLoadingProduct: Bool = false
@@ -56,8 +61,12 @@ final class IAPManager: ObservableObject {
     /// Authoritative check — StoreKit 2. Updates the cache on success.
     func verifyEntitlement() async {
         let unlocked = await currentlyOwnsFullUnlock()
+        let didChange = unlocked != self.isFullyUnlocked
         self.isFullyUnlocked = unlocked
         ProgressManager.shared.isFullUnlockCached = unlocked
+        if didChange {
+            NotificationCenter.default.post(name: Self.entitlementDidChange, object: self)
+        }
     }
 
     /// Runs the purchase flow for the full unlock. Caller is responsible for

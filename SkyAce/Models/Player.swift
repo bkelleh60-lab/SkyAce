@@ -53,7 +53,19 @@ enum PlaneCatalog {
         assetFacesLeft: false
     )
 
-    static let all: [Plane] = [redBaron, blueSkyChaser, shadowDart]
+    static let nightHawk = Plane(
+        id: "night_hawk",
+        name: "Night Hawk",
+        subtitle: "Supreme Bomber",
+        cost: 2000,
+        requiresFullUnlock: false,
+        spriteName: SkySprites.planeNightHawk,
+        bodyColor: UIColor(hex: 0x08314D),
+        accentColor: UIColor(hex: 0xFF8C00),
+        assetFacesLeft: false
+    )
+
+    static let all: [Plane] = [redBaron, blueSkyChaser, shadowDart, nightHawk]
 
     static func plane(forID id: String) -> Plane {
         return all.first(where: { $0.id == id }) ?? redBaron

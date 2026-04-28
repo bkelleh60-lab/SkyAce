@@ -205,9 +205,12 @@ final class HangarScene: SKScene {
         } else if plane.requiresFullUnlock && !IAPManager.shared.isContentUnlocked {
             flyButton.setTitle("UNLOCK GAME")
             flyButton.setStyle(.tertiary)
-        } else {
+        } else if ProgressManager.shared.coins >= plane.cost {
             flyButton.setTitle("★ \(plane.cost) COINS")
-            flyButton.setStyle(ProgressManager.shared.coins >= plane.cost ? .tertiary : .disabled)
+            flyButton.setStyle(.tertiary)
+        } else {
+            flyButton.setTitle("NOT ENOUGH COINS")
+            flyButton.setStyle(.disabled)
         }
     }
 
@@ -242,6 +245,15 @@ final class HangarScene: SKScene {
             SkyNavigator.shared.showUnlock()
             return
         }
+
+        #if DEBUG
+        if debugUnlockAllContent {
+            ProgressManager.shared.purchasePlane(plane.id)
+            ProgressManager.shared.selectedPlaneID = plane.id
+            refresh()
+            return
+        }
+        #endif
 
         if ProgressManager.shared.spendCoins(plane.cost) {
             ProgressManager.shared.purchasePlane(plane.id)

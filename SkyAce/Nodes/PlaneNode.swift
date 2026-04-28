@@ -80,7 +80,82 @@ final class PlaneNode: SKNode {
             container.addChild(sprite)
             return container
         }
+        // PLACEHOLDER: Replace with production art asset before App Store
+        // submission. Shadow Dart gets a stealth-fighter silhouette; every
+        // other plane shares the generic propeller-fallback body.
+        if plane.id == "shadow_dart" {
+            return makeShadowDartBody(for: plane)
+        }
         return makeProgrammaticBody(for: plane)
+    }
+
+    private static func makeShadowDartBody(for plane: Plane) -> SKNode {
+        let container = SKNode()
+        container.zPosition = 10
+
+        // Engine exhaust glow — Sky Blue, behind the fuselage so the trail
+        // reads as engine plume, not a wing detail.
+        let exhaust = SKShapeNode(ellipseOf: CGSize(width: 18, height: 8))
+        exhaust.fillColor = plane.accentColor.withAlphaComponent(0.55)
+        exhaust.strokeColor = .clear
+        exhaust.position = CGPoint(x: -34, y: 0)
+        exhaust.zPosition = 0
+        exhaust.blendMode = .add
+        container.addChild(exhaust)
+
+        // Swept-back angular wings — single triangle path, mirrored top/bottom
+        // by drawing one shape that spans the full wing chord.
+        let wingPath = CGMutablePath()
+        wingPath.move(to: CGPoint(x: 4, y: 0))
+        wingPath.addLine(to: CGPoint(x: -28, y: 26))
+        wingPath.addLine(to: CGPoint(x: -16, y: 26))
+        wingPath.addLine(to: CGPoint(x: 14, y: 0))
+        wingPath.addLine(to: CGPoint(x: -16, y: -26))
+        wingPath.addLine(to: CGPoint(x: -28, y: -26))
+        wingPath.closeSubpath()
+        let wings = SKShapeNode(path: wingPath)
+        wings.fillColor = plane.bodyColor
+        wings.strokeColor = .clear
+        wings.zPosition = 1
+        container.addChild(wings)
+
+        // Flat angular fuselage with sharp pointed nose.
+        let hullPath = CGMutablePath()
+        hullPath.move(to: CGPoint(x: 38, y: 0))
+        hullPath.addLine(to: CGPoint(x: 18, y: 7))
+        hullPath.addLine(to: CGPoint(x: -28, y: 7))
+        hullPath.addLine(to: CGPoint(x: -32, y: 0))
+        hullPath.addLine(to: CGPoint(x: -28, y: -7))
+        hullPath.addLine(to: CGPoint(x: 18, y: -7))
+        hullPath.closeSubpath()
+        let hull = SKShapeNode(path: hullPath)
+        hull.fillColor = plane.bodyColor
+        hull.strokeColor = .clear
+        hull.zPosition = 2
+        container.addChild(hull)
+
+        // Sky Blue accent stripe along the fuselage.
+        let stripe = SKShapeNode(rectOf: CGSize(width: 56, height: 2), cornerRadius: 1)
+        stripe.fillColor = plane.accentColor
+        stripe.strokeColor = .clear
+        stripe.position = CGPoint(x: 2, y: 0)
+        stripe.zPosition = 3
+        container.addChild(stripe)
+
+        // Victory Gold cockpit canopy — small angular blister near the nose.
+        let canopyPath = CGMutablePath()
+        canopyPath.move(to: CGPoint(x: 14, y: 6))
+        canopyPath.addLine(to: CGPoint(x: 4, y: 9))
+        canopyPath.addLine(to: CGPoint(x: -8, y: 9))
+        canopyPath.addLine(to: CGPoint(x: -4, y: 6))
+        canopyPath.closeSubpath()
+        let canopy = SKShapeNode(path: canopyPath)
+        canopy.fillColor = UIColor(hex: 0xFFD709)
+        canopy.strokeColor = .clear
+        canopy.zPosition = 4
+        container.addChild(canopy)
+
+        return container
     }
 
     private static func makeProgrammaticBody(for plane: Plane) -> SKNode {

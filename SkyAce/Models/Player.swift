@@ -41,19 +41,19 @@ enum PlaneCatalog {
         assetFacesLeft: true
     )
 
-    static let silverFalcon = Plane(
-        id: "silver_falcon",
-        name: "Silver Falcon",
-        subtitle: "Advanced Stealth Jet",
+    static let shadowDart = Plane(
+        id: "shadow_dart",
+        name: "Shadow Dart",
+        subtitle: "Fast as Light",
         cost: 1200,
-        requiresFullUnlock: true,
-        spriteName: SkySprites.planeBiplane,
-        bodyColor: UIColor(hex: 0xBFC8D1),
-        accentColor: UIColor(hex: 0x3D5F7C),
+        requiresFullUnlock: false,
+        spriteName: SkySprites.planeShadowDart,
+        bodyColor: UIColor(hex: 0x08314D),
+        accentColor: UIColor(hex: 0x00BAFF),
         assetFacesLeft: false
     )
 
-    static let all: [Plane] = [redBaron, blueSkyChaser, silverFalcon]
+    static let all: [Plane] = [redBaron, blueSkyChaser, shadowDart]
 
     static func plane(forID id: String) -> Plane {
         return all.first(where: { $0.id == id }) ?? redBaron

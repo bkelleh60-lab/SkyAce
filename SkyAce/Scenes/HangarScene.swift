@@ -206,7 +206,7 @@ final class HangarScene: SKScene {
             flyButton.setTitle("UNLOCK GAME")
             flyButton.setStyle(.tertiary)
         } else if ProgressManager.shared.coins >= plane.cost {
-            flyButton.setTitle("★ \(plane.cost) COINS")
+            flyButton.setTitle("★ \(plane.cost.formatted()) COINS")
             flyButton.setStyle(.tertiary)
         } else {
             flyButton.setTitle("NOT ENOUGH COINS")

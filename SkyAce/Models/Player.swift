@@ -11,6 +11,9 @@ struct Plane {
     let spriteName: String    // Resources/Sprites/*.png; nil-safe via SkySprites.texture
     let bodyColor: UIColor    // programmatic-fallback fill when sprite is absent
     let accentColor: UIColor  // programmatic-fallback accent
+    // Set when the bundled PNG is authored nose-left; PlaneNode mirrors the
+    // sprite so the plane reads as flying right in every scene.
+    let assetFacesLeft: Bool
 }
 
 enum PlaneCatalog {
@@ -22,7 +25,8 @@ enum PlaneCatalog {
         requiresFullUnlock: false,
         spriteName: SkySprites.planeJet,
         bodyColor: SkyColors.primaryContainer,
-        accentColor: SkyColors.primary
+        accentColor: SkyColors.primary,
+        assetFacesLeft: false
     )
 
     static let redBaron = Plane(
@@ -33,7 +37,8 @@ enum PlaneCatalog {
         requiresFullUnlock: false,
         spriteName: SkySprites.planeFighter,
         bodyColor: UIColor(hex: 0xE8424A),
-        accentColor: UIColor(hex: 0xFFD709)
+        accentColor: UIColor(hex: 0xFFD709),
+        assetFacesLeft: true
     )
 
     static let silverFalcon = Plane(
@@ -44,7 +49,8 @@ enum PlaneCatalog {
         requiresFullUnlock: true,
         spriteName: SkySprites.planeBiplane,
         bodyColor: UIColor(hex: 0xBFC8D1),
-        accentColor: UIColor(hex: 0x3D5F7C)
+        accentColor: UIColor(hex: 0x3D5F7C),
+        assetFacesLeft: false
     )
 
     static let all: [Plane] = [blueSkyChaser, redBaron, silverFalcon]

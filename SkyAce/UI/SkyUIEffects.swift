@@ -223,6 +223,10 @@ enum SkySprites {
     static let planeFighter     = "plane_fighter"
     static let planeJet         = "plane_jet"
     static let planeBiplane     = "plane_biplane"
+    // PLACEHOLDER: Replace with production art asset before App Store submission.
+    // No PNG is bundled yet — PlaneNode falls back to a programmatic stealth
+    // fighter body for the Shadow Dart until commissioned art lands.
+    static let planeShadowDart  = "plane_shadow_dart"
 
     // Gameplay sprites (Resources/Sprites/)
     static let coin             = "coin"

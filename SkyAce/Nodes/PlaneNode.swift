@@ -69,8 +69,16 @@ final class PlaneNode: SKNode {
         // Prefer the bundled plane sprite; fall back to programmatic art while
         // final PNGs are still in production.
         if let sprite = SkySprites.sprite(named: plane.spriteName, size: CGSize(width: 90, height: 45)) {
-            sprite.zPosition = 10
-            return sprite
+            // Wrap so the boost-trail emitter (added later as a child of `body`
+            // at x=-48) stays behind the plane even when the inner sprite is
+            // mirrored for an asset that's authored nose-left.
+            let container = SKNode()
+            container.zPosition = 10
+            if plane.assetFacesLeft {
+                sprite.xScale = -1
+            }
+            container.addChild(sprite)
+            return container
         }
         return makeProgrammaticBody(for: plane)
     }
@@ -171,13 +179,15 @@ final class PlaneNode: SKNode {
             SKAction.colorize(with: UIColor.systemRed, colorBlendFactor: 0.6, duration: 0.06),
             SKAction.colorize(withColorBlendFactor: 0.0, duration: 0.2)
         ])
-        // Sprite path: colorize the body sprite directly. (No-op on SKShapeNode.)
-        body.run(flash)
 
-        // Programmatic-fallback path: swap fill on each child SKShapeNode so the
-        // colorize behaviour is visible even when the body is a shape container.
+        // Body is always a container now: sprite path wraps an SKSpriteNode,
+        // programmatic path holds SKShapeNodes. Colorize the sprite child(ren)
+        // directly, and swap fillColor on shape children since SKAction.colorize
+        // is a no-op on SKShapeNode.
         body.enumerateChildNodes(withName: "*") { node, _ in
-            if let shape = node as? SKShapeNode {
+            if let sprite = node as? SKSpriteNode {
+                sprite.run(flash)
+            } else if let shape = node as? SKShapeNode {
                 let original = shape.fillColor
                 shape.run(SKAction.sequence([
                     SKAction.run { shape.fillColor = UIColor.systemRed },

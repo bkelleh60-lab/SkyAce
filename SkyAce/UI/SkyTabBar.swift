@@ -3,11 +3,12 @@ import UIKit
 
 /// Persistent 4-tab bottom navigation bar:
 ///
-///     [ Home ]  [ Hangar ]  ⦿ Missions (raised)  [ Shop ]
+///     [ Home ]  [ Hangar ]  [ Missions ]  [ Shop ]
 ///
-/// Missions is always visually raised and uses the primary gradient — it's
-/// the "primary action" anchor. The other three tabs dim to 70% opacity
-/// when inactive and go to full opacity + primary color when active.
+/// All four tabs share the same baseline and visual treatment. The active
+/// tab — set by each scene at construction — renders at full opacity in the
+/// primary color; inactive tabs dim to 60–70% opacity with the on-surface-
+/// variant color so the active state always reflects the current screen.
 ///
 /// Position the bar with its **center at y = barHeight / 2** — the bar
 /// extends upward from the scene's y=0 baseline.
@@ -69,19 +70,11 @@ final class SkyTabBar: SKNode {
 
         for (tab, xInBar) in slots {
             let x = xInBar - barWidth / 2
-            if tab == .missions {
-                let node = buildMissionsButton()
-                node.position = CGPoint(x: x, y: 20)   // raised above the bar
-                node.zPosition = 5
-                node.name = "tab-\(tab.rawValue)"
-                addChild(node)
-            } else {
-                let node = buildStandardTab(tab)
-                node.position = CGPoint(x: x, y: 0)
-                node.zPosition = 2
-                node.name = "tab-\(tab.rawValue)"
-                addChild(node)
-            }
+            let node = buildStandardTab(tab)
+            node.position = CGPoint(x: x, y: 0)
+            node.zPosition = 2
+            node.name = "tab-\(tab.rawValue)"
+            addChild(node)
         }
     }
 
@@ -91,10 +84,10 @@ final class SkyTabBar: SKNode {
 
         let (spriteName, emoji, title): (String, String, String) = {
             switch tab {
-            case .home:     return (SkySprites.iconHome,    "⌂", "HOME")
-            case .hangar:   return (SkySprites.tabHangar,   "✈", "HANGAR")
-            case .missions: return (SkySprites.iconMissions, "📋", "MISSIONS")  // unused here
-            case .shop:     return (SkySprites.tabShop,     "🛒", "SHOP")
+            case .home:     return (SkySprites.iconHome,     "⌂",  "HOME")
+            case .hangar:   return (SkySprites.tabHangar,    "✈",  "HANGAR")
+            case .missions: return (SkySprites.iconMissions, "📋", "MISSIONS")
+            case .shop:     return (SkySprites.tabShop,      "🛒", "SHOP")
             }
         }()
         let color: UIColor = isActive ? SkyColors.primary : SkyColors.onSurfaceVariant
@@ -117,51 +110,6 @@ final class SkyTabBar: SKNode {
         label.verticalAlignmentMode = .center
         label.horizontalAlignmentMode = .center
         label.position = CGPoint(x: 0, y: -14)
-        group.addChild(label)
-
-        return group
-    }
-
-    private func buildMissionsButton() -> SKNode {
-        let size: CGFloat = 64
-        let group = SKNode()
-
-        // Soft shadow for the raised circle.
-        let shadow = SkyUIEffects.shadowSprite(
-            size: CGSize(width: size, height: size),
-            cornerRadius: size / 2,
-            blur: 16,
-            spread: -2
-        )
-        shadow.zPosition = -1
-        group.addChild(shadow)
-
-        // Gradient-filled circle.
-        let bgTexture = SkyUIEffects.gradientTexture(
-            size: CGSize(width: size, height: size),
-            cornerRadius: size / 2,
-            top: SkyColors.primaryContainer,
-            bottom: SkyColors.primary
-        )
-        let bg = SKSpriteNode(texture: bgTexture, size: CGSize(width: size, height: size))
-        group.addChild(bg)
-
-        let icon = SkySprites.iconNode(
-            named: SkySprites.iconMissionsWhite,
-            fallbackEmoji: "📋",
-            size: 28,
-            color: SkyColors.onPrimary
-        )
-        icon.position = CGPoint(x: 0, y: 6)
-        group.addChild(icon)
-
-        let label = SKLabelNode(text: "MISSIONS")
-        label.fontName = SkyFonts.headlineName
-        label.fontSize = 8
-        label.fontColor = SkyColors.onPrimary
-        label.verticalAlignmentMode = .center
-        label.horizontalAlignmentMode = .center
-        label.position = CGPoint(x: 0, y: -18)
         group.addChild(label)
 
         return group

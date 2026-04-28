@@ -38,34 +38,46 @@ final class ShopScene: SKScene {
 
     // MARK: - Content
 
+    private struct BuiltCard {
+        let node: SKNode
+        let height: CGFloat
+    }
+
+    /// Constant edge-to-edge spacing between adjacent cards so the rhythm holds
+    /// when individual card heights grow to fit wrapped descriptions.
+    private let cardSpacing: CGFloat = 20
+
     private func buildContent() {
-        var cursorY: CGFloat = 100
+        var previousHeight: CGFloat = 0
+        var cursorY: CGFloat = 0
+
+        func place(_ built: BuiltCard) {
+            if previousHeight == 0 {
+                cursorY = 20 + built.height / 2
+            } else {
+                cursorY += previousHeight / 2 + cardSpacing + built.height / 2
+            }
+            built.node.position = CGPoint(x: size.width / 2, y: cursorY)
+            contentNode.addChild(built.node)
+            previousHeight = built.height
+        }
 
         // Current plane card first.
-        let planeCard = buildCurrentPlaneCard()
-        planeCard.position = CGPoint(x: size.width / 2, y: cursorY)
-        contentNode.addChild(planeCard)
-        cursorY += 200
+        place(buildCurrentPlaneCard())
 
         // Featured (first unlockable) upgrade card.
         let featured = firstFeatured()
         if let featured = featured {
-            let card = buildFeaturedCard(for: featured)
-            card.position = CGPoint(x: size.width / 2, y: cursorY)
-            contentNode.addChild(card)
-            cursorY += 200
+            place(buildFeaturedCard(for: featured))
         }
 
         // Small upgrade cards for the remaining tracks (including fuel).
         let smallKinds = UpgradeKind.allCases.filter { $0 != featured?.kind }
         for kind in smallKinds {
-            let card = buildSmallUpgradeCard(kind: kind)
-            card.position = CGPoint(x: size.width / 2, y: cursorY)
-            contentNode.addChild(card)
-            cursorY += 130
+            place(buildSmallUpgradeCard(kind: kind))
         }
 
-        contentHeight = cursorY + 80
+        contentHeight = cursorY + previousHeight / 2 + 80
     }
 
     private func firstFeatured() -> UpgradeState? {
@@ -78,11 +90,32 @@ final class ShopScene: SKScene {
 
     // MARK: - Featured card
 
-    private func buildFeaturedCard(for upgrade: UpgradeState) -> SKNode {
+    private func buildFeaturedCard(for upgrade: UpgradeState) -> BuiltCard {
         let node = SKNode()
         node.name = "featured-\(upgrade.kind.rawValue)"
 
-        let cardSize = CGSize(width: size.width - 40, height: 180)
+        let cardWidth = size.width - 40
+        let textLeft = -cardWidth / 2 + 100
+        let textRight = cardWidth / 2 - 16
+        let detailMaxWidth = max(80, textRight - textLeft)
+
+        // Build the wrapped description first so we can size the card around it.
+        let detail = SKLabelNode(text: upgrade.kind.description)
+        detail.fontName = SkyFonts.bodyName
+        detail.fontSize = 12
+        detail.fontColor = SkyColors.skOnSurfaceVariant
+        detail.horizontalAlignmentMode = .left
+        detail.verticalAlignmentMode = .top
+        detail.numberOfLines = 0
+        detail.lineBreakMode = .byWordWrapping
+        detail.preferredMaxLayoutWidth = detailMaxWidth
+        let detailHeight = max(14, detail.frame.height)
+
+        // Min height 180 preserves the original visual rhythm for a 1-line
+        // description; longer descriptions push the card taller in 14pt steps.
+        let cardHeight = max(180, 166 + detailHeight)
+        let cardSize = CGSize(width: cardWidth, height: cardHeight)
+
         let card = SKShapeNode(rectOf: cardSize, cornerRadius: 28)
         card.fillColor = SkyColors.skSurfaceContainerLowest
         card.strokeColor = .clear
@@ -91,7 +124,7 @@ final class ShopScene: SKScene {
         let iconBG = SKShapeNode(circleOfRadius: 56)
         iconBG.fillColor = SkyColors.skPrimaryContainer
         iconBG.strokeColor = .clear
-        iconBG.position = CGPoint(x: -cardSize.width / 2 + 30, y: 30)
+        iconBG.position = CGPoint(x: -cardWidth / 2 + 30, y: cardHeight / 2 - 60)
         node.addChild(iconBG)
 
         let icon = SKLabelNode(text: upgrade.kind.iconEmoji)
@@ -104,7 +137,7 @@ final class ShopScene: SKScene {
         let badge = SKShapeNode(rectOf: CGSize(width: 88, height: 22), cornerRadius: 11)
         badge.fillColor = SkyColors.skTertiaryContainer
         badge.strokeColor = .clear
-        badge.position = CGPoint(x: cardSize.width / 2 - 60, y: cardSize.height / 2 - 22)
+        badge.position = CGPoint(x: cardWidth / 2 - 60, y: cardHeight / 2 - 22)
         node.addChild(badge)
 
         let badgeLabel = SKLabelNode(text: "FEATURED")
@@ -116,37 +149,37 @@ final class ShopScene: SKScene {
         badgeLabel.position = badge.position
         node.addChild(badgeLabel)
 
+        // Top-anchored: title sits a fixed offset from the top of the card.
         let title = SKLabelNode(text: upgrade.kind.displayName.uppercased())
         title.fontName = SkyFonts.headlineName
         title.fontSize = 20
         title.fontColor = SkyColors.skOnSurface
         title.horizontalAlignmentMode = .left
         title.verticalAlignmentMode = .center
-        title.position = CGPoint(x: -cardSize.width / 2 + 100, y: 36)
+        title.position = CGPoint(x: textLeft, y: cardHeight / 2 - 54)
         node.addChild(title)
 
-        let detail = SKLabelNode(text: upgrade.kind.description)
-        detail.fontName = SkyFonts.bodyName
-        detail.fontSize = 12
-        detail.fontColor = SkyColors.skOnSurfaceVariant
-        detail.horizontalAlignmentMode = .left
-        detail.verticalAlignmentMode = .center
-        detail.position = CGPoint(x: -cardSize.width / 2 + 100, y: 14)
+        detail.position = CGPoint(x: textLeft, y: cardHeight / 2 - 76)
         node.addChild(detail)
 
-        // Progress bar.
+        // Bottom-anchored: bar / level / buy keep fixed offsets from the
+        // bottom edge so the card grows in the middle when detail wraps.
+        let barY = -cardHeight / 2 + 78
+        let levelY = -cardHeight / 2 + 58
+        let buyY = -cardHeight / 2 + 32
+
         let barBG = SKShapeNode(rectOf: CGSize(width: 200, height: 8), cornerRadius: 4)
         barBG.fillColor = SkyColors.skSurfaceContainerHigh
         barBG.strokeColor = .clear
-        barBG.position = CGPoint(x: -cardSize.width / 2 + 200, y: -12)
+        barBG.position = CGPoint(x: -cardWidth / 2 + 200, y: barY)
         node.addChild(barBG)
 
         let fraction = CGFloat(upgrade.currentLevel) / CGFloat(upgrade.kind.maxLevel)
         let fillWidth = max(2, 200 * fraction)
-        let fill = SKShapeNode(rectOf: CGSize(width: max(2, fillWidth), height: 8), cornerRadius: 4)
+        let fill = SKShapeNode(rectOf: CGSize(width: fillWidth, height: 8), cornerRadius: 4)
         fill.fillColor = SkyColors.skPrimary
         fill.strokeColor = .clear
-        fill.position = CGPoint(x: barBG.position.x - 100 + fillWidth / 2, y: -12)
+        fill.position = CGPoint(x: barBG.position.x - 100 + fillWidth / 2, y: barY)
         node.addChild(fill)
 
         let levelLabel = SKLabelNode(text: "LEVEL \(upgrade.currentLevel) / \(upgrade.kind.maxLevel)")
@@ -155,15 +188,14 @@ final class ShopScene: SKScene {
         levelLabel.fontColor = SkyColors.skOnSurfaceVariant
         levelLabel.horizontalAlignmentMode = .left
         levelLabel.verticalAlignmentMode = .center
-        levelLabel.position = CGPoint(x: -cardSize.width / 2 + 100, y: -32)
+        levelLabel.position = CGPoint(x: textLeft, y: levelY)
         node.addChild(levelLabel)
 
-        // Buy button.
         if let cost = upgrade.nextCost {
             let buy = SkyPillButton(title: "BUY  ★ \(cost)", style: affordStyle(cost), size: CGSize(width: 160, height: 40)) { [weak self] in
                 self?.attemptBuy(upgrade: upgrade)
             }
-            buy.position = CGPoint(x: cardSize.width / 2 - 100, y: -cardSize.height / 2 + 32)
+            buy.position = CGPoint(x: cardWidth / 2 - 100, y: buyY)
             buy.name = "featuredBuy"
             node.addChild(buy)
         } else {
@@ -173,21 +205,60 @@ final class ShopScene: SKScene {
             maxed.fontColor = SkyColors.skOnSurfaceVariant
             maxed.verticalAlignmentMode = .center
             maxed.horizontalAlignmentMode = .right
-            maxed.position = CGPoint(x: cardSize.width / 2 - 32, y: -cardSize.height / 2 + 32)
+            maxed.position = CGPoint(x: cardWidth / 2 - 32, y: buyY)
             node.addChild(maxed)
         }
 
-        return node
+        return BuiltCard(node: node, height: cardHeight)
     }
 
     // MARK: - Small upgrade card
 
-    private func buildSmallUpgradeCard(kind: UpgradeKind) -> SKNode {
+    private func buildSmallUpgradeCard(kind: UpgradeKind) -> BuiltCard {
         let state = UpgradeState.current(kind)
         let node = SKNode()
         node.name = "smallCard-\(kind.rawValue)"
 
-        let cardSize = CGSize(width: size.width - 40, height: 110)
+        let cardWidth = size.width - 40
+        let textLeft = -cardWidth / 2 + 110
+
+        // The right-side content reserves a different width depending on what
+        // is shown (locked vs purchasable vs maxed). Compute the leftmost edge
+        // of that content so the description never collides with the button.
+        let buttonReservedWidth: CGFloat
+        let buttonCenterX: CGFloat
+        if !kind.isAvailable {
+            buttonReservedWidth = 150
+            buttonCenterX = cardWidth / 2 - 92
+        } else if state.isMaxed {
+            buttonReservedWidth = 60
+            buttonCenterX = cardWidth / 2 - 40
+        } else {
+            buttonReservedWidth = 110
+            buttonCenterX = cardWidth / 2 - 80
+        }
+        let buttonLeftEdge = buttonCenterX - buttonReservedWidth / 2
+        let hintMaxWidth = max(60, buttonLeftEdge - textLeft - 12)
+
+        // Wrap the description before sizing the card so we know how tall to
+        // make it. The original layout assumed a single line of fontSize 10.
+        let hint = SKLabelNode(text: kind.description)
+        hint.fontName = SkyFonts.bodyName
+        hint.fontSize = 10
+        hint.fontColor = SkyColors.skOnSurfaceVariant
+        hint.horizontalAlignmentMode = .left
+        hint.verticalAlignmentMode = .top
+        hint.numberOfLines = 0
+        hint.lineBreakMode = .byWordWrapping
+        hint.preferredMaxLayoutWidth = hintMaxWidth
+        let hintHeight = max(10, hint.frame.height)
+
+        // Min height 110 preserves the original look for short descriptions;
+        // longer descriptions (e.g. armor) push the card taller so wrapped
+        // lines have space to render without clipping or overlap.
+        let cardHeight = max(110, 74 + hintHeight)
+        let cardSize = CGSize(width: cardWidth, height: cardHeight)
+
         let card = SKShapeNode(rectOf: cardSize, cornerRadius: 24)
         card.fillColor = SkyColors.skSurfaceContainerLowest
         card.strokeColor = .clear
@@ -197,16 +268,17 @@ final class ShopScene: SKScene {
         icon.fontSize = 40
         icon.verticalAlignmentMode = .center
         icon.horizontalAlignmentMode = .center
-        icon.position = CGPoint(x: -cardSize.width / 2 + 56, y: 0)
+        icon.position = CGPoint(x: -cardWidth / 2 + 56, y: 0)
         node.addChild(icon)
 
+        // Top-anchored: title and level row sit a fixed distance from the top.
         let title = SKLabelNode(text: kind.displayName)
         title.fontName = SkyFonts.headlineName
         title.fontSize = 16
         title.fontColor = SkyColors.skOnSurface
         title.horizontalAlignmentMode = .left
         title.verticalAlignmentMode = .center
-        title.position = CGPoint(x: -cardSize.width / 2 + 110, y: 20)
+        title.position = CGPoint(x: textLeft, y: cardHeight / 2 - 35)
         node.addChild(title)
 
         let level = SKLabelNode(text: "LEVEL \(state.currentLevel) / \(kind.maxLevel)")
@@ -215,22 +287,17 @@ final class ShopScene: SKScene {
         level.fontColor = SkyColors.skOnSurfaceVariant
         level.horizontalAlignmentMode = .left
         level.verticalAlignmentMode = .center
-        level.position = CGPoint(x: -cardSize.width / 2 + 110, y: 0)
+        level.position = CGPoint(x: textLeft, y: cardHeight / 2 - 55)
         node.addChild(level)
 
-        let hint = SKLabelNode(text: kind.description)
-        hint.fontName = SkyFonts.bodyName
-        hint.fontSize = 10
-        hint.fontColor = SkyColors.skOnSurfaceVariant
-        hint.horizontalAlignmentMode = .left
-        hint.verticalAlignmentMode = .center
-        hint.position = CGPoint(x: -cardSize.width / 2 + 110, y: -16)
+        // Wrapped hint hangs from a fixed distance below the level row.
+        hint.position = CGPoint(x: textLeft, y: cardHeight / 2 - 66)
         node.addChild(hint)
 
-        // Button
+        // Button vertically centered on the card.
         if !kind.isAvailable {
             let soon = SkyPillButton(title: "🔒 COMING SOON", style: .disabled, size: CGSize(width: 150, height: 36)) { }
-            soon.position = CGPoint(x: cardSize.width / 2 - 92, y: 0)
+            soon.position = CGPoint(x: buttonCenterX, y: 0)
             node.addChild(soon)
         } else if state.isMaxed {
             let maxed = SKLabelNode(text: "MAX")
@@ -239,18 +306,18 @@ final class ShopScene: SKScene {
             maxed.fontColor = SkyColors.skOnSurfaceVariant
             maxed.verticalAlignmentMode = .center
             maxed.horizontalAlignmentMode = .center
-            maxed.position = CGPoint(x: cardSize.width / 2 - 40, y: 0)
+            maxed.position = CGPoint(x: buttonCenterX, y: 0)
             node.addChild(maxed)
         } else if let cost = state.nextCost {
             let button = SkyPillButton(title: "★ \(cost)", style: affordStyle(cost), size: CGSize(width: 110, height: 36)) { [weak self] in
                 self?.attemptBuy(upgrade: state)
             }
-            button.position = CGPoint(x: cardSize.width / 2 - 80, y: 0)
+            button.position = CGPoint(x: buttonCenterX, y: 0)
             button.name = "smallBuy-\(kind.rawValue)"
             node.addChild(button)
         }
 
-        return node
+        return BuiltCard(node: node, height: cardHeight)
     }
 
     private func affordStyle(_ cost: Int) -> SkyPillButton.Style {
@@ -259,7 +326,7 @@ final class ShopScene: SKScene {
 
     // MARK: - Current plane card
 
-    private func buildCurrentPlaneCard() -> SKNode {
+    private func buildCurrentPlaneCard() -> BuiltCard {
         let plane = PlaneCatalog.plane(forID: ProgressManager.shared.selectedPlaneID)
         let node = SKNode()
 
@@ -305,7 +372,7 @@ final class ShopScene: SKScene {
             node.addChild(row)
         }
 
-        return node
+        return BuiltCard(node: node, height: cardSize.height)
     }
 
     private func statBar(label: String, filled: Int) -> SKNode {

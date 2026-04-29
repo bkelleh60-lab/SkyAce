@@ -337,6 +337,23 @@ enum SkySprites {
         label.horizontalAlignmentMode = .center
         return label
     }
+
+    /// Returns an SKSpriteNode rendered from an SF Symbol, tinted to `color`.
+    /// Prefer this over emoji fallbacks when the glyph must be tinted precisely
+    /// (e.g. nav-bar active/inactive states).
+    static func sfSymbolNode(systemName: String, size: CGFloat, color: UIColor) -> SKSpriteNode {
+        let config = UIImage.SymbolConfiguration(pointSize: size, weight: .medium)
+        let uiImage = UIImage(systemName: systemName, withConfiguration: config)?
+            .withTintColor(color, renderingMode: .alwaysOriginal)
+        let texture: SKTexture
+        if let img = uiImage {
+            texture = SKTexture(image: img)
+        } else {
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+            texture = SKTexture(image: renderer.image { _ in })
+        }
+        return SKSpriteNode(texture: texture, size: CGSize(width: size, height: size))
+    }
 }
 
 // MARK: - SkyHaptics

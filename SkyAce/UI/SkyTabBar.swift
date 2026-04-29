@@ -92,12 +92,14 @@ final class SkyTabBar: SKNode {
         }()
         let color: UIColor = isActive ? SkyColors.primary : SkyColors.onSurfaceVariant
 
-        let icon = SkySprites.iconNode(
-            named: spriteName,
-            fallbackEmoji: emoji,
-            size: 22,
-            color: color
-        )
+        // Hangar gets a building SF Symbol so it is visually distinct from the
+        // Free Flight airplane icon on the home screen.
+        let icon: SKNode
+        if tab == .hangar {
+            icon = SkySprites.sfSymbolNode(systemName: "building.2.fill", size: 22, color: color)
+        } else {
+            icon = SkySprites.iconNode(named: spriteName, fallbackEmoji: emoji, size: 22, color: color)
+        }
         icon.position = CGPoint(x: 0, y: 8)
         icon.alpha = isActive ? 1.0 : 0.6
         group.addChild(icon)

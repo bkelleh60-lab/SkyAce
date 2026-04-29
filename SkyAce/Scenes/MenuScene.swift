@@ -186,6 +186,7 @@ final class MenuScene: SKScene {
             title: "FREE FLIGHT",
             iconSpriteName: SkySprites.tabHangar,
             iconFallback: "✈",
+            sfSymbolName: "airplane",
             fillColor: SkyColors.secondaryContainer,
             textColor: SkyColors.onSecondaryContainer,
             name: "bentoFreeFlight"
@@ -216,6 +217,7 @@ final class MenuScene: SKScene {
     private func buildBentoTile(title: String,
                                 iconSpriteName: String,
                                 iconFallback: String,
+                                sfSymbolName: String? = nil,
                                 fillColor: UIColor,
                                 textColor: UIColor,
                                 name: String) -> SKNode {
@@ -236,12 +238,12 @@ final class MenuScene: SKScene {
         let tile = SKSpriteNode(texture: tileTexture, size: size)
         container.addChild(tile)
 
-        let icon = SkySprites.iconNode(
-            named: iconSpriteName,
-            fallbackEmoji: iconFallback,
-            size: 28,
-            color: textColor
-        )
+        let icon: SKNode
+        if let symbolName = sfSymbolName {
+            icon = SkySprites.sfSymbolNode(systemName: symbolName, size: 28, color: textColor)
+        } else {
+            icon = SkySprites.iconNode(named: iconSpriteName, fallbackEmoji: iconFallback, size: 28, color: textColor)
+        }
         icon.position = CGPoint(x: 0, y: 12)
         container.addChild(icon)
 

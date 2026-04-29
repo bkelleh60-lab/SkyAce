@@ -75,11 +75,7 @@ final class GameViewController: UIViewController {
     /// Used before every IAP purchase attempt.
     func presentParentalGate(onSuccess: @escaping () -> Void) {
         let gate = ParentalGateViewController()
-        gate.onSuccess = { [weak gate] in
-            gate?.dismiss(animated: true) {
-                onSuccess()
-            }
-        }
+        gate.onGatePassedCompletion = onSuccess
         gate.modalPresentationStyle = .overFullScreen
         gate.modalTransitionStyle = .crossDissolve
         present(gate, animated: true)

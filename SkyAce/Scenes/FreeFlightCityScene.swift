@@ -300,8 +300,13 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         birdLayer.zPosition = -20
         worldNode.addChild(birdLayer)
         for _ in 0..<4 {
-            let v = SKSpriteNode(imageNamed: "bird")
-            v.size = CGSize(width: 24, height: 12)
+            let birdSize = CGSize(width: 24, height: 12)
+            let v: SKSpriteNode
+            if let tex = SkySprites.texture(named: "bird") {
+                v = SKSpriteNode(texture: tex, size: birdSize)
+            } else {
+                v = SKSpriteNode(color: .white, size: birdSize)
+            }
             v.position = CGPoint(
                 x: CGFloat.random(in: 0...size.width),
                 y: CGFloat.random(in: size.height * 0.5...size.height * 0.85)

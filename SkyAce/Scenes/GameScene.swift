@@ -185,14 +185,17 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         hudNode.addChild(pill)
         coinPillBG = pill
 
-        coinLabel = SKLabelNode(text: "★ 0")
-        coinLabel.fontName = SkyFonts.headlineName
-        coinLabel.fontSize = 15
-        coinLabel.fontColor = SkyColors.skOnTertiaryContainer
+        coinLabel = SKLabelNode()
         coinLabel.verticalAlignmentMode = .center
         coinLabel.horizontalAlignmentMode = .center
         coinLabel.position = pill.position
         coinLabel.zPosition = 101
+        coinLabel.attributedText = SkyUIEffects.coinAmountAttributed(
+            text: "0",
+            fontName: SkyFonts.headlineName,
+            fontSize: 15,
+            color: SkyColors.skOnTertiaryContainer
+        )
         hudNode.addChild(coinLabel)
 
         // Armor badge — only shown if the player has armor.
@@ -550,7 +553,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     // MARK: - HUD updates
 
     private func updateHUD() {
-        coinLabel.text = "★ \(state.coinsCollected)"
+        coinLabel.attributedText = SkyUIEffects.coinAmountAttributed(
+            text: "\(state.coinsCollected)",
+            fontName: SkyFonts.headlineName,
+            fontSize: 15,
+            color: SkyColors.skOnTertiaryContainer
+        )
 
         let totalWidth: CGFloat = 130
         let fraction = state.progress

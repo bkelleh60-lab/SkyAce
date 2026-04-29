@@ -224,12 +224,22 @@ final class HangarScene: SKScene {
             flyButton.setTitle("UNLOCK GAME")
             flyButton.setStyle(.tertiary)
         } else if ProgressManager.shared.coins >= plane.cost {
-            flyButton.setTitle("★ \(plane.cost.formatted()) COINS")
             flyButton.setStyle(.tertiary)
+            flyButton.setAttributedTitle(SkyUIEffects.coinAmountAttributed(
+                text: "\(plane.cost.formatted()) COINS",
+                fontName: SkyFonts.headlineName,
+                fontSize: 16,
+                color: SkyPillButton.labelColor(for: .tertiary)
+            ))
         } else {
             // Show the price above the disabled button so the player knows the
             // target. The button itself keeps the "NOT ENOUGH COINS" status.
-            coinPriceLabel.text = "★ \(plane.cost.formatted())"
+            coinPriceLabel.attributedText = SkyUIEffects.coinAmountAttributed(
+                text: "\(plane.cost.formatted())",
+                fontName: SkyFonts.headlineName,
+                fontSize: 22,
+                color: SkyColors.skOnSurface
+            )
             coinPriceLabel.isHidden = false
             flyButton.setTitle("NOT ENOUGH COINS")
             flyButton.setStyle(.disabled)

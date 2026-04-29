@@ -133,6 +133,46 @@ enum SkyUIEffects {
         }
         return SKTexture(cgImage: outCG)
     }
+
+    // MARK: - Coin amount attributed string
+
+    /// Build an attributed string of the form `[prefix][coin icon] [text]` so
+    /// any UILabel / SKLabelNode can show the bundled coin glyph inline with
+    /// surrounding copy. The icon falls back to "🪙" when the asset is missing.
+    /// Use `iconAsset: SkySprites.iconCoinWhite` on dark/saturated surfaces.
+    static func coinAmountAttributed(prefix: String? = nil,
+                                     text: String,
+                                     fontName: String,
+                                     fontSize: CGFloat,
+                                     color: UIColor,
+                                     iconAsset: String = SkySprites.iconCoin) -> NSAttributedString {
+        let font = UIFont(name: fontName, size: fontSize) ?? UIFont.systemFont(ofSize: fontSize)
+        let attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: color
+        ]
+        let result = NSMutableAttributedString()
+
+        if let prefix = prefix, !prefix.isEmpty {
+            result.append(NSAttributedString(string: prefix, attributes: attrs))
+        }
+
+        if let image = UIImage(named: iconAsset) {
+            let attachment = NSTextAttachment()
+            attachment.image = image
+            let iconSize = fontSize * 1.1
+            // Vertically center the icon against the surrounding cap-height
+            // so it sits on the same visual baseline as the digits.
+            let yOffset = (font.capHeight - iconSize) / 2
+            attachment.bounds = CGRect(x: 0, y: yOffset, width: iconSize, height: iconSize)
+            result.append(NSAttributedString(attachment: attachment))
+        } else {
+            result.append(NSAttributedString(string: "🪙", attributes: attrs))
+        }
+
+        result.append(NSAttributedString(string: " " + text, attributes: attrs))
+        return result
+    }
 }
 
 // MARK: - SkyGlassCard

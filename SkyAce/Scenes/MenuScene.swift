@@ -603,7 +603,7 @@ final class MenuCloud: SKNode {
 }
 
 /// Coin balance pill — gold background with the current coin count.
-/// Uses the bundled `icon_coin` glyph when available; falls back to a ★.
+/// Uses the bundled `icon_coin` glyph when available; falls back to 🪙.
 final class SkyCoinPill: SKNode {
     private let label: SKLabelNode
     private let icon: SKNode
@@ -612,7 +612,7 @@ final class SkyCoinPill: SKNode {
         self.label = SKLabelNode(text: "\(coins)")
         self.icon = SkySprites.iconNode(
             named: SkySprites.iconCoin,
-            fallbackEmoji: "★",
+            fallbackEmoji: "🪙",
             size: 18,
             color: SkyColors.onTertiaryContainer
         )
@@ -676,7 +676,16 @@ final class SkyPillButton: SKNode {
     }
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
-    func setTitle(_ title: String) { label.text = title }
+    func setTitle(_ title: String) {
+        label.attributedText = nil
+        label.text = title
+    }
+
+    /// Set an attributed title (e.g. inline coin icon + amount). Style changes
+    /// will not retint attributed text — rebuild and re-set on style flips.
+    func setAttributedTitle(_ attributed: NSAttributedString) {
+        label.attributedText = attributed
+    }
 
     func setStyle(_ newStyle: Style) {
         self.style = newStyle
@@ -730,12 +739,19 @@ final class SkyPillButton: SKNode {
         label.verticalAlignmentMode = .center
         label.horizontalAlignmentMode = .center
         label.position = .zero
+        label.fontColor = SkyPillButton.labelColor(for: style)
+    }
+
+    /// Foreground color the button uses for plain titles in the given style.
+    /// Exposed so callers building attributed titles (e.g. with an inline coin
+    /// icon) can match the same color the button would have used for text.
+    static func labelColor(for style: Style) -> UIColor {
         switch style {
-        case .primary:   label.fontColor = SkyColors.skOnPrimary
-        case .secondary: label.fontColor = SkyColors.skOnSecondaryContainer
-        case .surface:   label.fontColor = SkyColors.skOnSurface
-        case .tertiary:  label.fontColor = SkyColors.skOnTertiaryContainer
-        case .disabled:  label.fontColor = SkyColors.skOnSurfaceVariant
+        case .primary:   return SkyColors.skOnPrimary
+        case .secondary: return SkyColors.skOnSecondaryContainer
+        case .surface:   return SkyColors.skOnSurface
+        case .tertiary:  return SkyColors.skOnTertiaryContainer
+        case .disabled:  return SkyColors.skOnSurfaceVariant
         }
     }
 }

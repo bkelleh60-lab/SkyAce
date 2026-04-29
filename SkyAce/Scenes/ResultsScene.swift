@@ -98,13 +98,17 @@ final class ResultsScene: SKScene {
         pill.position = CGPoint(x: size.width / 2, y: size.height * 0.44)
         addChild(pill)
 
-        let coinLabel = SKLabelNode(text: "+ ★ 0")
-        coinLabel.fontName = SkyFonts.headlineName
-        coinLabel.fontSize = 20
-        coinLabel.fontColor = SkyColors.skOnTertiaryContainer
+        let coinLabel = SKLabelNode()
         coinLabel.verticalAlignmentMode = .center
         coinLabel.horizontalAlignmentMode = .center
         coinLabel.position = pill.position
+        coinLabel.attributedText = SkyUIEffects.coinAmountAttributed(
+            prefix: "+ ",
+            text: "0",
+            fontName: SkyFonts.headlineName,
+            fontSize: 20,
+            color: SkyColors.skOnTertiaryContainer
+        )
         addChild(coinLabel)
 
         animateCoinCountUp(label: coinLabel, target: challenge.reward)
@@ -148,7 +152,15 @@ final class ResultsScene: SKScene {
         var actions: [SKAction] = []
         for i in 0...steps {
             let value = Int(round(Double(target) * Double(i) / Double(steps)))
-            actions.append(SKAction.run { label.text = "+ ★ \(value)" })
+            actions.append(SKAction.run {
+                label.attributedText = SkyUIEffects.coinAmountAttributed(
+                    prefix: "+ ",
+                    text: "\(value)",
+                    fontName: SkyFonts.headlineName,
+                    fontSize: 20,
+                    color: SkyColors.skOnTertiaryContainer
+                )
+            })
             actions.append(SKAction.wait(forDuration: stepDuration))
         }
         label.run(SKAction.sequence(actions))
@@ -207,11 +219,16 @@ final class ResultsScene: SKScene {
         subtitle.position = CGPoint(x: size.width / 2, y: size.height * 0.72 - 32)
         addChild(subtitle)
 
-        let coinLine = SKLabelNode(text: "Coins collected: ★ \(coinsCollected)")
-        coinLine.fontName = SkyFonts.bodyName
-        coinLine.fontSize = 14
-        coinLine.fontColor = SkyColors.skOnPrimary.withAlphaComponent(0.85)
+        let coinLine = SKLabelNode()
         coinLine.position = CGPoint(x: size.width / 2, y: size.height * 0.56)
+        coinLine.attributedText = SkyUIEffects.coinAmountAttributed(
+            prefix: "Coins collected: ",
+            text: "\(coinsCollected)",
+            fontName: SkyFonts.bodyName,
+            fontSize: 14,
+            color: SkyColors.skOnPrimary.withAlphaComponent(0.85),
+            iconAsset: SkySprites.iconCoinWhite
+        )
         addChild(coinLine)
 
         let retry = SkyPillButton(title: "TRY AGAIN", style: .primary, size: CGSize(width: 240, height: 52)) { [weak self] in

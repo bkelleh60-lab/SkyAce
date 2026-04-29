@@ -30,9 +30,21 @@ final class CurrencyManager {
 
     // MARK: - Mutations
 
+    /// Maximum coins a free player can accumulate.
+    static let freeCoinCap = 1_000
+
     func addCoins(_ amount: Int) {
         guard amount > 0 else { return }
-        let new = coinTotal + amount
+        let new: Int
+        #if DEBUG
+        new = coinTotal + amount
+        #else
+        if IAPManager.shared.isContentUnlocked {
+            new = coinTotal + amount
+        } else {
+            new = min(coinTotal + amount, CurrencyManager.freeCoinCap)
+        }
+        #endif
         defaults.set(new, forKey: Key.coinTotal)
         NotificationCenter.default.post(
             name: CurrencyManager.coinTotalDidChange,

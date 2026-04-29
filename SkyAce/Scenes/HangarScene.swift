@@ -9,6 +9,7 @@ final class HangarScene: SKScene {
     private var nameLabel: SKLabelNode!
     private var subtitleLabel: SKLabelNode!
     private var flyButton: SkyPillButton!
+    private var coinPriceLabel: SKLabelNode!
     private var dotsContainer: SKNode!
     private var previewPlane: PlaneNode?
 
@@ -149,6 +150,20 @@ final class HangarScene: SKScene {
         flyButton.position = CGPoint(x: size.width / 2, y: 130)
         flyButton.zPosition = 20
         addChild(flyButton)
+
+        // Price label sits just above the action button. Visible only when the
+        // plane is locked behind a coin price and the player can't afford it,
+        // so kids can see the target they're working toward.
+        coinPriceLabel = SKLabelNode(text: "")
+        coinPriceLabel.fontName = SkyFonts.headlineName
+        coinPriceLabel.fontSize = 22
+        coinPriceLabel.fontColor = SkyColors.skOnSurface
+        coinPriceLabel.verticalAlignmentMode = .center
+        coinPriceLabel.horizontalAlignmentMode = .center
+        coinPriceLabel.position = CGPoint(x: size.width / 2, y: 130 + 56 / 2 + 24)
+        coinPriceLabel.zPosition = 20
+        coinPriceLabel.isHidden = true
+        addChild(coinPriceLabel)
     }
 
     // MARK: - Top / tab bars
@@ -199,6 +214,9 @@ final class HangarScene: SKScene {
         let owned = ProgressManager.shared.ownsPlane(plane.id)
         let selected = ProgressManager.shared.selectedPlaneID == plane.id
 
+        // Reset between refreshes; only the insufficient-coins branch reveals it.
+        coinPriceLabel.isHidden = true
+
         if owned {
             flyButton.setTitle(selected ? "FLY!" : "SELECT")
             flyButton.setStyle(.primary)
@@ -209,6 +227,10 @@ final class HangarScene: SKScene {
             flyButton.setTitle("★ \(plane.cost.formatted()) COINS")
             flyButton.setStyle(.tertiary)
         } else {
+            // Show the price above the disabled button so the player knows the
+            // target. The button itself keeps the "NOT ENOUGH COINS" status.
+            coinPriceLabel.text = "★ \(plane.cost.formatted())"
+            coinPriceLabel.isHidden = false
             flyButton.setTitle("NOT ENOUGH COINS")
             flyButton.setStyle(.disabled)
         }

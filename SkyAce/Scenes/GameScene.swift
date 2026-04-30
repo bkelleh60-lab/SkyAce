@@ -45,7 +45,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private var isTouchingScreen = false
 
     // HUD
-    private var coinLabel: SKLabelNode!
+    private var coinLabel: CoinAmountNode!
     private var coinPillBG: SKShapeNode!
     private var missionTitleLabel: SKLabelNode!
     private var progressBarFill: SKShapeNode!
@@ -185,12 +185,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         hudNode.addChild(pill)
         coinPillBG = pill
 
-        coinLabel = SKLabelNode(text: "★ 0")
-        coinLabel.fontName = SkyFonts.headlineName
-        coinLabel.fontSize = 15
-        coinLabel.fontColor = SkyColors.skOnTertiaryContainer
-        coinLabel.verticalAlignmentMode = .center
-        coinLabel.horizontalAlignmentMode = .center
+        coinLabel = CoinAmountNode(
+            amount: "0",
+            fontName: SkyFonts.headlineName,
+            fontSize: 15,
+            color: SkyColors.skOnTertiaryContainer
+        )
         coinLabel.position = pill.position
         coinLabel.zPosition = 101
         hudNode.addChild(coinLabel)
@@ -550,7 +550,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     // MARK: - HUD updates
 
     private func updateHUD() {
-        coinLabel.text = "★ \(state.coinsCollected)"
+        coinLabel.setAmount("\(state.coinsCollected)")
 
         let totalWidth: CGFloat = 130
         let fraction = state.progress

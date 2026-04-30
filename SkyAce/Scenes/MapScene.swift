@@ -274,12 +274,13 @@ final class MapScene: SKScene {
         name.position = CGPoint(x: 0, y: 18)
         card.addChild(name)
 
-        let reward = SKLabelNode(text: "REWARD: ★ \(challenge.reward)")
-        reward.fontName = SkyFonts.bodyMediumName
-        reward.fontSize = 12
-        reward.fontColor = SkyColors.skOnTertiaryContainer
-        reward.verticalAlignmentMode = .center
-        reward.horizontalAlignmentMode = .center
+        let reward = CoinAmountNode(
+            prefix: "REWARD: ",
+            amount: "\(challenge.reward)",
+            fontName: SkyFonts.bodyMediumName,
+            fontSize: 12,
+            color: SkyColors.skOnTertiaryContainer
+        )
         reward.position = CGPoint(x: 0, y: -4)
         card.addChild(reward)
 

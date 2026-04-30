@@ -98,16 +98,17 @@ final class ResultsScene: SKScene {
         pill.position = CGPoint(x: size.width / 2, y: size.height * 0.44)
         addChild(pill)
 
-        let coinLabel = SKLabelNode(text: "+ ★ 0")
-        coinLabel.fontName = SkyFonts.headlineName
-        coinLabel.fontSize = 20
-        coinLabel.fontColor = SkyColors.skOnTertiaryContainer
-        coinLabel.verticalAlignmentMode = .center
-        coinLabel.horizontalAlignmentMode = .center
+        let coinLabel = CoinAmountNode(
+            prefix: "+ ",
+            amount: "0",
+            fontName: SkyFonts.headlineName,
+            fontSize: 20,
+            color: SkyColors.skOnTertiaryContainer
+        )
         coinLabel.position = pill.position
         addChild(coinLabel)
 
-        animateCoinCountUp(label: coinLabel, target: challenge.reward)
+        animateCoinCountUp(node: coinLabel, target: challenge.reward)
 
         // Buttons
         let next = SkyPillButton(title: "NEXT LEVEL", style: .primary, size: CGSize(width: 240, height: 52)) { [weak self] in
@@ -142,16 +143,18 @@ final class ResultsScene: SKScene {
         run(AudioManager.shared.sfxAction(SkySFX.win))
     }
 
-    private func animateCoinCountUp(label: SKLabelNode, target: Int) {
+    private func animateCoinCountUp(node: CoinAmountNode, target: Int) {
         let steps = 30
         let stepDuration = 0.030
         var actions: [SKAction] = []
         for i in 0...steps {
             let value = Int(round(Double(target) * Double(i) / Double(steps)))
-            actions.append(SKAction.run { label.text = "+ ★ \(value)" })
+            actions.append(SKAction.run { [weak node] in
+                node?.setAmount("\(value)")
+            })
             actions.append(SKAction.wait(forDuration: stepDuration))
         }
-        label.run(SKAction.sequence(actions))
+        node.run(SKAction.sequence(actions))
     }
 
     private func buildConfetti() {
@@ -207,10 +210,14 @@ final class ResultsScene: SKScene {
         subtitle.position = CGPoint(x: size.width / 2, y: size.height * 0.72 - 32)
         addChild(subtitle)
 
-        let coinLine = SKLabelNode(text: "Coins collected: ★ \(coinsCollected)")
-        coinLine.fontName = SkyFonts.bodyName
-        coinLine.fontSize = 14
-        coinLine.fontColor = SkyColors.skOnPrimary.withAlphaComponent(0.85)
+        let coinLine = CoinAmountNode(
+            prefix: "Coins collected: ",
+            amount: "\(coinsCollected)",
+            fontName: SkyFonts.bodyName,
+            fontSize: 14,
+            color: SkyColors.skOnPrimary.withAlphaComponent(0.85),
+            iconAsset: SkySprites.iconCoinWhite
+        )
         coinLine.position = CGPoint(x: size.width / 2, y: size.height * 0.56)
         addChild(coinLine)
 

@@ -192,9 +192,10 @@ final class ShopScene: SKScene {
         node.addChild(levelLabel)
 
         if let cost = upgrade.nextCost {
-            let buy = SkyPillButton(title: "BUY  ★ \(cost)", style: affordStyle(cost), size: CGSize(width: 160, height: 40)) { [weak self] in
+            let buy = SkyPillButton(title: "", style: affordStyle(cost), size: CGSize(width: 160, height: 40)) { [weak self] in
                 self?.attemptBuy(upgrade: upgrade)
             }
+            buy.setCoinAmountTitle(prefix: "BUY  ", amount: "\(cost)")
             buy.position = CGPoint(x: cardWidth / 2 - 100, y: buyY)
             buy.name = "featuredBuy"
             node.addChild(buy)
@@ -309,9 +310,10 @@ final class ShopScene: SKScene {
             maxed.position = CGPoint(x: buttonCenterX, y: 0)
             node.addChild(maxed)
         } else if let cost = state.nextCost {
-            let button = SkyPillButton(title: "★ \(cost)", style: affordStyle(cost), size: CGSize(width: 110, height: 36)) { [weak self] in
+            let button = SkyPillButton(title: "", style: affordStyle(cost), size: CGSize(width: 110, height: 36)) { [weak self] in
                 self?.attemptBuy(upgrade: state)
             }
+            button.setCoinAmountTitle(amount: "\(cost)")
             button.position = CGPoint(x: buttonCenterX, y: 0)
             button.name = "smallBuy-\(kind.rawValue)"
             node.addChild(button)

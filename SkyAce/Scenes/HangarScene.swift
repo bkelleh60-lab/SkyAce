@@ -9,7 +9,7 @@ final class HangarScene: SKScene {
     private var nameLabel: SKLabelNode!
     private var subtitleLabel: SKLabelNode!
     private var flyButton: SkyPillButton!
-    private var coinPriceLabel: SKLabelNode!
+    private var coinPriceLabel: CoinAmountNode!
     private var dotsContainer: SKNode!
     private var previewPlane: PlaneNode?
 
@@ -154,12 +154,12 @@ final class HangarScene: SKScene {
         // Price label sits just above the action button. Visible only when the
         // plane is locked behind a coin price and the player can't afford it,
         // so kids can see the target they're working toward.
-        coinPriceLabel = SKLabelNode(text: "")
-        coinPriceLabel.fontName = SkyFonts.headlineName
-        coinPriceLabel.fontSize = 22
-        coinPriceLabel.fontColor = SkyColors.skOnSurface
-        coinPriceLabel.verticalAlignmentMode = .center
-        coinPriceLabel.horizontalAlignmentMode = .center
+        coinPriceLabel = CoinAmountNode(
+            amount: "",
+            fontName: SkyFonts.headlineName,
+            fontSize: 22,
+            color: SkyColors.skOnSurface
+        )
         coinPriceLabel.position = CGPoint(x: size.width / 2, y: 130 + 56 / 2 + 24)
         coinPriceLabel.zPosition = 20
         coinPriceLabel.isHidden = true
@@ -224,12 +224,12 @@ final class HangarScene: SKScene {
             flyButton.setTitle("UNLOCK GAME")
             flyButton.setStyle(.tertiary)
         } else if ProgressManager.shared.coins >= plane.cost {
-            flyButton.setTitle("★ \(plane.cost.formatted()) COINS")
             flyButton.setStyle(.tertiary)
+            flyButton.setCoinAmountTitle(amount: "\(plane.cost.formatted()) COINS")
         } else {
             // Show the price above the disabled button so the player knows the
             // target. The button itself keeps the "NOT ENOUGH COINS" status.
-            coinPriceLabel.text = "★ \(plane.cost.formatted())"
+            coinPriceLabel.setAmount("\(plane.cost.formatted())")
             coinPriceLabel.isHidden = false
             flyButton.setTitle("NOT ENOUGH COINS")
             flyButton.setStyle(.disabled)

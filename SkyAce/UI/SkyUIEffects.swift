@@ -133,6 +133,7 @@ enum SkyUIEffects {
         }
         return SKTexture(cgImage: outCG)
     }
+
 }
 
 // MARK: - SkyGlassCard

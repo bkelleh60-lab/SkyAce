@@ -143,12 +143,13 @@ final class SkyNavigator {
         present(scene, music: SkyMusic.gameplay)
     }
 
-    func showResults(challenge: Challenge, coinsCollected: Int, hitsTaken: Int, didWin: Bool) {
+    func showResults(challenge: Challenge, coinsCollected: Int, coinsAvailable: Int, timeRemaining: TimeInterval, didWin: Bool) {
         let scene = ResultsScene(
             size: sceneSize(),
             challenge: challenge,
             coinsCollected: coinsCollected,
-            hitsTaken: hitsTaken,
+            coinsAvailable: coinsAvailable,
+            timeRemaining: timeRemaining,
             didWin: didWin
         )
         present(scene, music: didWin ? SkyMusic.menu : SkyMusic.menu)

@@ -104,14 +104,26 @@ enum ChallengeCatalog {
     }
 }
 
-// Star rating thresholds: 3=0 hits, 2=1 hit, 1=2+ hits (completion).
+/// Star rating thresholds:
+///   1★ — finished the level (time expired or finish line reached)
+///   2★ — finished AND collected ≥50% of coins that appeared
+///   3★ — finished AND collected ≥80% of coins AND time still on the clock
+///
+/// Thresholds are tunable here.
 enum StarRating {
-    static func stars(forHitsTaken hits: Int, completed: Bool) -> Int {
+    static let twoStarCoinThreshold: Double = 0.5
+    static let threeStarCoinThreshold: Double = 0.8
+
+    static func stars(
+        completed: Bool,
+        coinsCollected: Int,
+        totalCoins: Int,
+        timeRemaining: TimeInterval
+    ) -> Int {
         guard completed else { return 0 }
-        switch hits {
-        case 0:  return 3
-        case 1:  return 2
-        default: return 1
-        }
+        let pct = totalCoins > 0 ? Double(coinsCollected) / Double(totalCoins) : 0
+        if pct >= threeStarCoinThreshold && timeRemaining > 0 { return 3 }
+        if pct >= twoStarCoinThreshold { return 2 }
+        return 1
     }
 }

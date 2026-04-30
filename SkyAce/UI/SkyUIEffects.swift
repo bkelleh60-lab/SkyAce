@@ -220,18 +220,13 @@ final class SkyGlassCard: SKNode {
 /// `SKTexture(imageNamed:)` directly) so it can detect missing assets and
 /// fall back to programmatic shapes while art is still in production.
 enum SkySprites {
-    // Plane sprites (Resources/Sprites/)
+    // Plane sprites (Resources/Sprites/ for the original three; Asset Catalog
+    // imagesets for the Stitch-designed Shadow Dart and Night Hawk).
     static let planeFighter     = "plane_fighter"
     static let planeJet         = "plane_jet"
     static let planeBiplane     = "plane_biplane"
-    // PLACEHOLDER: Replace with production art asset before App Store submission.
-    // No PNG is bundled yet — PlaneNode falls back to a programmatic stealth
-    // fighter body for the Shadow Dart until commissioned art lands.
-    static let planeShadowDart  = "plane_shadow_dart"
-    // PLACEHOLDER: Replace with production art asset before App Store submission.
-    // No PNG is bundled yet — PlaneNode falls back to a programmatic stealth
-    // bomber body for the Night Hawk until commissioned art lands.
-    static let planeNightHawk   = "plane_night_hawk"
+    static let planeShadowDart  = "shadow_dart"
+    static let planeNightHawk   = "night_hawk"
 
     // Gameplay sprites (Resources/Sprites/)
     static let coin             = "coin"

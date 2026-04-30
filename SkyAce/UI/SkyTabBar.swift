@@ -10,25 +10,42 @@ import UIKit
 /// primary color; inactive tabs dim to 60–70% opacity with the on-surface-
 /// variant color so the active state always reflects the current screen.
 ///
-/// Position the bar with its **center at y = barHeight / 2** — the bar
-/// extends upward from the scene's y=0 baseline.
+/// Position the bar with its **center at y = bottomInset + barHeight / 2**.
+/// The icon/label content sits in the upper `barHeight` strip; when a
+/// `bottomInset` is supplied the surface fill extends downward by that
+/// amount so the bar reads as flush with the device's bottom edge while
+/// the home indicator passes safely below the touch targets.
 final class SkyTabBar: SKNode {
     enum Tab: Int { case home, hangar, missions, shop }
 
     private let barWidth: CGFloat
+    private(set) var bottomInset: CGFloat
+    private var bottomInsetFill: SKSpriteNode?
     static let barHeight: CGFloat = 80
 
     let active: Tab
 
-    init(active: Tab, width: CGFloat) {
+    init(active: Tab, width: CGFloat, bottomInset: CGFloat = 0) {
         self.active = active
         self.barWidth = width
+        self.bottomInset = bottomInset
         super.init()
         buildBar()
         buildTabs()
     }
 
     required init?(coder aDecoder: NSCoder) { fatalError() }
+
+    /// Update the safe-area inset after construction. SpriteKit scenes
+    /// receive `safeAreaInsets` of zero in `didMove(to:)` on the very
+    /// first present (before `viewSafeAreaInsetsDidChange` fires), so the
+    /// host view controller calls this once layout settles to fill the
+    /// home-indicator strip behind the bar.
+    func setBottomInset(_ inset: CGFloat) {
+        guard inset != bottomInset else { return }
+        bottomInset = inset
+        applyBottomInsetFill()
+    }
 
     // MARK: - Bar background (rounded top corners only)
 
@@ -42,6 +59,8 @@ final class SkyTabBar: SKNode {
         bar.zPosition = 0
         addChild(bar)
 
+        applyBottomInsetFill()
+
         // Subtle ambient shadow above the bar (matches the mockup's
         // upward-casting shadow).
         let shadow = SkyUIEffects.shadowSprite(
@@ -53,6 +72,23 @@ final class SkyTabBar: SKNode {
         )
         shadow.zPosition = -1
         addChild(shadow)
+    }
+
+    /// Adds (or resizes/removes) the rectangle that extends the bar's
+    /// surface fill behind the home indicator so the bar reads flush with
+    /// the screen edge.
+    private func applyBottomInsetFill() {
+        bottomInsetFill?.removeFromParent()
+        bottomInsetFill = nil
+        guard bottomInset > 0 else { return }
+        let fill = SKSpriteNode(
+            color: SkyColors.surfaceContainerLow,
+            size: CGSize(width: barWidth, height: bottomInset)
+        )
+        fill.position = CGPoint(x: 0, y: -Self.barHeight / 2 - bottomInset / 2)
+        fill.zPosition = 0
+        addChild(fill)
+        bottomInsetFill = fill
     }
 
     // MARK: - Tabs

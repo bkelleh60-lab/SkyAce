@@ -262,8 +262,9 @@ final class MenuScene: SKScene {
     // MARK: - Bottom nav bar
 
     private func buildNavBar() {
-        let bar = SkyTabBar(active: .home, width: size.width)
-        // Lift above the home indicator so tap targets aren't under it.
+        let bar = SkyTabBar(active: .home, width: size.width, bottomInset: bottomSafeInset)
+        // Tap targets sit above the home indicator; the bar's surface fill
+        // extends down behind it so the bar is flush with the screen edge.
         bar.position = CGPoint(x: size.width / 2, y: bottomSafeInset + SkyTabBar.barHeight / 2)
         bar.zPosition = 40
         bar.name = "navBar"

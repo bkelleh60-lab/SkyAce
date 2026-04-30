@@ -652,6 +652,7 @@ final class SkyPillButton: SKNode {
     private let fill: SKSpriteNode
     private let shadow: SKSpriteNode
     private let label: SKLabelNode
+    private var coinTitleNode: CoinAmountNode?
     private let handler: () -> Void
     var style: Style
 
@@ -677,14 +678,29 @@ final class SkyPillButton: SKNode {
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
     func setTitle(_ title: String) {
-        label.attributedText = nil
+        coinTitleNode?.removeFromParent()
+        coinTitleNode = nil
+        label.isHidden = false
         label.text = title
     }
 
-    /// Set an attributed title (e.g. inline coin icon + amount). Style changes
-    /// will not retint attributed text — rebuild and re-set on style flips.
-    func setAttributedTitle(_ attributed: NSAttributedString) {
-        label.attributedText = attributed
+    /// Set a title that contains an inline coin icon (e.g. "BUY [coin] 350").
+    /// Hides the plain label and adds a `CoinAmountNode` child. The icon and
+    /// text colors are derived from the current style.
+    func setCoinAmountTitle(prefix: String? = nil, amount: String, fontSize: CGFloat = 16) {
+        coinTitleNode?.removeFromParent()
+        label.isHidden = true
+        let node = CoinAmountNode(
+            prefix: prefix,
+            amount: amount,
+            fontName: SkyFonts.headlineName,
+            fontSize: fontSize,
+            color: SkyPillButton.labelColor(for: style)
+        )
+        node.zPosition = 1
+        node.position = .zero
+        addChild(node)
+        coinTitleNode = node
     }
 
     func setStyle(_ newStyle: Style) {
@@ -753,6 +769,98 @@ final class SkyPillButton: SKNode {
         case .tertiary:  return SkyColors.skOnTertiaryContainer
         case .disabled:  return SkyColors.skOnSurfaceVariant
         }
+    }
+}
+
+// MARK: - Coin amount node
+
+/// Inline coin-price/reward composition: optional prefix text, then the
+/// bundled coin glyph (or 🪙 fallback), then the amount text — all centered
+/// horizontally around the node's origin and vertically centered with the
+/// surrounding text baseline. Drop in anywhere a coin amount is shown so
+/// every screen renders the same coin asset.
+final class CoinAmountNode: SKNode {
+
+    private let icon: SKNode
+    private let amountLabel: SKLabelNode
+    private var prefixLabel: SKLabelNode?
+    private let iconSize: CGFloat
+    private let spacing: CGFloat
+    private let fontName: String
+    private let fontSize: CGFloat
+
+    init(prefix: String? = nil,
+         amount: String,
+         fontName: String,
+         fontSize: CGFloat,
+         color: UIColor,
+         iconAsset: String = SkySprites.iconCoin,
+         iconScale: CGFloat = 1.2,
+         spacing: CGFloat = 4) {
+        self.fontName = fontName
+        self.fontSize = fontSize
+        self.iconSize = fontSize * iconScale
+        self.spacing = spacing
+
+        self.amountLabel = SKLabelNode(text: amount)
+        self.icon = SkySprites.iconNode(
+            named: iconAsset,
+            fallbackEmoji: "🪙",
+            size: iconSize,
+            color: color
+        )
+
+        super.init()
+
+        amountLabel.fontName = fontName
+        amountLabel.fontSize = fontSize
+        amountLabel.fontColor = color
+        amountLabel.verticalAlignmentMode = .center
+        amountLabel.horizontalAlignmentMode = .left
+
+        if let prefix = prefix, !prefix.isEmpty {
+            let p = SKLabelNode(text: prefix)
+            p.fontName = fontName
+            p.fontSize = fontSize
+            p.fontColor = color
+            p.verticalAlignmentMode = .center
+            p.horizontalAlignmentMode = .left
+            prefixLabel = p
+            addChild(p)
+        }
+        addChild(icon)
+        addChild(amountLabel)
+
+        layoutContents()
+    }
+
+    required init?(coder aDecoder: NSCoder) { fatalError() }
+
+    /// Update the amount text (e.g. for the level-complete count-up animation
+    /// or the in-game coin counter). Re-runs layout so the icon stays
+    /// positioned to the left of the (possibly wider) number.
+    func setAmount(_ amount: String) {
+        amountLabel.text = amount
+        layoutContents()
+    }
+
+    private func layoutContents() {
+        let prefixWidth = prefixLabel?.frame.width ?? 0
+        let amountWidth = amountLabel.frame.width
+        let segmentCount = (prefixLabel != nil ? 1 : 0) + 2 // (prefix?) + icon + amount
+        let totalWidth = prefixWidth + iconSize + amountWidth + spacing * CGFloat(segmentCount - 1)
+        var x = -totalWidth / 2
+
+        if let p = prefixLabel {
+            p.position = CGPoint(x: x, y: 0)
+            x += prefixWidth + spacing
+        }
+
+        // SKSprite icons anchor at center — position at icon's center x.
+        icon.position = CGPoint(x: x + iconSize / 2, y: 0)
+        x += iconSize + spacing
+
+        amountLabel.position = CGPoint(x: x, y: 0)
     }
 }
 

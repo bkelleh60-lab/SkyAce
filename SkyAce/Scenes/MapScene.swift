@@ -274,17 +274,14 @@ final class MapScene: SKScene {
         name.position = CGPoint(x: 0, y: 18)
         card.addChild(name)
 
-        let reward = SKLabelNode()
-        reward.verticalAlignmentMode = .center
-        reward.horizontalAlignmentMode = .center
-        reward.position = CGPoint(x: 0, y: -4)
-        reward.attributedText = SkyUIEffects.coinAmountAttributed(
+        let reward = CoinAmountNode(
             prefix: "REWARD: ",
-            text: "\(challenge.reward)",
+            amount: "\(challenge.reward)",
             fontName: SkyFonts.bodyMediumName,
             fontSize: 12,
             color: SkyColors.skOnTertiaryContainer
         )
+        reward.position = CGPoint(x: 0, y: -4)
         card.addChild(reward)
 
         let fly = SkyPillButton(title: "FLY NOW", style: .primary, size: CGSize(width: 160, height: 38)) {

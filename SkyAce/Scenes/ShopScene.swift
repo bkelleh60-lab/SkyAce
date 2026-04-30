@@ -192,17 +192,10 @@ final class ShopScene: SKScene {
         node.addChild(levelLabel)
 
         if let cost = upgrade.nextCost {
-            let style = affordStyle(cost)
-            let buy = SkyPillButton(title: "", style: style, size: CGSize(width: 160, height: 40)) { [weak self] in
+            let buy = SkyPillButton(title: "", style: affordStyle(cost), size: CGSize(width: 160, height: 40)) { [weak self] in
                 self?.attemptBuy(upgrade: upgrade)
             }
-            buy.setAttributedTitle(SkyUIEffects.coinAmountAttributed(
-                prefix: "BUY  ",
-                text: "\(cost)",
-                fontName: SkyFonts.headlineName,
-                fontSize: 16,
-                color: SkyPillButton.labelColor(for: style)
-            ))
+            buy.setCoinAmountTitle(prefix: "BUY  ", amount: "\(cost)")
             buy.position = CGPoint(x: cardWidth / 2 - 100, y: buyY)
             buy.name = "featuredBuy"
             node.addChild(buy)
@@ -317,16 +310,10 @@ final class ShopScene: SKScene {
             maxed.position = CGPoint(x: buttonCenterX, y: 0)
             node.addChild(maxed)
         } else if let cost = state.nextCost {
-            let style = affordStyle(cost)
-            let button = SkyPillButton(title: "", style: style, size: CGSize(width: 110, height: 36)) { [weak self] in
+            let button = SkyPillButton(title: "", style: affordStyle(cost), size: CGSize(width: 110, height: 36)) { [weak self] in
                 self?.attemptBuy(upgrade: state)
             }
-            button.setAttributedTitle(SkyUIEffects.coinAmountAttributed(
-                text: "\(cost)",
-                fontName: SkyFonts.headlineName,
-                fontSize: 16,
-                color: SkyPillButton.labelColor(for: style)
-            ))
+            button.setCoinAmountTitle(amount: "\(cost)")
             button.position = CGPoint(x: buttonCenterX, y: 0)
             button.name = "smallBuy-\(kind.rawValue)"
             node.addChild(button)

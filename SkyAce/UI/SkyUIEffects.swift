@@ -276,6 +276,17 @@ enum SkySprites {
     static let mountainJaggedPeaks = "mountain_jagged_peaks"
     static let mountainSkyIsland   = "mountain_sky_island"
 
+    // Free Flight Mountain scenery (Resources/Sprites/). Three parallax
+    // background strips, a pine tree foreground strip, and ambient props.
+    static let mountainBgFar       = "mountain_bg_far"
+    static let mountainBgMid       = "mountain_bg_mid"
+    static let mountainBgNear      = "mountain_bg_near"
+    static let mountainPineTrees   = "pine_trees"
+    static let mountainSkiLodge    = "ski_lodge"
+    static let mountainCableCar    = "cable_car"
+    static let mountainHangGlider  = "hang_glider"
+    static let mountainHotAirBalloon = "hot_air_balloon"
+
     /// Returns an SKTexture for `name` if the image exists in the asset catalog
     /// or in `Resources/Sprites/` (bundled as a folder reference), otherwise
     /// nil. Callers should fall back to programmatic art when nil is returned.

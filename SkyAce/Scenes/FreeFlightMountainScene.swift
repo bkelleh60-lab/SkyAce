@@ -60,9 +60,12 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
     private var isTouching = false
     private var lastUpdateTime: TimeInterval = 0
 
-    private var farPeaks       = SKNode()
+    private var bgFar          = SKNode()
+    private var bgMid          = SKNode()
+    private var bgNear         = SKNode()
     private var cloudWisps     = SKNode()
-    private var valley         = SKNode()
+    private var pineLine       = SKNode()
+    private var skyProps       = SKNode()
     private var landmarkLayer  = SKNode()
 
     private var lastLandmarkSpawn: TimeInterval = 0
@@ -93,10 +96,12 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
 
         addChild(worldNode)
         buildSkyGradient()
-        buildFarPeaks()
+        buildMountainBackground()
         buildCloudWisps()
-        buildValley()
+        buildSkyProps()
+        buildPineLine()
         buildLandmarkLayer()
+        buildCableCar()
         buildEagles()
         buildSnow()
         buildPlane()
@@ -126,17 +131,86 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         worldNode.addChild(topFade)
     }
 
-    private func buildFarPeaks() {
-        farPeaks.zPosition = -80
-        worldNode.addChild(farPeaks)
-        for _ in 0..<8 {
-            let tri = triangle(
-                size: CGSize(width: CGFloat.random(in: 90...180), height: CGFloat.random(in: 90...140)),
-                color: UIColor(hex: 0x3D5F7C).withAlphaComponent(0.35)
+    /// Three tiling parallax mountain layers. Each layer scrolls at a fixed
+    /// fraction of the world speed (far slowest, near fastest) so the range
+    /// reads with depth as the plane flies forward.
+    private func buildMountainBackground() {
+        bgFar.zPosition  = -95
+        bgMid.zPosition  = -90
+        bgNear.zPosition = -85
+        worldNode.addChild(bgFar)
+        worldNode.addChild(bgMid)
+        worldNode.addChild(bgNear)
+
+        // Layer geometry: far layer sits highest on screen and is faintest,
+        // near layer sits lowest and is full opacity. Heights tuned so each
+        // band's painted peaks rise above the band below it.
+        buildTilingLayer(
+            into: bgFar,
+            spriteName: SkySprites.mountainBgFar,
+            tileHeight: 220,
+            centerY: 200,
+            alpha: 0.65
+        )
+        buildTilingLayer(
+            into: bgMid,
+            spriteName: SkySprites.mountainBgMid,
+            tileHeight: 200,
+            centerY: 160,
+            alpha: 0.85
+        )
+        buildTilingLayer(
+            into: bgNear,
+            spriteName: SkySprites.mountainBgNear,
+            tileHeight: 180,
+            centerY: 130,
+            alpha: 1.0
+        )
+    }
+
+    /// Tiles `spriteName` horizontally across `layer`, sized to `tileHeight`
+    /// preserving the asset's aspect ratio. Stores the per-tile width in
+    /// `layer.userData` so `scrollTilingLayer` can recycle off-screen tiles.
+    /// Falls back to a simple colored strip if the texture is missing.
+    private func buildTilingLayer(into layer: SKNode,
+                                  spriteName: String,
+                                  tileHeight: CGFloat,
+                                  centerY: CGFloat,
+                                  alpha: CGFloat) {
+        let texture = SkySprites.texture(named: spriteName)
+        let aspect: CGFloat = {
+            if let tex = texture {
+                let s = tex.size()
+                return s.height > 0 ? s.width / s.height : 1.75
+            }
+            return 1.75
+        }()
+        let tileWidth = tileHeight * aspect
+        // Cover full screen plus a safety buffer of one extra tile so the
+        // recycled tile is already in place when the leftmost tile cycles.
+        let copies = max(2, Int(ceil(size.width / tileWidth)) + 1)
+
+        for i in 0..<copies {
+            let node: SKSpriteNode
+            if let tex = texture {
+                node = SKSpriteNode(texture: tex, size: CGSize(width: tileWidth, height: tileHeight))
+            } else {
+                node = SKSpriteNode(
+                    color: UIColor(hex: 0x3D5F7C).withAlphaComponent(0.35),
+                    size: CGSize(width: tileWidth, height: tileHeight)
+                )
+            }
+            node.alpha = alpha
+            node.position = CGPoint(
+                x: tileWidth * (CGFloat(i) + 0.5),
+                y: centerY
             )
-            tri.position = CGPoint(x: CGFloat.random(in: 0...size.width * 2), y: 140)
-            farPeaks.addChild(tri)
+            layer.addChild(node)
         }
+
+        let userData = layer.userData ?? NSMutableDictionary()
+        userData["tileWidth"] = tileWidth
+        layer.userData = userData
     }
 
     private func buildCloudWisps() {
@@ -154,19 +228,185 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         }
     }
 
-    private func buildValley() {
-        valley.zPosition = -30
-        worldNode.addChild(valley)
-        let strip = SKShapeNode(rectOf: CGSize(width: size.width * 3, height: 80))
-        strip.fillColor = UIColor(hex: 0x0A2E15)
-        strip.strokeColor = .clear
-        strip.position = CGPoint(x: size.width, y: 40)
-        valley.addChild(strip)
+    /// Foreground pine forest that scrolls at world speed. A ski lodge sits
+    /// among the trees on every other tile so the landmark recurs roughly
+    /// once every ~screen-and-a-half of travel — recurring scenery, not a
+    /// hero landmark, with no collision or collectibles.
+    private func buildPineLine() {
+        pineLine.zPosition = -45
+        worldNode.addChild(pineLine)
+
+        let tileHeight: CGFloat = 110
+        let centerY: CGFloat = 55  // base of pine strip flush with bottom (0)
+        buildTilingLayer(
+            into: pineLine,
+            spriteName: SkySprites.mountainPineTrees,
+            tileHeight: tileHeight,
+            centerY: centerY,
+            alpha: 1.0
+        )
+
+        // Ski lodge: child of one pine tile so it scrolls and recycles
+        // alongside the trees. Anchored a little above the pine baseline so
+        // it appears nestled in the grove rather than floating.
+        guard let tileWidth = pineLine.userData?["tileWidth"] as? CGFloat,
+              let lodgeTex = SkySprites.texture(named: SkySprites.mountainSkiLodge),
+              pineLine.children.count >= 2 else { return }
+
+        let lodgeHeight: CGFloat = 90
+        let lodgeAspect = lodgeTex.size().height > 0
+            ? lodgeTex.size().width / lodgeTex.size().height
+            : 1.0
+        let lodgeWidth = lodgeHeight * lodgeAspect
+        let lodge = SKSpriteNode(
+            texture: lodgeTex,
+            size: CGSize(width: lodgeWidth, height: lodgeHeight)
+        )
+        // Offset within the host tile (tile is anchored at center, so
+        // child x is relative to tile center). Place lodge ~25% in from
+        // the tile's left edge so it doesn't clip when the tile cycles.
+        lodge.position = CGPoint(x: -tileWidth * 0.25, y: tileHeight * 0.4)
+        lodge.zPosition = 1
+        pineLine.children[1].addChild(lodge)
     }
 
     private func buildLandmarkLayer() {
         landmarkLayer.zPosition = -40
         worldNode.addChild(landmarkLayer)
+    }
+
+    /// Cable car suspended on a thin cable line, traversing the upper sky in
+    /// a slow left-right loop. Screen-anchored — does not parallax-scroll
+    /// with the world. The cable line is a 1pt SKShapeNode, the one
+    /// programmatic-art exception explicitly granted by the SKY-23 ticket
+    /// (a structural element, not a visual asset).
+    private func buildCableCar() {
+        guard let texture = SkySprites.texture(named: SkySprites.mountainCableCar) else { return }
+
+        let cableY = size.height * 0.65
+        let leftAnchor = CGPoint(x: -10, y: cableY + 20)
+        let rightAnchor = CGPoint(x: size.width + 10, y: cableY - 20)
+
+        let path = CGMutablePath()
+        path.move(to: leftAnchor)
+        path.addLine(to: rightAnchor)
+        let cable = SKShapeNode(path: path)
+        cable.strokeColor = UIColor(white: 0.15, alpha: 0.55)
+        cable.lineWidth = 1
+        cable.zPosition = -25
+        addChild(cable)
+
+        let gondolaHeight: CGFloat = 56
+        let aspect = texture.size().height > 0
+            ? texture.size().width / texture.size().height
+            : 1.0
+        let gondolaWidth = gondolaHeight * aspect
+        let gondola = SKSpriteNode(
+            texture: texture,
+            size: CGSize(width: gondolaWidth, height: gondolaHeight)
+        )
+        gondola.zPosition = -24
+
+        // Animate gondola along the cable line. The line slopes slightly
+        // downward (right anchor lower than left), so we lerp y in sync.
+        // Hang the gondola ~6pt below the cable so the sprite reads as
+        // suspended rather than skewered by the cable.
+        let dropBelowCable: CGFloat = -6
+        let startX: CGFloat = leftAnchor.x + 30
+        let endX: CGFloat = rightAnchor.x - 30
+
+        func yOnCable(at x: CGFloat) -> CGFloat {
+            let t = (x - leftAnchor.x) / (rightAnchor.x - leftAnchor.x)
+            return leftAnchor.y + (rightAnchor.y - leftAnchor.y) * t + dropBelowCable
+        }
+
+        gondola.position = CGPoint(x: startX, y: yOnCable(at: startX))
+        addChild(gondola)
+
+        let traverseDuration: TimeInterval = 30
+        let goRight = SKAction.customAction(withDuration: traverseDuration) { node, elapsed in
+            let t = CGFloat(elapsed / CGFloat(traverseDuration))
+            let x = startX + (endX - startX) * t
+            node.position = CGPoint(x: x, y: yOnCable(at: x))
+        }
+        let flipForReturn = SKAction.scaleX(to: -1, duration: 0)
+        let flipForward   = SKAction.scaleX(to: 1, duration: 0)
+        let goLeft = SKAction.customAction(withDuration: traverseDuration) { node, elapsed in
+            let t = CGFloat(elapsed / CGFloat(traverseDuration))
+            let x = endX + (startX - endX) * t
+            node.position = CGPoint(x: x, y: yOnCable(at: x))
+        }
+        gondola.run(SKAction.repeatForever(SKAction.sequence([
+            goRight, flipForReturn, goLeft, flipForward
+        ])))
+    }
+
+    /// Ambient mid-sky props: a hang glider and a hot air balloon drift
+    /// across the scene at varying heights, recurring on staggered timers
+    /// so the sky never feels empty. Independent of world scroll — they
+    /// have their own slow horizontal animations.
+    private func buildSkyProps() {
+        skyProps.zPosition = -55
+        addChild(skyProps)
+
+        scheduleSkyProp(
+            spriteName: SkySprites.mountainHangGlider,
+            propHeight: 44,
+            yRange: size.height * 0.55 ... size.height * 0.78,
+            duration: 22,
+            firstDelay: 3
+        )
+        scheduleSkyProp(
+            spriteName: SkySprites.mountainHotAirBalloon,
+            propHeight: 70,
+            yRange: size.height * 0.45 ... size.height * 0.72,
+            duration: 30,
+            firstDelay: 12,
+            bobs: true
+        )
+    }
+
+    private func scheduleSkyProp(spriteName: String,
+                                 propHeight: CGFloat,
+                                 yRange: ClosedRange<CGFloat>,
+                                 duration: TimeInterval,
+                                 firstDelay: TimeInterval,
+                                 bobs: Bool = false) {
+        guard let texture = SkySprites.texture(named: spriteName) else { return }
+        let aspect = texture.size().height > 0
+            ? texture.size().width / texture.size().height
+            : 1.0
+        let propWidth = propHeight * aspect
+
+        let cycle = SKAction.run { [weak self] in
+            guard let self = self else { return }
+            let prop = SKSpriteNode(
+                texture: texture,
+                size: CGSize(width: propWidth, height: propHeight)
+            )
+            let startY = CGFloat.random(in: yRange)
+            prop.position = CGPoint(x: -propWidth, y: startY)
+            self.skyProps.addChild(prop)
+
+            let drift = SKAction.moveBy(
+                x: self.size.width + propWidth * 2,
+                y: CGFloat.random(in: -30...30),
+                duration: duration
+            )
+            if bobs {
+                let bob = SKAction.repeatForever(SKAction.sequence([
+                    SKAction.moveBy(x: 0, y: 8, duration: 1.4),
+                    SKAction.moveBy(x: 0, y: -8, duration: 1.4)
+                ]))
+                prop.run(bob)
+            }
+            prop.run(SKAction.sequence([drift, SKAction.removeFromParent()]))
+        }
+        let gap = SKAction.wait(forDuration: duration * 0.9, withRange: 4)
+        skyProps.run(SKAction.sequence([
+            SKAction.wait(forDuration: firstDelay),
+            SKAction.repeatForever(SKAction.sequence([cycle, gap]))
+        ]))
     }
 
     private func buildEagles() {
@@ -231,18 +471,6 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         plane.physicsBody?.contactTestBitMask = PhysicsCategory.coin | PhysicsCategory.ring
         plane.physicsBody?.collisionBitMask = 0
         worldNode.addChild(plane)
-    }
-
-    private func triangle(size: CGSize, color: UIColor) -> SKShapeNode {
-        let path = CGMutablePath()
-        path.move(to: CGPoint(x: 0, y: size.height / 2))
-        path.addLine(to: CGPoint(x: size.width / 2, y: -size.height / 2))
-        path.addLine(to: CGPoint(x: -size.width / 2, y: -size.height / 2))
-        path.closeSubpath()
-        let shape = SKShapeNode(path: path)
-        shape.fillColor = color
-        shape.strokeColor = .clear
-        return shape
     }
 
     // MARK: - Top bar
@@ -393,9 +621,13 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         landmarkLayer.speed = boost
         plane.setBoostIntensity((boost - 1) / (boostPeakMultiplier - 1))
 
-        scrollLayer(farPeaks, speed: 20 * boost, delta: delta)
+        // Parallax scroll: world speed = 100. Far/mid/near layers scroll at
+        // 20%/50%/80% of that for depth, pine line at 190% (foreground).
+        scrollTilingLayer(bgFar,  speed: 20  * boost, delta: delta)
+        scrollTilingLayer(bgMid,  speed: 50  * boost, delta: delta)
+        scrollTilingLayer(bgNear, speed: 80  * boost, delta: delta)
         scrollLayer(cloudWisps, speed: 30 * boost, delta: delta)
-        scrollLayer(valley, speed: 190 * boost, delta: delta)
+        scrollTilingLayer(pineLine, speed: 190 * boost, delta: delta)
 
         spawnLandmarkIfDue(currentTime: currentTime)
     }
@@ -417,6 +649,21 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             node.position.x -= speed * CGFloat(delta)
             if node.position.x < -300 {
                 node.position.x += size.width * 2 + 300
+            }
+        }
+    }
+
+    /// Scroll helper for layers built by `buildTilingLayer`. Recycles a tile
+    /// by adding the layer's total tiled width once it slips past the left
+    /// edge, so seams stay invisible.
+    private func scrollTilingLayer(_ layer: SKNode, speed: CGFloat, delta: TimeInterval) {
+        guard let tileWidth = layer.userData?["tileWidth"] as? CGFloat,
+              !layer.children.isEmpty else { return }
+        let totalWidth = tileWidth * CGFloat(layer.children.count)
+        layer.children.forEach { node in
+            node.position.x -= speed * CGFloat(delta)
+            if node.position.x < -tileWidth / 2 {
+                node.position.x += totalWidth
             }
         }
     }

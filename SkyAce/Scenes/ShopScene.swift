@@ -25,6 +25,31 @@ final class ShopScene: SKScene {
         if !IAPManager.shared.isContentUnlocked {
             presentPaywallOverlay()
         }
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleEntitlementChange),
+            name: IAPManager.entitlementDidChange,
+            object: nil
+        )
+    }
+
+    override func willMove(from view: SKView) {
+        NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
+        super.willMove(from: view)
+    }
+
+    @objc private func handleEntitlementChange() {
+        // Drop the paywall overlay the moment unlock lands so the player isn't
+        // stuck behind it. The card list itself was built unconditionally, so
+        // removing the overlay is enough to expose the shop.
+        if IAPManager.shared.isContentUnlocked, let overlay = paywallOverlay {
+            paywallOverlay = nil
+            overlay.run(SKAction.sequence([
+                SKAction.fadeOut(withDuration: 0.2),
+                SKAction.removeFromParent()
+            ]))
+        }
     }
 
     // MARK: - Background
@@ -452,7 +477,7 @@ final class ShopScene: SKScene {
         card.position = CGPoint(x: size.width / 2, y: size.height / 2)
         overlay.addChild(card)
 
-        let title = SKLabelNode(text: "Unlock The Shop")
+        let title = SKLabelNode(text: "Unlock Sky Ace")
         title.fontName = SkyFonts.headlineName
         title.fontSize = 22
         title.fontColor = SkyColors.skOnSurface

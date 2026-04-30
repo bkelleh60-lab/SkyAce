@@ -32,6 +32,24 @@ final class HangarScene: SKScene {
         buildTopBar()
         buildTabBar()
         refresh()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleEntitlementChange),
+            name: IAPManager.entitlementDidChange,
+            object: nil
+        )
+    }
+
+    override func willMove(from view: SKView) {
+        NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
+        super.willMove(from: view)
+    }
+
+    @objc private func handleEntitlementChange() {
+        // Drop paywall affordances on the carousel without tearing down the
+        // scene; refresh() recomputes button title/style for the current plane.
+        refresh()
     }
 
     // MARK: - Background
@@ -226,7 +244,11 @@ final class HangarScene: SKScene {
             flyButton.setTitle(selected ? "FLY!" : "SELECT")
             flyButton.setStyle(.primary)
         } else if plane.requiresFullUnlock && !IAPManager.shared.isContentUnlocked {
-            flyButton.setTitle("UNLOCK GAME")
+            // Free players see the coin price (so the value is legible) but
+            // the CTA routes through the paywall instead of the coin economy.
+            coinPriceLabel.setAmount("\(plane.cost.formatted())")
+            coinPriceLabel.isHidden = false
+            flyButton.setTitle("UNLOCK SKY ACE")
             flyButton.setStyle(.tertiary)
         } else if ProgressManager.shared.coins >= plane.cost {
             flyButton.setStyle(.tertiary)

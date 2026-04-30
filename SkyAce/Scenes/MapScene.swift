@@ -54,6 +54,28 @@ final class MapScene: SKScene {
         DispatchQueue.main.async { [weak self] in
             self?.scrollToActive()
         }
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleEntitlementChange),
+            name: IAPManager.entitlementDidChange,
+            object: nil
+        )
+    }
+
+    override func willMove(from view: SKView) {
+        NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
+        super.willMove(from: view)
+    }
+
+    @objc private func handleEntitlementChange() {
+        // Re-render the level list so paywall-locked nodes flip to active and
+        // the dashed path / info card pick up the new active level. The whole
+        // contentNode is the level list — clearing and rebuilding is simpler
+        // than per-node patching for a one-shot transition.
+        contentNode.removeAllChildren()
+        buildLevelList()
+        scrollToActive()
     }
 
     // MARK: - Background

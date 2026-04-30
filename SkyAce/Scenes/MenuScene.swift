@@ -25,6 +25,32 @@ final class MenuScene: SKScene {
         buildPlayCTA()
         buildBentoRow()
         buildNavBar()
+
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleEntitlementChange),
+            name: IAPManager.entitlementDidChange,
+            object: nil
+        )
+    }
+
+    override func willMove(from view: SKView) {
+        NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
+        super.willMove(from: view)
+    }
+
+    @objc private func handleEntitlementChange() {
+        // If the world-select overlay is open with the Mountain tile in its
+        // locked state, rebuild it so the lock badge drops immediately. Other
+        // menu state doesn't read the entitlement so nothing else needs a
+        // refresh here. Remove synchronously (not via the fade-out used on
+        // user dismiss) so the rebuilt card's backdrop snapshot doesn't pick
+        // up the stale overlay.
+        if let overlay = worldSelectOverlay {
+            overlay.removeFromParent()
+            worldSelectOverlay = nil
+            showWorldSelect()
+        }
     }
 
     // MARK: - Background

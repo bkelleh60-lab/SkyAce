@@ -141,6 +141,20 @@ final class IAPManager: ObservableObject {
         }
     }
 
+    #if DEBUG
+    /// Test-only hook. Sets the cached entitlement bit and posts the
+    /// transition notification when the value actually changes — the same
+    /// contract `verifyEntitlement()` uses in production. Lets unit tests
+    /// observe `entitlementDidChange` without going through StoreKit.
+    func setFullyUnlockedForTesting(_ value: Bool) {
+        let didChange = value != self.isFullyUnlocked
+        self.isFullyUnlocked = value
+        if didChange {
+            NotificationCenter.default.post(name: Self.entitlementDidChange, object: self)
+        }
+    }
+    #endif
+
     private func currentlyOwnsFullUnlock() async -> Bool {
         guard let result = await Transaction.currentEntitlement(for: Self.fullUnlockProductID) else {
             return false

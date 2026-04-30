@@ -428,8 +428,8 @@ final class ShopScene: SKScene {
     }
 
     private func buildTabBar() {
-        let bar = SkyTabBar(active: .shop, width: size.width)
         let bottomInset = view?.safeAreaInsets.bottom ?? 0
+        let bar = SkyTabBar(active: .shop, width: size.width, bottomInset: bottomInset)
         bar.position = CGPoint(x: size.width / 2, y: bottomInset + SkyTabBar.barHeight / 2)
         bar.zPosition = 200
         addChild(bar)

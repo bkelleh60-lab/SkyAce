@@ -10,19 +10,24 @@ import UIKit
 /// primary color; inactive tabs dim to 60–70% opacity with the on-surface-
 /// variant color so the active state always reflects the current screen.
 ///
-/// Position the bar with its **center at y = barHeight / 2** — the bar
-/// extends upward from the scene's y=0 baseline.
+/// Position the bar with its **center at y = bottomInset + barHeight / 2**.
+/// The icon/label content sits in the upper `barHeight` strip; when a
+/// `bottomInset` is supplied the surface fill extends downward by that
+/// amount so the bar reads as flush with the device's bottom edge while
+/// the home indicator passes safely below the touch targets.
 final class SkyTabBar: SKNode {
     enum Tab: Int { case home, hangar, missions, shop }
 
     private let barWidth: CGFloat
+    private let bottomInset: CGFloat
     static let barHeight: CGFloat = 80
 
     let active: Tab
 
-    init(active: Tab, width: CGFloat) {
+    init(active: Tab, width: CGFloat, bottomInset: CGFloat = 0) {
         self.active = active
         self.barWidth = width
+        self.bottomInset = bottomInset
         super.init()
         buildBar()
         buildTabs()
@@ -41,6 +46,18 @@ final class SkyTabBar: SKNode {
         bar.strokeColor = .clear
         bar.zPosition = 0
         addChild(bar)
+
+        // Extend the surface fill below the bar through the home-indicator
+        // safe-area region so the bar reads flush with the screen edge.
+        if bottomInset > 0 {
+            let fill = SKSpriteNode(
+                color: SkyColors.surfaceContainerLow,
+                size: CGSize(width: barWidth, height: bottomInset)
+            )
+            fill.position = CGPoint(x: 0, y: -Self.barHeight / 2 - bottomInset / 2)
+            fill.zPosition = 0
+            addChild(fill)
+        }
 
         // Subtle ambient shadow above the bar (matches the mockup's
         // upward-casting shadow).

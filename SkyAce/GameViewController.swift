@@ -73,13 +73,17 @@ final class GameViewController: UIViewController {
 
     // Safe area insets are zero during viewDidLoad (before the first layout pass),
     // so any scene built in viewDidLoad positions its nav bar at y = barHeight/2
-    // instead of y = bottomInset + barHeight/2. Fix: reposition on first inset update.
+    // instead of y = bottomInset + barHeight/2. Fix: reposition on first inset
+    // update and refresh the bar's home-indicator fill so it stays flush.
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
         let bottomInset = view.safeAreaInsets.bottom
         skView.scene?.children
             .compactMap { $0 as? SkyTabBar }
-            .forEach { $0.position.y = bottomInset + SkyTabBar.barHeight / 2 }
+            .forEach { bar in
+                bar.setBottomInset(bottomInset)
+                bar.position.y = bottomInset + SkyTabBar.barHeight / 2
+            }
     }
 
     /// Presents the parental gate modally before running a successful closure.

@@ -19,7 +19,8 @@ final class SkyTabBar: SKNode {
     enum Tab: Int { case home, hangar, missions, shop }
 
     private let barWidth: CGFloat
-    private let bottomInset: CGFloat
+    private(set) var bottomInset: CGFloat
+    private var bottomInsetFill: SKSpriteNode?
     static let barHeight: CGFloat = 80
 
     let active: Tab
@@ -35,6 +36,17 @@ final class SkyTabBar: SKNode {
 
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
+    /// Update the safe-area inset after construction. SpriteKit scenes
+    /// receive `safeAreaInsets` of zero in `didMove(to:)` on the very
+    /// first present (before `viewSafeAreaInsetsDidChange` fires), so the
+    /// host view controller calls this once layout settles to fill the
+    /// home-indicator strip behind the bar.
+    func setBottomInset(_ inset: CGFloat) {
+        guard inset != bottomInset else { return }
+        bottomInset = inset
+        applyBottomInsetFill()
+    }
+
     // MARK: - Bar background (rounded top corners only)
 
     private func buildBar() {
@@ -47,17 +59,7 @@ final class SkyTabBar: SKNode {
         bar.zPosition = 0
         addChild(bar)
 
-        // Extend the surface fill below the bar through the home-indicator
-        // safe-area region so the bar reads flush with the screen edge.
-        if bottomInset > 0 {
-            let fill = SKSpriteNode(
-                color: SkyColors.surfaceContainerLow,
-                size: CGSize(width: barWidth, height: bottomInset)
-            )
-            fill.position = CGPoint(x: 0, y: -Self.barHeight / 2 - bottomInset / 2)
-            fill.zPosition = 0
-            addChild(fill)
-        }
+        applyBottomInsetFill()
 
         // Subtle ambient shadow above the bar (matches the mockup's
         // upward-casting shadow).
@@ -70,6 +72,23 @@ final class SkyTabBar: SKNode {
         )
         shadow.zPosition = -1
         addChild(shadow)
+    }
+
+    /// Adds (or resizes/removes) the rectangle that extends the bar's
+    /// surface fill behind the home indicator so the bar reads flush with
+    /// the screen edge.
+    private func applyBottomInsetFill() {
+        bottomInsetFill?.removeFromParent()
+        bottomInsetFill = nil
+        guard bottomInset > 0 else { return }
+        let fill = SKSpriteNode(
+            color: SkyColors.surfaceContainerLow,
+            size: CGSize(width: barWidth, height: bottomInset)
+        )
+        fill.position = CGPoint(x: 0, y: -Self.barHeight / 2 - bottomInset / 2)
+        fill.zPosition = 0
+        addChild(fill)
+        bottomInsetFill = fill
     }
 
     // MARK: - Tabs

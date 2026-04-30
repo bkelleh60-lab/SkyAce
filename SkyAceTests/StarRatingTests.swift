@@ -1,42 +1,90 @@
 import XCTest
 @testable import SkyAce
 
-/// Tests for the level star rating logic. The shipped game derives stars
-/// from `hitsTaken` and a `completed` flag (see `StarRating` in
-/// `Challenge.swift`), not from coin collection percentages — so these tests
-/// exercise that contract rather than the hypothetical
-/// `calculateStars(collected:total:timeRemaining:)` shape proposed in the
-/// ticket. The intent (1/2/3 star thresholds + best-score persistence + edge
-/// cases) is covered.
+/// Tests the post-SKY-37 star rating contract: stars are derived from the
+/// percentage of available coins collected and whether time was still on the
+/// clock at finish. Persistence (best-only) is also covered.
 final class StarRatingTests: XCTestCase {
 
     // MARK: - Failure case
 
     func testZeroStarsWhenLevelNotCompleted() {
-        XCTAssertEqual(StarRating.stars(forHitsTaken: 0, completed: false), 0)
-        XCTAssertEqual(StarRating.stars(forHitsTaken: 5, completed: false), 0)
+        XCTAssertEqual(
+            StarRating.stars(completed: false, coinsCollected: 0, totalCoins: 10, timeRemaining: 10),
+            0
+        )
+        XCTAssertEqual(
+            StarRating.stars(completed: false, coinsCollected: 10, totalCoins: 10, timeRemaining: 10),
+            0,
+            "An incomplete run earns no stars even with a full coin sweep."
+        )
     }
 
-    // MARK: - One star (≥2 hits, completed)
+    // MARK: - One star (completed, low coin %)
 
-    func testOneStarForTwoHits() {
-        XCTAssertEqual(StarRating.stars(forHitsTaken: 2, completed: true), 1)
+    func testOneStarForCompletionWithNoCoins() {
+        XCTAssertEqual(
+            StarRating.stars(completed: true, coinsCollected: 0, totalCoins: 20, timeRemaining: 10),
+            1
+        )
     }
 
-    func testOneStarForManyHits() {
-        XCTAssertEqual(StarRating.stars(forHitsTaken: 99, completed: true), 1)
+    func testOneStarJustBelowTwoStarThreshold() {
+        // 49% — below the 50% two-star threshold.
+        XCTAssertEqual(
+            StarRating.stars(completed: true, coinsCollected: 49, totalCoins: 100, timeRemaining: 10),
+            1
+        )
     }
 
-    // MARK: - Two stars (exactly 1 hit, completed)
-
-    func testTwoStarsForOneHit() {
-        XCTAssertEqual(StarRating.stars(forHitsTaken: 1, completed: true), 2)
+    func testOneStarWhenLevelHasNoCoins() {
+        // Defensive: total=0 should not crash and should fall through to the
+        // completion-only floor.
+        XCTAssertEqual(
+            StarRating.stars(completed: true, coinsCollected: 0, totalCoins: 0, timeRemaining: 5),
+            1
+        )
     }
 
-    // MARK: - Three stars (zero hits, completed)
+    // MARK: - Two stars (≥50% coins)
 
-    func testThreeStarsForFlawlessRun() {
-        XCTAssertEqual(StarRating.stars(forHitsTaken: 0, completed: true), 3)
+    func testTwoStarsAtFiftyPercentCoins() {
+        XCTAssertEqual(
+            StarRating.stars(completed: true, coinsCollected: 10, totalCoins: 20, timeRemaining: 0),
+            2
+        )
+    }
+
+    func testTwoStarsAtSeventyNinePercentCoins() {
+        // 79% — just below the 80% three-star threshold, even with time left.
+        XCTAssertEqual(
+            StarRating.stars(completed: true, coinsCollected: 79, totalCoins: 100, timeRemaining: 5),
+            2
+        )
+    }
+
+    func testTwoStarsWhenEightyPercentButNoTimeRemaining() {
+        // ≥80% coins but timer expired — three stars require BOTH conditions.
+        XCTAssertEqual(
+            StarRating.stars(completed: true, coinsCollected: 80, totalCoins: 100, timeRemaining: 0),
+            2
+        )
+    }
+
+    // MARK: - Three stars (≥80% coins AND time remaining)
+
+    func testThreeStarsAtEightyPercentCoinsWithTimeLeft() {
+        XCTAssertEqual(
+            StarRating.stars(completed: true, coinsCollected: 80, totalCoins: 100, timeRemaining: 1),
+            3
+        )
+    }
+
+    func testThreeStarsForFlawlessCoinSweep() {
+        XCTAssertEqual(
+            StarRating.stars(completed: true, coinsCollected: 20, totalCoins: 20, timeRemaining: 12),
+            3
+        )
     }
 
     // MARK: - Best-score persistence

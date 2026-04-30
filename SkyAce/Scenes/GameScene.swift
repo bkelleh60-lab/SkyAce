@@ -414,6 +414,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             coin.position = CGPoint(x: startX + CGFloat(i) * 40, y: centerY)
             coin.zPosition = 2
             worldNode.addChild(coin)
+            state.registerCoinSpawned()
 
             let speed = plane.horizontalSpeed * challenge.speedMultiplier
             let distance = size.width + 320
@@ -510,6 +511,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             coin.position = CGPoint(x: startX + offset.x, y: centerY + offset.y)
             coin.zPosition = 2
             worldNode.addChild(coin)
+            state.registerCoinSpawned()
             coin.run(SKAction.sequence([
                 SKAction.moveBy(x: -distance, y: 0, duration: duration),
                 SKAction.removeFromParent()
@@ -694,7 +696,8 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         SkyNavigator.shared.showResults(
             challenge: challenge,
             coinsCollected: state.coinsCollected,
-            hitsTaken: state.hitsTaken,
+            coinsAvailable: state.totalCoinsSpawned,
+            timeRemaining: state.levelTimeRemaining,
             didWin: state.didWin
         )
     }

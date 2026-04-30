@@ -163,28 +163,37 @@ final class MapScene: SKScene {
         switch state {
         case .completed:
             circle.fillColor = SkyColors.skTertiaryContainer
-            let star = SkySprites.iconNode(
-                named: SkySprites.starFilled,
-                fallbackEmoji: "★",
-                size: 20,
-                color: SkyColors.onTertiaryContainer
-            )
-            container.addChild(star)
+            let checkmark = SKLabelNode(text: "✓")
+            checkmark.fontName = SkyFonts.headlineName
+            checkmark.fontSize = 22
+            checkmark.fontColor = SkyColors.onTertiaryContainer
+            checkmark.verticalAlignmentMode = .center
+            checkmark.horizontalAlignmentMode = .center
+            container.addChild(checkmark)
 
-            let badge = SKShapeNode(rectOf: CGSize(width: 130, height: 26), cornerRadius: 13)
+            // Stars-earned summary badge: 1/2/3 mini stars, empties for the rest.
+            let earned = ProgressManager.shared.starsForLevel(challenge.id)
+            let badge = SKShapeNode(rectOf: CGSize(width: 90, height: 26), cornerRadius: 13)
             badge.fillColor = SkyColors.skSurfaceContainerLowest.withAlphaComponent(0.9)
             badge.strokeColor = .clear
-            badge.position = CGPoint(x: 80, y: 0)
+            badge.position = CGPoint(x: 60, y: 0)
             container.addChild(badge)
 
-            let label = SKLabelNode(text: "✓ COMPLETED")
-            label.fontName = SkyFonts.headlineName
-            label.fontSize = 11
-            label.fontColor = SkyColors.skOnSurface
-            label.verticalAlignmentMode = .center
-            label.horizontalAlignmentMode = .center
-            label.position = CGPoint(x: 80, y: 0)
-            container.addChild(label)
+            let starSpacing: CGFloat = 22
+            let starsRowStartX = badge.position.x - starSpacing
+            for i in 0..<3 {
+                let filled = i < earned
+                let star = SkySprites.iconNode(
+                    named: filled ? SkySprites.starFilled : SkySprites.starEmpty,
+                    fallbackEmoji: filled ? "★" : "☆",
+                    size: 14,
+                    color: filled
+                        ? SkyColors.onTertiaryContainer
+                        : SkyColors.onSurfaceVariant.withAlphaComponent(0.4)
+                )
+                star.position = CGPoint(x: starsRowStartX + CGFloat(i) * starSpacing, y: 0)
+                container.addChild(star)
+            }
 
         case .active:
             circle.fillColor = SkyColors.skPrimary

@@ -7,6 +7,12 @@ final class GameState {
 
     let challenge: Challenge
     private(set) var coinsCollected: Int = 0
+    /// Total coins that spawned during this run. Used as the denominator
+    /// for the star-rating coin percentage at finish. Spawning is dynamic
+    /// (no fixed level total), so the scene increments this as it places
+    /// coin nodes — coins that flew past uncollected still count as
+    /// "available," which is the desired semantics.
+    private(set) var totalCoinsSpawned: Int = 0
     private(set) var hitsTaken: Int = 0
     private(set) var timeRemaining: TimeInterval
     private(set) var elapsedTime: TimeInterval = 0
@@ -31,6 +37,10 @@ final class GameState {
     func collectCoin() {
         coinsCollected += 1
         checkCoinChainWin()
+    }
+
+    func registerCoinSpawned(count: Int = 1) {
+        totalCoinsSpawned += count
     }
 
     /// Returns true if the plane is dead (run should end).
@@ -101,7 +111,21 @@ final class GameState {
         }
     }
 
+    /// Time still on the clock relative to the level's expected duration.
+    /// Generic across mission types — coin-chain wins early when the target
+    /// is hit (time remains), obstacle courses win on the finish line at
+    /// exactly `levelDuration` (≈0 remaining), and time trials match their
+    /// existing countdown.
+    var levelTimeRemaining: TimeInterval {
+        return max(0, challenge.levelDuration - elapsedTime)
+    }
+
     var starsEarned: Int {
-        return StarRating.stars(forHitsTaken: hitsTaken, completed: didWin)
+        return StarRating.stars(
+            completed: didWin,
+            coinsCollected: coinsCollected,
+            totalCoins: totalCoinsSpawned,
+            timeRemaining: levelTimeRemaining
+        )
     }
 }

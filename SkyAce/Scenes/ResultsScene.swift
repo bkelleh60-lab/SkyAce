@@ -6,21 +6,29 @@ final class ResultsScene: SKScene {
 
     private let challenge: Challenge
     private let coinsCollected: Int
-    private let hitsTaken: Int
+    private let coinsAvailable: Int
+    private let timeRemaining: TimeInterval
     private let didWin: Bool
+    private let starsEarned: Int
 
     // MARK: - Init
-    init(size: CGSize, challenge: Challenge, coinsCollected: Int, hitsTaken: Int, didWin: Bool) {
+    init(size: CGSize, challenge: Challenge, coinsCollected: Int, coinsAvailable: Int, timeRemaining: TimeInterval, didWin: Bool) {
         self.challenge = challenge
         self.coinsCollected = coinsCollected
-        self.hitsTaken = hitsTaken
+        self.coinsAvailable = coinsAvailable
+        self.timeRemaining = timeRemaining
         self.didWin = didWin
+        self.starsEarned = StarRating.stars(
+            completed: didWin,
+            coinsCollected: coinsCollected,
+            totalCoins: coinsAvailable,
+            timeRemaining: timeRemaining
+        )
         super.init(size: size)
 
         // Commit run results to progress/coins on the way in.
         if didWin {
-            let stars = StarRating.stars(forHitsTaken: hitsTaken, completed: true)
-            ProgressManager.shared.markLevelCompleted(challenge.id, stars: stars)
+            ProgressManager.shared.markLevelCompleted(challenge.id, stars: starsEarned)
             ProgressManager.shared.addCoins(challenge.reward)
         }
     }
@@ -66,10 +74,9 @@ final class ResultsScene: SKScene {
         addChild(subtitle)
 
         // Stars with staggered spring pop-in.
-        let stars = StarRating.stars(forHitsTaken: hitsTaken, completed: true)
         // Results scene sits on the primary sky-blue gradient — use white variants.
         for i in 0..<3 {
-            let filled = i < stars
+            let filled = i < starsEarned
             let spriteName = filled ? SkySprites.starFilledWhite : SkySprites.starEmptyWhite
             let fallbackColor = filled
                 ? SkyColors.tertiaryContainer

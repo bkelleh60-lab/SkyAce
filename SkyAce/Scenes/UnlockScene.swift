@@ -59,7 +59,7 @@ final class UnlockScene: SKScene {
             controlPoint2: CGPoint(x: size.width * 0.66, y: heroY + 40)
         )
 
-        let follow = SKAction.follow(path.cgPath, asOffset: false, orientToPath: true, duration: 3.5)
+        let follow = SKAction.follow(path.cgPath, asOffset: false, orientToPath: false, duration: 3.5)
         let reset = SKAction.run { plane.position = CGPoint(x: -40, y: heroY - 10) }
         plane.run(SKAction.repeatForever(SKAction.sequence([follow, reset])))
     }

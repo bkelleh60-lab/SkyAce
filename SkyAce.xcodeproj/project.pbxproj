@@ -53,6 +53,7 @@
 		B10001000000000000000702 /* SkyChunkyButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000702 /* SkyChunkyButton.swift */; };
 		B10001000000000000000703 /* SkyTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000703 /* SkyTabBar.swift */; };
 		B10001000000000000000704 /* CurrencyHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000704 /* CurrencyHUD.swift */; };
+		B10001000000000000000705 /* SkyMenuTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000705 /* SkyMenuTopBar.swift */; };
 		B10002000000000000000601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000601 /* Assets.xcassets */; };
 		B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000602 /* PrivacyInfo.xcprivacy */; };
 		B10002000000000000000603 /* Sprites in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000603 /* Sprites */; };
@@ -110,6 +111,7 @@
 		F10001000000000000000702 /* SkyChunkyButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyChunkyButton.swift; sourceTree = "<group>"; };
 		F10001000000000000000703 /* SkyTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyTabBar.swift; sourceTree = "<group>"; };
 		F10001000000000000000704 /* CurrencyHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyHUD.swift; sourceTree = "<group>"; };
+		F10001000000000000000705 /* SkyMenuTopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyMenuTopBar.swift; sourceTree = "<group>"; };
 		F10002000000000000000601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10002000000000000000602 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F10002000000000000000603 /* Sprites */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Sprites; sourceTree = "<group>"; };
@@ -267,6 +269,7 @@
 				F10001000000000000000702 /* SkyChunkyButton.swift */,
 				F10001000000000000000703 /* SkyTabBar.swift */,
 				F10001000000000000000704 /* CurrencyHUD.swift */,
+				F10001000000000000000705 /* SkyMenuTopBar.swift */,
 			);
 			path = UI;
 			sourceTree = "<group>";
@@ -419,6 +422,7 @@
 				B10001000000000000000702 /* SkyChunkyButton.swift in Sources */,
 				B10001000000000000000703 /* SkyTabBar.swift in Sources */,
 				B10001000000000000000704 /* CurrencyHUD.swift in Sources */,
+				B10001000000000000000705 /* SkyMenuTopBar.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

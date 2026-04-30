@@ -91,88 +91,15 @@ final class MenuScene: SKScene {
     // MARK: - Top bar (pilot avatar + title + coin pill + gear)
 
     private func buildTopBar() {
-        // The bar extends from the very top of the screen down past the
-        // safe-area inset — that way the light surface color fills behind
-        // the Dynamic Island, and the notch just sits in its usual spot
-        // without interrupting our header visually. All content is
-        // positioned BELOW the safe inset so it stays fully visible.
-        let contentHeight: CGFloat = 72
-        let barHeight = topSafeInset + contentHeight
-        let barY = size.height - barHeight / 2
-        let bar = SKSpriteNode(color: SkyColors.surface, size: CGSize(width: size.width, height: barHeight))
-        bar.position = CGPoint(x: size.width / 2, y: barY)
+        // SkyMenuTopBar anchors to the top edge of the screen and lays its
+        // surface fill + content out internally relative to the current
+        // top safe-area inset. The host view controller patches the inset
+        // after the first layout pass — see `viewSafeAreaInsetsDidChange`.
+        let bar = SkyMenuTopBar(width: size.width, topInset: topSafeInset)
+        bar.position = CGPoint(x: size.width / 2, y: size.height)
         bar.zPosition = 30
+        bar.name = "topBar"
         addChild(bar)
-
-        // Pilot avatar — circular, top-left, below the safe-area inset.
-        let avatarSize: CGFloat = 52
-        let avatarX: CGFloat = 44
-        let avatarY = size.height - topSafeInset - contentHeight / 2
-
-        let avatarRing = SKShapeNode(circleOfRadius: avatarSize / 2 + 3)
-        avatarRing.fillColor = SkyColors.primaryContainer
-        avatarRing.strokeColor = .clear
-        avatarRing.position = CGPoint(x: avatarX, y: avatarY)
-        avatarRing.zPosition = 31
-        addChild(avatarRing)
-
-        let avatar: SKNode
-        if let sprite = SkySprites.sprite(
-            named: SkySprites.pilotAvatar,
-            size: CGSize(width: avatarSize, height: avatarSize)
-        ) {
-            let mask = SKShapeNode(circleOfRadius: avatarSize / 2)
-            mask.fillColor = .white
-            mask.strokeColor = .clear
-            let crop = SKCropNode()
-            crop.maskNode = mask
-            crop.addChild(sprite)
-            avatar = crop
-        } else {
-            let placeholder = SKShapeNode(circleOfRadius: avatarSize / 2)
-            placeholder.fillColor = SkyColors.surfaceContainer
-            placeholder.strokeColor = .clear
-            let glyph = SKLabelNode(text: "👨‍✈️")
-            glyph.fontSize = 30
-            glyph.verticalAlignmentMode = .center
-            glyph.horizontalAlignmentMode = .center
-            placeholder.addChild(glyph)
-            avatar = placeholder
-        }
-        avatar.position = CGPoint(x: avatarX, y: avatarY)
-        avatar.zPosition = 32
-        addChild(avatar)
-
-        // Title label ("Sky Ace") — primary-container blue.
-        let title = SKLabelNode(text: "Sky Ace")
-        title.fontName = SkyFonts.headlineName
-        title.fontSize = 20
-        title.fontColor = SkyColors.primaryContainer
-        title.verticalAlignmentMode = .baseline
-        title.horizontalAlignmentMode = .left
-        title.position = CGPoint(x: avatarX + avatarSize / 2 + 14, y: avatarY + 4)
-        title.zPosition = 31
-        addChild(title)
-
-        // Coin pill nested under the title.
-        let coinPill = SkyCoinPill(coins: ProgressManager.shared.coins)
-        coinPill.setScale(0.85)
-        coinPill.position = CGPoint(x: avatarX + avatarSize / 2 + 14 + 52, y: avatarY - 16)
-        coinPill.zPosition = 31
-        coinPill.name = "coinPill"
-        addChild(coinPill)
-
-        // Settings gear (dark navy on the light surface).
-        let gear = SkySprites.iconNode(
-            named: SkySprites.iconSettings,
-            fallbackEmoji: "⚙",
-            size: 28,
-            color: SkyColors.onSurface
-        )
-        gear.position = CGPoint(x: size.width - 32, y: avatarY)
-        gear.zPosition = 31
-        gear.name = "settingsGear"
-        addChild(gear)
     }
 
     // MARK: - Hero plane (user's selected, tilted up 12°)

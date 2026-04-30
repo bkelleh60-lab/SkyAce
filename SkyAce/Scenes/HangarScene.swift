@@ -73,10 +73,15 @@ final class HangarScene: SKScene {
     // MARK: - Nav arrows
 
     private func buildNavArrows() {
+        // Arrows sit over the showcase card, which is filled with skOnSurface.
+        // Use Sky Blue (the brand primary container) so they read against the
+        // dark card and match the active-dot indicator beneath it.
+        let arrowColor = SkyColors.skPrimaryContainer
+
         let left = SKLabelNode(text: "‹")
         left.fontName = SkyFonts.headlineName
         left.fontSize = 44
-        left.fontColor = SkyColors.skOnSurface
+        left.fontColor = arrowColor
         left.verticalAlignmentMode = .center
         left.horizontalAlignmentMode = .center
         left.position = CGPoint(x: 32, y: size.height * 0.6)
@@ -87,7 +92,7 @@ final class HangarScene: SKScene {
         let right = SKLabelNode(text: "›")
         right.fontName = SkyFonts.headlineName
         right.fontSize = 44
-        right.fontColor = SkyColors.skOnSurface
+        right.fontColor = arrowColor
         right.verticalAlignmentMode = .center
         right.horizontalAlignmentMode = .center
         right.position = CGPoint(x: size.width - 32, y: size.height * 0.6)

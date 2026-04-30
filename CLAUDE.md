@@ -81,8 +81,6 @@ These are non-negotiable and must be respected in every change:
 
 ---
 
-<<<<<<< Updated upstream
-=======
 ## UX Assets and Stitch Design Tool
 
 MANDATORY: Never create visual game assets, plane sprites, UI components, icons,
@@ -116,7 +114,6 @@ or purely structural/functional UI with no visual design requirements.
 
 ---
 
->>>>>>> Stashed changes
 ## Git Workflow
 
 Follow this workflow for every piece of work:

@@ -81,6 +81,32 @@ These are non-negotiable and must be respected in every change:
 
 ---
 
+## UX Assets and Stitch Design Tool
+
+MANDATORY: Never create visual game assets, plane sprites, UI components, icons,
+or artwork from scratch using code (SKShapeNode, SKSpriteNode programmatic drawing,
+CALayer, Core Graphics, etc.) without first checking whether a Stitch design exists.
+
+Before building any visual asset programmatically:
+1. Stop and ask: "Does a Stitch design exist for this asset?"
+2. If the answer is yes or unknown: stop, report to Brian, and wait for the
+   Stitch image URL or exported asset to be provided before proceeding.
+3. Only proceed with programmatic placeholder code if Brian explicitly confirms
+   no Stitch design exists AND instructs you to create a placeholder.
+4. All programmatic placeholders must be marked with:
+   // PLACEHOLDER: Stitch design required before App Store submission
+
+The Stitch design tool is at: [stitch.google.com](http://stitch.google.com)
+Active Sky Ace design project: "Sky Ace Plane Assets"
+Active game design system: "Sky Challenge Flight" (High-Energy Tactile Playground)
+
+This rule applies to: plane sprites, bird sprites, UI icons, button artwork,
+HUD elements, scene backgrounds, and any other visual asset.
+This rule does NOT apply to: layout constraints, text labels, progress bars,
+or purely structural/functional UI with no visual design requirements.
+
+---
+
 ## Git Workflow
 
 Follow this workflow for every piece of work:

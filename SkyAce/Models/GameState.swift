@@ -36,7 +36,6 @@ final class GameState {
 
     func collectCoin() {
         coinsCollected += 1
-        checkCoinChainWin()
     }
 
     func registerCoinSpawned(count: Int = 1) {
@@ -78,25 +77,15 @@ final class GameState {
 
     // MARK: - Derived
 
-    private func checkCoinChainWin() {
-        if challenge.type == .coinChain, coinsCollected >= challenge.coinChainTarget {
-            finish(won: true)
-        }
-    }
-
     /// Fraction [0,1] for UI progress bars. Meaning depends on challenge type.
     var progress: CGFloat {
         switch challenge.type {
         case .timeTrial:
             let total = challenge.timeTrialDuration
             return total > 0 ? CGFloat(1.0 - (timeRemaining / total)) : 0
-        case .coinChain:
-            let target = CGFloat(challenge.coinChainTarget)
-            return target > 0 ? min(1.0, CGFloat(coinsCollected) / target) : 0
-        case .obstacleCourse:
-            // Each obstacle course is a fixed elapsed-time run (~30s).
-            let target: TimeInterval = 30.0
-            return CGFloat(min(1.0, elapsedTime / target))
+        case .obstacleCourse, .coinChain:
+            let target = challenge.levelDuration
+            return target > 0 ? CGFloat(min(1.0, elapsedTime / target)) : 0
         }
     }
 
@@ -104,18 +93,13 @@ final class GameState {
         switch challenge.type {
         case .timeTrial:
             return "\(Int(ceil(timeRemaining)))s"
-        case .coinChain:
-            return "\(coinsCollected)/\(challenge.coinChainTarget)"
-        case .obstacleCourse:
+        case .obstacleCourse, .coinChain:
             return "\(coinsCollected) coins"
         }
     }
 
     /// Time still on the clock relative to the level's expected duration.
-    /// Generic across mission types — coin-chain wins early when the target
-    /// is hit (time remains), obstacle courses win on the finish line at
-    /// exactly `levelDuration` (≈0 remaining), and time trials match their
-    /// existing countdown.
+    /// Drives the 3★ "time remaining" bonus for every mission type.
     var levelTimeRemaining: TimeInterval {
         return max(0, challenge.levelDuration - elapsedTime)
     }

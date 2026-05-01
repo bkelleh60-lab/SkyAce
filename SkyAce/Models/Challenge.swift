@@ -62,8 +62,6 @@ struct Challenge {
     }
 
     var timeTrialDuration: TimeInterval { 45.0 }
-    var coinChainTarget: Int { 15 }
-    var coinChainTotal: Int { 20 }
 
     /// Total time from level start until the finish line crosses the plane.
     /// Drives finish-line scheduling in GameScene; each mission type has a

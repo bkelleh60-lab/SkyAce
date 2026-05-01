@@ -73,12 +73,19 @@ final class ShopScene: SKScene {
     private let cardSpacing: CGFloat = 20
 
     private func buildContent() {
+        // The tab bar sits at scene y ∈ [0, bottomInset + barHeight]. Without
+        // reserving that strip, the first card placed (Current Plane) lands
+        // behind the tab bar and is unreachable — `clampOffset`'s maxY = 0
+        // keeps the content from being scrolled up to clear it.
+        let bottomInset = view?.safeAreaInsets.bottom ?? 0
+        let bottomReserved = bottomInset + SkyTabBar.barHeight + 20
+
         var previousHeight: CGFloat = 0
         var cursorY: CGFloat = 0
 
         func place(_ built: BuiltCard) {
             if previousHeight == 0 {
-                cursorY = 20 + built.height / 2
+                cursorY = bottomReserved + built.height / 2
             } else {
                 cursorY += previousHeight / 2 + cardSpacing + built.height / 2
             }

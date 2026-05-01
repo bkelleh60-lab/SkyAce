@@ -469,22 +469,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private func handleFinishLineCross() {
         guard !runHasFinished, !state.isGameOver else { return }
 
-        // Crossing semantics differ by mission type. For obstacle courses
-        // and time trials, reaching the gate is the win. For coin chains
-        // the player must also have hit the coin target — otherwise the
-        // gate marks a fail (out of course, target not met).
-        let won: Bool
-        switch challenge.type {
-        case .obstacleCourse, .timeTrial:
-            won = true
-        case .coinChain:
-            won = state.coinsCollected >= challenge.coinChainTarget
-        }
-
-        if won {
-            finishLineNode?.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
-        }
-        state.finish(won: won)
+        // Crossing the finish line is the win condition for every non-timed
+        // mission type. Coins are scoring only — they affect star rating
+        // and currency, never completion.
+        finishLineNode?.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        state.finish(won: true)
         finishRun()
     }
 

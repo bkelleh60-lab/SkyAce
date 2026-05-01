@@ -263,6 +263,9 @@ enum SkySprites {
     static let iconWorldMountain = "icon_world_mountain"
     static let pilotAvatar       = "pilot_avatar"
 
+    // Shop upgrade icons (Assets.xcassets/*.imageset).
+    static let upgradeEngine     = "engine_boost"
+
     // Free Flight City landmarks (Resources/Sprites/).
     static let cityTowerBlue     = "city_tower_blue"
     static let cityHouseRed      = "city_house_red"

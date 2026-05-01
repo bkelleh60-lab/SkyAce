@@ -73,12 +73,19 @@ final class ShopScene: SKScene {
     private let cardSpacing: CGFloat = 20
 
     private func buildContent() {
+        // The tab bar sits at scene y ∈ [0, bottomInset + barHeight]. Without
+        // reserving that strip, the first card placed (Current Plane) lands
+        // behind the tab bar and is unreachable — `clampOffset`'s maxY = 0
+        // keeps the content from being scrolled up to clear it.
+        let bottomInset = view?.safeAreaInsets.bottom ?? 0
+        let bottomReserved = bottomInset + SkyTabBar.barHeight + 20
+
         var previousHeight: CGFloat = 0
         var cursorY: CGFloat = 0
 
         func place(_ built: BuiltCard) {
             if previousHeight == 0 {
-                cursorY = 20 + built.height / 2
+                cursorY = bottomReserved + built.height / 2
             } else {
                 cursorY += previousHeight / 2 + cardSpacing + built.height / 2
             }
@@ -146,17 +153,26 @@ final class ShopScene: SKScene {
         card.strokeColor = .clear
         node.addChild(card)
 
-        let iconBG = SKShapeNode(circleOfRadius: 56)
-        iconBG.fillColor = SkyColors.skPrimaryContainer
-        iconBG.strokeColor = .clear
-        iconBG.position = CGPoint(x: -cardWidth / 2 + 30, y: cardHeight / 2 - 60)
-        node.addChild(iconBG)
-
-        let icon = SKLabelNode(text: upgrade.kind.iconEmoji)
-        icon.fontSize = 58
-        icon.verticalAlignmentMode = .center
-        icon.horizontalAlignmentMode = .center
-        icon.position = iconBG.position
+        // Engine Boost has a bespoke PNG icon; other upgrades fall back to the
+        // emoji glyph until their assets land. Match the small upgrade cards'
+        // icon size (40pt) and left-edge offset so all four shop tiles share
+        // a consistent icon footprint.
+        let icon: SKNode
+        if upgrade.kind == .engine {
+            icon = SkySprites.iconNode(
+                named: SkySprites.upgradeEngine,
+                fallbackEmoji: upgrade.kind.iconEmoji,
+                size: 40,
+                color: SkyColors.skOnSurface
+            )
+        } else {
+            let label = SKLabelNode(text: upgrade.kind.iconEmoji)
+            label.fontSize = 40
+            label.verticalAlignmentMode = .center
+            label.horizontalAlignmentMode = .center
+            icon = label
+        }
+        icon.position = CGPoint(x: -cardWidth / 2 + 56, y: 0)
         node.addChild(icon)
 
         let badge = SKShapeNode(rectOf: CGSize(width: 88, height: 22), cornerRadius: 11)

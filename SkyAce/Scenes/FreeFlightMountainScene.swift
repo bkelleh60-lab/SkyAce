@@ -75,6 +75,20 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
 
     private var topSafeInset: CGFloat = 0
 
+    // Flyable Y band — mirrors the clamp applied to the plane each frame in
+    // update(). Collectibles must sit inside this band (with a buffer above
+    // the floor) so the plane can actually fly to and through them. SKY-54:
+    // before this was extracted, jaggedPeaks coins lived at offsets of -50/-60
+    // (abs y ~80) — below the visible mountain peaks and far below the lower
+    // plane clamp, so they were uncollectible in a paid scene.
+    private let planeMinY: CGFloat = 160
+    private var planeMaxY: CGFloat { size.height - 50 }
+    /// Smallest absolute Y a coin or ring is allowed to sit at. 30pt above
+    /// `planeMinY` keeps the plane's hitbox top clear of the collectible's
+    /// bottom edge, so the plane has to actively climb to collect rather
+    /// than scraping the floor. Mirrors FreeFlightCityScene.
+    private var collectibleMinY: CGFloat { planeMinY + 30 }
+
     // Currency HUD (top-right).
     private var currencyHUD: CurrencyHUD!
 
@@ -551,10 +565,20 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
 
         // Collectibles sit at zPosition = 1 so they always render in front
         // of the landmark sprite (zPosition = 0).
+        //
+        // Y offsets are landmark-relative; they're chosen so each
+        // collectible's *absolute* Y (= landmark.centerY + offset.y) lands
+        // inside the plane's flyable band — i.e. >= collectibleMinY (190).
+        // Validated by assertCollectiblesInFlyableBand below, so any future
+        // tweak that drops a collectible back into the unreachable floor
+        // zone trips in DEBUG builds.
+        let landmarkCenter = landmark.centerY(for: size)
         switch landmark {
         case .snowDome:
-            // 4 coins in an arc curving over the snowy dome.
-            let arc: [(CGFloat, CGFloat)] = [(-70, 50), (-25, 90), (25, 90), (70, 50)]
+            // 4 coins in an arc curving over the snowy dome. Side offsets
+            // bumped from 50→60 so abs y clears the 190 floor (was 187.6,
+            // 2.4pt below the plane's lower clamp).
+            let arc: [(CGFloat, CGFloat)] = [(-70, 60), (-25, 100), (25, 100), (70, 60)]
             for (dx, dy) in arc {
                 let coin = CoinNode()
                 coin.position = CGPoint(x: dx, y: dy)
@@ -563,8 +587,9 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             }
 
         case .pineGrove:
-            // 3 coins hidden between the treetops.
-            let spots: [(CGFloat, CGFloat)] = [(-55, 50), (0, 70), (55, 50)]
+            // 3 coins hidden between the treetops. Side offsets bumped
+            // 50→60 to clear the flyable floor (same fix as snowDome).
+            let spots: [(CGFloat, CGFloat)] = [(-55, 60), (0, 80), (55, 60)]
             for (dx, dy) in spots {
                 let coin = CoinNode()
                 coin.position = CGPoint(x: dx, y: dy)
@@ -573,8 +598,14 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             }
 
         case .jaggedPeaks:
-            // Treasure run — 3 oversized gold coins at the base of the peaks.
-            let nuggets: [(CGFloat, CGFloat)] = [(-50, -50), (0, -60), (50, -50)]
+            // Treasure run — 3 oversized gold coins arching just above the
+            // peak tips. Original SKY-54 placement had these "at the base of
+            // the peaks" with offsets of -50/-60 → abs y ~80, well below the
+            // plane's lower clamp (160) and visually buried inside the
+            // mountain sprite. Repositioned above the peak tips (landmark
+            // top ~ centerY + 90 = 227) so the player flies up and over
+            // the mountains to grab them.
+            let nuggets: [(CGFloat, CGFloat)] = [(-50, 75), (0, 95), (50, 75)]
             for (dx, dy) in nuggets {
                 let coin = CoinNode()
                 coin.setScale(1.4)
@@ -585,7 +616,9 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
 
         case .skyIsland:
             // Ring in the waterfall's path, plus 2 coins floating above the
-            // grass top.
+            // grass top. skyIsland is sky-anchored (centerY = sceneHeight *
+            // 0.58) so even the -100 ring offset lands well above the
+            // flyable floor.
             let ring = RingNode()
             ring.position = CGPoint(x: 0, y: -100)
             ring.zPosition = 1
@@ -600,7 +633,28 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             }
         }
 
+        assertCollectiblesInFlyableBand(container, landmarkCenterY: landmarkCenter)
         return container
+    }
+
+    /// DEBUG-only sanity check: every coin/ring inside `container` must sit
+    /// at an absolute Y >= `collectibleMinY`. Catches future regressions
+    /// where someone tweaks an offset and accidentally drops a collectible
+    /// back into the unreachable floor zone (the SKY-54 bug).
+    private func assertCollectiblesInFlyableBand(_ container: SKNode,
+                                                 landmarkCenterY: CGFloat) {
+        #if DEBUG
+        for child in container.children {
+            guard child is CoinNode || child is RingNode else { continue }
+            let absY = landmarkCenterY + child.position.y
+            assert(
+                absY >= collectibleMinY,
+                "Collectible at offset y=\(child.position.y) → abs y=\(absY) " +
+                "is below collectibleMinY=\(collectibleMinY). The plane " +
+                "can't reach it — raise the offset."
+            )
+        }
+        #endif
     }
 
     // MARK: - Update
@@ -613,8 +667,9 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         plane.update()
 
         // Top margin bumped to 50pt to keep the 2x-scaled sprite (half-height
-        // ~45pt) fully on-screen at the upper extreme.
-        plane.position.y = min(size.height - 50, max(160, plane.position.y))
+        // ~45pt) fully on-screen at the upper extreme. Lower clamp (planeMinY)
+        // also gates collectible placement — see collectibleMinY.
+        plane.position.y = min(planeMaxY, max(planeMinY, plane.position.y))
         plane.position.x += (size.width * 0.28 - plane.position.x) * 0.12
 
         let boost = currentBoostMultiplier(at: currentTime)

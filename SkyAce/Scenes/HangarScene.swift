@@ -170,7 +170,7 @@ final class HangarScene: SKScene {
         flyButton = SkyPillButton(title: "FLY!", style: .primary, size: CGSize(width: 260, height: 56)) { [weak self] in
             self?.handlePrimaryAction()
         }
-        flyButton.position = CGPoint(x: size.width / 2, y: 130)
+        flyButton.position = CGPoint(x: size.width / 2, y: size.height * 0.18)
         flyButton.zPosition = 20
         addChild(flyButton)
 
@@ -183,7 +183,7 @@ final class HangarScene: SKScene {
             fontSize: 22,
             color: SkyColors.skOnSurface
         )
-        coinPriceLabel.position = CGPoint(x: size.width / 2, y: 130 + 56 / 2 + 24)
+        coinPriceLabel.position = CGPoint(x: size.width / 2, y: flyButton.position.y + 56 / 2 + 24)
         coinPriceLabel.zPosition = 20
         coinPriceLabel.isHidden = true
         addChild(coinPriceLabel)

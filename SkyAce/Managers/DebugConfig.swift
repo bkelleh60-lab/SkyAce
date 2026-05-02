@@ -22,5 +22,5 @@ import Foundation
 #if DEBUG
 /// When `true`, paywall checks return "unlocked" so testers can reach
 /// premium content without purchasing. Stripped from Release builds.
-let debugUnlockAllContent = true
+let debugUnlockAllContent = false
 #endif

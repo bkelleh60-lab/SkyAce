@@ -19,6 +19,8 @@ final class SkyMenuTopBar: SKNode {
 
     private let barWidth: CGFloat
     private(set) var topInset: CGFloat
+    private(set) var leftInset: CGFloat = 0
+    private(set) var rightInset: CGFloat = 0
 
     private let surface: SKSpriteNode
     private let avatarRing: SKShapeNode
@@ -113,6 +115,14 @@ final class SkyMenuTopBar: SKNode {
         guard inset != topInset else { return }
         topInset = inset
         applyLayout()
+    }
+
+    /// Plumbing for landscape support (SKY-049). Stored now so future layout
+    /// work can shift edge-anchored content (avatar, gear) inboard of the
+    /// Dynamic Island sensor housing without further wiring changes.
+    func setHorizontalInsets(left: CGFloat, right: CGFloat) {
+        leftInset = left
+        rightInset = right
     }
 
     private func applyLayout() {

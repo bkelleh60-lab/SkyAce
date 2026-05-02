@@ -7,6 +7,12 @@ final class GameViewController: UIViewController {
 
     private var skView: SKView!
 
+    // Plumbing for landscape support (SKY-049). Read in
+    // viewSafeAreaInsetsDidChange and forwarded to active-scene chrome so
+    // edge-anchored HUD elements can later move inboard of the Dynamic
+    // Island sensor housing in landscape on Face-ID iPhones.
+    private var horizontalSafeInsets: (left: CGFloat, right: CGFloat) = (0, 0)
+
     override func loadView() {
         let view = SKView(frame: UIScreen.main.bounds)
         view.backgroundColor = SkyColors.surface
@@ -79,18 +85,23 @@ final class GameViewController: UIViewController {
     override func viewSafeAreaInsetsDidChange() {
         super.viewSafeAreaInsetsDidChange()
         let insets = view.safeAreaInsets
+        horizontalSafeInsets = (insets.left, insets.right)
         guard let scene = skView.scene else { return }
 
         scene.children
             .compactMap { $0 as? SkyTabBar }
             .forEach { bar in
                 bar.setBottomInset(insets.bottom)
+                bar.setHorizontalInsets(left: insets.left, right: insets.right)
                 bar.position.y = insets.bottom + SkyTabBar.barHeight / 2
             }
 
         scene.children
             .compactMap { $0 as? SkyMenuTopBar }
-            .forEach { $0.setTopInset(insets.top) }
+            .forEach {
+                $0.setTopInset(insets.top)
+                $0.setHorizontalInsets(left: insets.left, right: insets.right)
+            }
     }
 
     /// Presents the parental gate modally before running a successful closure.

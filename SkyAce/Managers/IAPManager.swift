@@ -172,7 +172,7 @@ final class IAPManager: ObservableObject {
             for await update in Transaction.updates {
                 if case .verified(let transaction) = update {
                     await transaction.finish()
-                    await MainActor.run {
+                    _ = await MainActor.run {
                         Task { await IAPManager.shared.verifyEntitlement() }
                     }
                 }

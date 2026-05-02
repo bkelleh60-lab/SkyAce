@@ -75,7 +75,9 @@ final class GameViewController: UIViewController {
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        UIDevice.current.userInterfaceIdiom == .pad ? .all : .portrait
+    }
 
     // Safe area insets are zero during viewDidLoad (before the first layout pass),
     // so any scene built in viewDidLoad positions its nav bar at y = barHeight/2

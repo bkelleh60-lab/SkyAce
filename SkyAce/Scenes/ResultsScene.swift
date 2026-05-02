@@ -38,6 +38,22 @@ final class ResultsScene: SKScene {
 
     override func didMove(to view: SKView) {
         backgroundColor = didWin ? SkyColors.skPrimary : SkyColors.skOnSurface
+        layoutScene()
+    }
+
+    // SKY-55: see MenuScene.didChangeSize. Re-runs the win/fail layout against
+    // the new dimensions; the coin count-up animation restarts but the run
+    // results are already committed to ProgressManager in init() so no state is
+    // lost.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
+        removeAllChildren()
+        removeAllActions()
+        layoutScene()
+    }
+
+    private func layoutScene() {
         buildBackground()
         if didWin { buildWin() } else { buildFail() }
     }

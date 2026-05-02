@@ -23,15 +23,7 @@ final class HangarScene: SKScene {
         // Determine starting index from the selected plane.
         currentIndex = PlaneCatalog.all.firstIndex(where: { $0.id == ProgressManager.shared.selectedPlaneID }) ?? 0
 
-        buildBackground()
-        buildShowcase()
-        buildNavArrows()
-        buildDots()
-        buildInfo()
-        buildActionButton()
-        buildTopBar()
-        buildTabBar()
-        refresh()
+        layoutScene()
 
         NotificationCenter.default.addObserver(
             self,
@@ -44,6 +36,29 @@ final class HangarScene: SKScene {
     override func willMove(from view: SKView) {
         NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
         super.willMove(from: view)
+    }
+
+    // SKY-55: see MenuScene.didChangeSize. Carousel index survives the rebuild
+    // because it lives on the scene; everything else is reconstructed.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
+        previewPlane = nil
+        removeAllChildren()
+        removeAllActions()
+        layoutScene()
+    }
+
+    private func layoutScene() {
+        buildBackground()
+        buildShowcase()
+        buildNavArrows()
+        buildDots()
+        buildInfo()
+        buildActionButton()
+        buildTopBar()
+        buildTabBar()
+        refresh()
     }
 
     @objc private func handleEntitlementChange() {

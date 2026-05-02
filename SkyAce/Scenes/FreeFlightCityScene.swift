@@ -103,9 +103,39 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         backgroundColor = UIColor(hex: 0xCDE5FF)
         physicsWorld.gravity = CGVector(dx: 0, dy: -5.0)
         physicsWorld.contactDelegate = self
-        topSafeInset = view.safeAreaInsets.top
         SkyHaptics.prepare()
+        layoutScene()
+    }
 
+    // SKY-55: see MenuScene.didChangeSize. Free Flight is an endless sandbox
+    // with no win/lose state — coin/ring totals live in CurrencyManager and
+    // survive the rebuild. Plane resets to the starting Y, parallax phases and
+    // landmark spawn timing reset; acceptable on a deliberate device rotation.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard view != nil, oldSize != .zero, oldSize != size, worldNode.parent != nil else { return }
+        worldNode.removeAllChildren()
+        worldNode.removeAllActions()
+        worldNode.removeFromParent()
+        farBackground = SKNode()
+        nearForeground = SKNode()
+        birdLayer = SKNode()
+        landmarkLayer = SKNode()
+        farTileWidth = 0
+        nearTileWidth = 0
+        lastLandmarkSpawn = 0
+        lastSpawnedLandmark = nil
+        boostActiveUntil = 0
+        lastUpdateTime = 0
+        plane = nil
+        currencyHUD = nil
+        removeAllChildren()
+        removeAllActions()
+        layoutScene()
+    }
+
+    private func layoutScene() {
+        topSafeInset = view?.safeAreaInsets.top ?? 0
         addChild(worldNode)
         buildSkyFill()
         buildFarCityBackground()

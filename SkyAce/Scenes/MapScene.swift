@@ -30,26 +30,8 @@ final class MapScene: SKScene {
 
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimary
+        layoutScene()
 
-        // Option A: lift the map's layout so its bounds sit above the tab
-        // bar. Chose this over auto-hiding SkyTabBar because the bar is
-        // persistent on every other screen (Menu, Hangar, Shop) — adding a
-        // missions-only show/hide affordance would break that pattern and
-        // add a control with no equivalent elsewhere. Reserve room for:
-        //   - the tab bar's 80pt body + ~12pt of raised "missions" overhang,
-        //   - 155pt for the active level's info card (extends below the node),
-        //   - a small visual padding so the card never visually kisses the bar.
-        let bottomInset = view.safeAreaInsets.bottom
-        let tabBarTop = bottomInset + SkyTabBar.barHeight + 12
-        let activeCardClearance: CGFloat = 155
-        let visualPadding: CGFloat = 24
-        bottomPadding = tabBarTop + activeCardClearance + visualPadding
-
-        buildBackground()
-        addChild(contentNode)
-        buildLevelList()
-        buildTopBar()
-        buildTabBar()
         // Scroll to the active level on entry.
         DispatchQueue.main.async { [weak self] in
             self?.scrollToActive()
@@ -66,6 +48,46 @@ final class MapScene: SKScene {
     override func willMove(from view: SKView) {
         NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
         super.willMove(from: view)
+    }
+
+    // SKY-55: see MenuScene.didChangeSize. Rebuilds the level path, top/tab
+    // bars, and background to fill the new dimensions, then scrolls back to
+    // the active level (preserving the user's prior scroll position has no
+    // value once the layout's geometry has changed).
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
+        contentNode.removeAllChildren()
+        contentNode.removeAllActions()
+        contentNode.removeFromParent()
+        contentNode.position = .zero
+        scrollVelocity = 0
+        removeAllChildren()
+        removeAllActions()
+        layoutScene()
+        scrollToActive()
+    }
+
+    private func layoutScene() {
+        // Option A: lift the map's layout so its bounds sit above the tab
+        // bar. Chose this over auto-hiding SkyTabBar because the bar is
+        // persistent on every other screen (Menu, Hangar, Shop) — adding a
+        // missions-only show/hide affordance would break that pattern and
+        // add a control with no equivalent elsewhere. Reserve room for:
+        //   - the tab bar's 80pt body + ~12pt of raised "missions" overhang,
+        //   - 155pt for the active level's info card (extends below the node),
+        //   - a small visual padding so the card never visually kisses the bar.
+        let bottomInset = view?.safeAreaInsets.bottom ?? 0
+        let tabBarTop = bottomInset + SkyTabBar.barHeight + 12
+        let activeCardClearance: CGFloat = 155
+        let visualPadding: CGFloat = 24
+        bottomPadding = tabBarTop + activeCardClearance + visualPadding
+
+        buildBackground()
+        addChild(contentNode)
+        buildLevelList()
+        buildTopBar()
+        buildTabBar()
     }
 
     @objc private func handleEntitlementChange() {

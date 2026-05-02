@@ -22,6 +22,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private var distantCloudLayer  = SKNode()
     private var nearCloudLayer     = SKNode()
 
+    // Off-screen physics walls so the plane can't fly past the top/bottom of
+    // the scene. Tracked so iPad rotation (SKY-55) can reposition them onto
+    // the new screen edges without leaving stale colliders behind.
+    private var topBoundary: SKNode?
+    private var bottomBoundary: SKNode?
+
     // Gameplay
     private var plane: PlaneNode!
 
@@ -88,6 +94,58 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         scheduleFinishLine()
     }
 
+    // SKY-55: iPad rotation. Unlike menu scenes we can't rebuild from scratch
+    // — the player's mid-flight state (coins collected, timer, armor, plane
+    // position relative to the next obstacle) lives in `state` and on the
+    // plane node. Relayout in place: re-anchor the camera, resize the
+    // background gradient, reposition the boundary colliders onto the new
+    // edges, rebuild the camera-attached HUD against the new corners, and
+    // clamp the plane back to its target horizontal lane. In-flight obstacles
+    // and coins keep their existing scroll actions and slide off naturally.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard view != nil, oldSize != .zero, oldSize != size, worldNode.parent != nil else { return }
+
+        cameraRoot.position = CGPoint(x: size.width / 2, y: size.height / 2)
+
+        if let bg = bgGradient {
+            bg.texture = SKGradientBackgroundNode.gradientTexture(
+                size: size,
+                top: SkyColors.skPrimary,
+                bottom: SkyColors.skPrimaryContainer
+            )
+            bg.size = size
+        }
+
+        buildBoundaries()
+
+        // The "Tap & hold to fly" hint is positioned at launch-time width and
+        // self-removes after ~3s; drop it here so it doesn't linger off-center.
+        children.filter { $0.name == "startHint" }.forEach { $0.removeFromParent() }
+
+        // Rebuild HUD: every coin pill / mission card / pause button position
+        // is keyed off scene size. The HUD lives inside cameraRoot so the
+        // worldNode-attached gameplay state isn't touched.
+        hudNode.removeAllChildren()
+        armorBadge = nil
+        buildHUD()
+
+        // Pause overlay's dim sprite is sized to the old scene; rebuild it.
+        if pauseOverlay != nil {
+            pauseOverlay?.removeFromParent()
+            pauseOverlay = nil
+            showPauseOverlay()
+        }
+
+        // The plane drifts back to its target lane on its own (see update()),
+        // but we also clamp Y immediately so it can't end up outside the new
+        // top/bottom boundaries.
+        if plane != nil {
+            plane.position.x = size.width * 0.25
+            plane.position.y = max(40, min(size.height - 40, plane.position.y))
+        }
+    }
+
     // MARK: - Setup
 
     private func setupCamera() {
@@ -138,8 +196,13 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
 
-    /// Invisible top/bottom walls so the plane can't fly off-screen.
+    /// Invisible top/bottom walls so the plane can't fly off-screen. Replaces
+    /// any existing walls so iPad rotation (SKY-55) can reposition them onto
+    /// the new screen edges.
     private func buildBoundaries() {
+        topBoundary?.removeFromParent()
+        bottomBoundary?.removeFromParent()
+
         let top = SKNode()
         top.position = CGPoint(x: size.width / 2, y: size.height + 10)
         let topBody = SKPhysicsBody(rectangleOf: CGSize(width: size.width, height: 20))
@@ -149,6 +212,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         topBody.collisionBitMask = 0
         top.physicsBody = topBody
         worldNode.addChild(top)
+        topBoundary = top
 
         let bottom = SKNode()
         bottom.position = CGPoint(x: size.width / 2, y: -10)
@@ -159,6 +223,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         bottomBody.collisionBitMask = 0
         bottom.physicsBody = bottomBody
         worldNode.addChild(bottom)
+        bottomBoundary = bottom
     }
 
     private func buildPlane() {

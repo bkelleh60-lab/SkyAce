@@ -55,6 +55,7 @@
 		B10001000000000000000704 /* CurrencyHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000704 /* CurrencyHUD.swift */; };
 		B10001000000000000000705 /* SkyMenuTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000705 /* SkyMenuTopBar.swift */; };
 		B10002000000000000000601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000601 /* Assets.xcassets */; };
+		B10002000000000000000604 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000604 /* LaunchScreen.storyboard */; };
 		B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000602 /* PrivacyInfo.xcprivacy */; };
 		B10002000000000000000603 /* Sprites in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000603 /* Sprites */; };
 		B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010001 /* CurrencyManagerTests.swift */; };
@@ -113,6 +114,7 @@
 		F10001000000000000000704 /* CurrencyHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyHUD.swift; sourceTree = "<group>"; };
 		F10001000000000000000705 /* SkyMenuTopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyMenuTopBar.swift; sourceTree = "<group>"; };
 		F10002000000000000000601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F10002000000000000000604 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		F10002000000000000000602 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		F10002000000000000000603 /* Sprites */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Sprites; sourceTree = "<group>"; };
 		F10000000000000000000002 /* SkyAceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkyAceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -175,6 +177,7 @@
 				G10003000000000000000007 /* Resources */,
 				F10001000000000000000000 /* Info.plist */,
 				F10002000000000000000602 /* PrivacyInfo.xcprivacy */,
+				F10002000000000000000604 /* LaunchScreen.storyboard */,
 			);
 			path = SkyAce;
 			sourceTree = "<group>";
@@ -366,6 +369,7 @@
 				B10002000000000000000601 /* Assets.xcassets in Resources */,
 				B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */,
 				B10002000000000000000603 /* Sprites in Resources */,
+				B10002000000000000000604 /* LaunchScreen.storyboard in Resources */,
 				1ACC06C82F94DE72005BEF70 /* PlusJakartaSans-ExtraBold.ttf in Resources */,
 				1ACC06C92F94DE72005BEF70 /* PlusJakartaSans-Medium.ttf in Resources */,
 				1ACC06CA2F94DE72005BEF70 /* PlusJakartaSans-Bold.ttf in Resources */,

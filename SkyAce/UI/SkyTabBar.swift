@@ -20,6 +20,8 @@ final class SkyTabBar: SKNode {
 
     private let barWidth: CGFloat
     private(set) var bottomInset: CGFloat
+    private(set) var leftInset: CGFloat = 0
+    private(set) var rightInset: CGFloat = 0
     private var bottomInsetFill: SKSpriteNode?
     static let barHeight: CGFloat = 80
 
@@ -45,6 +47,14 @@ final class SkyTabBar: SKNode {
         guard inset != bottomInset else { return }
         bottomInset = inset
         applyBottomInsetFill()
+    }
+
+    /// Plumbing for landscape support (SKY-049). Stored now so future layout
+    /// work can pad the tab row inboard of the Dynamic Island / home
+    /// indicator without further wiring changes.
+    func setHorizontalInsets(left: CGFloat, right: CGFloat) {
+        leftInset = left
+        rightInset = right
     }
 
     // MARK: - Bar background (rounded top corners only)

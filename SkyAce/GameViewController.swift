@@ -15,6 +15,11 @@ final class GameViewController: UIViewController {
 
     override func loadView() {
         let view = SKView(frame: UIScreen.main.bounds)
+        // Without this, the SKView keeps its launch-time portrait frame after
+        // an iPad rotates to landscape, leaving an uncovered strip on the
+        // long edge. `.resizeFill` only resizes the scene to the SKView — the
+        // SKView itself needs to track the window.
+        view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         view.backgroundColor = SkyColors.surface
         // Render siblings in add-order. Our UI composites (bento tiles, tab
         // bar buttons, coin pill, etc.) stack background/icon/label at the
@@ -75,7 +80,9 @@ final class GameViewController: UIViewController {
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
-    override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .portrait }
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        UIDevice.current.userInterfaceIdiom == .pad ? .all : .portrait
+    }
 
     // Safe area insets are zero during viewDidLoad (before the first layout pass),
     // so any scene built in viewDidLoad positions its nav bar at y = barHeight/2

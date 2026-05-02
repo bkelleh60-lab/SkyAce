@@ -105,9 +105,40 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         backgroundColor = SkyColors.skPrimary
         physicsWorld.gravity = CGVector(dx: 0, dy: -5.0)
         physicsWorld.contactDelegate = self
-        topSafeInset = view.safeAreaInsets.top
         SkyHaptics.prepare()
+        layoutScene()
+    }
 
+    // SKY-55: see FreeFlightCityScene.didChangeSize — same rationale (no win/
+    // lose state, currency totals already in CurrencyManager). Tear down every
+    // parallax container, drop landmarks/cable car/eagles, rebuild against the
+    // new dimensions.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard view != nil, oldSize != .zero, oldSize != size, worldNode.parent != nil else { return }
+        worldNode.removeAllChildren()
+        worldNode.removeAllActions()
+        worldNode.removeFromParent()
+        bgFar = SKNode()
+        bgMid = SKNode()
+        bgNear = SKNode()
+        cloudWisps = SKNode()
+        pineLine = SKNode()
+        skyProps = SKNode()
+        landmarkLayer = SKNode()
+        lastLandmarkSpawn = 0
+        lastSpawnedLandmark = nil
+        boostActiveUntil = 0
+        lastUpdateTime = 0
+        plane = nil
+        currencyHUD = nil
+        removeAllChildren()
+        removeAllActions()
+        layoutScene()
+    }
+
+    private func layoutScene() {
+        topSafeInset = view?.safeAreaInsets.top ?? 0
         addChild(worldNode)
         buildSkyGradient()
         buildMountainBackground()

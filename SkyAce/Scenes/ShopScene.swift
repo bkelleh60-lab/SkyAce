@@ -16,15 +16,7 @@ final class ShopScene: SKScene {
 
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skSurface
-        buildBackground()
-        addChild(contentNode)
-        buildContent()
-        buildTopBar()
-        buildTabBar()
-
-        if !IAPManager.shared.isContentUnlocked {
-            presentPaywallOverlay()
-        }
+        layoutScene()
 
         NotificationCenter.default.addObserver(
             self,
@@ -37,6 +29,34 @@ final class ShopScene: SKScene {
     override func willMove(from view: SKView) {
         NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
         super.willMove(from: view)
+    }
+
+    // SKY-55: see MenuScene.didChangeSize. Rebuilds the card list, bars, and
+    // any visible paywall overlay to fit the new dimensions.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
+        contentNode.removeAllChildren()
+        contentNode.removeAllActions()
+        contentNode.removeFromParent()
+        contentNode.position = .zero
+        scrollVelocity = 0
+        paywallOverlay = nil
+        removeAllChildren()
+        removeAllActions()
+        layoutScene()
+    }
+
+    private func layoutScene() {
+        buildBackground()
+        addChild(contentNode)
+        buildContent()
+        buildTopBar()
+        buildTabBar()
+
+        if !IAPManager.shared.isContentUnlocked {
+            presentPaywallOverlay()
+        }
     }
 
     @objc private func handleEntitlementChange() {

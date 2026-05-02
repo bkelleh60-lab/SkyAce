@@ -16,15 +16,7 @@ final class MenuScene: SKScene {
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimary
         SkyHaptics.prepare()
-        topSafeInset = view.safeAreaInsets.top
-        bottomSafeInset = view.safeAreaInsets.bottom
-        buildGradient()
-        buildClouds()
-        buildTopBar()
-        buildHeroPlane()
-        buildPlayCTA()
-        buildBentoRow()
-        buildNavBar()
+        layoutScene()
 
         NotificationCenter.default.addObserver(
             self,
@@ -37,6 +29,36 @@ final class MenuScene: SKScene {
     override func willMove(from view: SKView) {
         NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
         super.willMove(from: view)
+    }
+
+    // SKY-55: SpriteKit's `.resizeFill` updates `scene.size` on iPad rotation
+    // but doesn't reposition or resize anything we built against the launch-time
+    // size. Tear down and re-run the layout pipeline so every node lands in the
+    // right spot for the new orientation. The first call (size == oldSize, or
+    // pre-didMove zero) is a no-op.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
+        // Modal world-select overlay can't survive a rebuild — its blurred
+        // backdrop snapshot is anchored to the old layout and the overlay is
+        // anyway dismissable, so drop it before rebuilding.
+        worldSelectOverlay?.removeFromParent()
+        worldSelectOverlay = nil
+        removeAllChildren()
+        removeAllActions()
+        layoutScene()
+    }
+
+    private func layoutScene() {
+        topSafeInset = view?.safeAreaInsets.top ?? 0
+        bottomSafeInset = view?.safeAreaInsets.bottom ?? 0
+        buildGradient()
+        buildClouds()
+        buildTopBar()
+        buildHeroPlane()
+        buildPlayCTA()
+        buildBentoRow()
+        buildNavBar()
     }
 
     @objc private func handleEntitlementChange() {

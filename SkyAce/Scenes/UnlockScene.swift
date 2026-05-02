@@ -10,6 +10,23 @@ final class UnlockScene: SKScene {
 
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimary
+        layoutScene()
+    }
+
+    // SKY-55: see MenuScene.didChangeSize. The animated plane and any in-flight
+    // status text are dropped; rebuilding the paywall is acceptable since
+    // purchase flows route through StoreKit, not scene state.
+    override func didChangeSize(_ oldSize: CGSize) {
+        super.didChangeSize(oldSize)
+        guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
+        animatedPlane = nil
+        statusLabel = nil
+        removeAllChildren()
+        removeAllActions()
+        layoutScene()
+    }
+
+    private func layoutScene() {
         buildBackground()
         buildHeroAnimation()
         buildCopy()

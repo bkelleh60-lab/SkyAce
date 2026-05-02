@@ -163,21 +163,21 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
             into: bgFar,
             spriteName: SkySprites.mountainBgFar,
             tileHeight: 220,
-            centerY: 200,
+            centerY: size.height * 0.215,
             alpha: 0.65
         )
         buildTilingLayer(
             into: bgMid,
             spriteName: SkySprites.mountainBgMid,
             tileHeight: 200,
-            centerY: 160,
+            centerY: size.height * 0.172,
             alpha: 0.85
         )
         buildTilingLayer(
             into: bgNear,
             spriteName: SkySprites.mountainBgNear,
             tileHeight: 180,
-            centerY: 130,
+            centerY: size.height * 0.140,
             alpha: 1.0
         )
     }

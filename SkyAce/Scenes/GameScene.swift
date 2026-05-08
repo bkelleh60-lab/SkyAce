@@ -445,7 +445,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func spawnObstaclePair() {
-        let obstacle = ObstacleNode(sceneSize: size, gap: challenge.obstacleGap)
+        let obstacle = ObstacleNode(sceneSize: size, gap: challenge.obstacleGap, theme: challenge.theme)
         obstacle.position = CGPoint(x: size.width + 80, y: 0)
         obstacle.zPosition = 1
         worldNode.addChild(obstacle)

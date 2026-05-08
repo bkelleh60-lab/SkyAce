@@ -3,15 +3,21 @@ import SpriteKit
 /// Paired cloud-pillar obstacles. One "pair" = a top pillar and a bottom
 /// pillar separated by `gap`. Constructed by the scene; the scene moves
 /// them leftward via an SKAction sequence.
+///
+/// Visual rendering is themed via `ObstacleTheme`. Hitbox geometry and
+/// `gap` placement are identical across every theme — only the visual
+/// changes per level.
 final class ObstacleNode: SKNode {
 
     let gap: CGFloat
     let sceneHeight: CGFloat
     let gapCenterY: CGFloat  // Y coordinate of the middle of the gap.
+    let theme: ObstacleTheme
 
-    init(sceneSize: CGSize, gap: CGFloat) {
+    init(sceneSize: CGSize, gap: CGFloat, theme: ObstacleTheme) {
         self.gap = gap
         self.sceneHeight = sceneSize.height
+        self.theme = theme
 
         // Random vertical placement that keeps both pillars on-screen.
         let margin: CGFloat = 80
@@ -25,7 +31,36 @@ final class ObstacleNode: SKNode {
 
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
+    /// Routes obstacle rendering to the correct draw function for the
+    /// current theme. Each theme function is responsible for adding the
+    /// top and bottom pillars as child nodes with correct physics bodies.
+    /// During the SKY-62 incremental rollout, themes that have not yet
+    /// been implemented fall through to `drawLegacyPillars` so the game
+    /// remains playable while individual themes are added one commit at
+    /// a time.
     private func buildPillars(sceneSize: CGSize) {
+        switch theme {
+        case .legacy:
+            drawLegacyPillars(sceneSize: sceneSize)
+        case .hotAirBalloons:
+            // Implemented in a follow-up commit; falls back to legacy for now.
+            drawLegacyPillars(sceneSize: sceneSize)
+        case .harborPiers:
+            // Implemented in a follow-up commit; falls back to legacy for now.
+            drawLegacyPillars(sceneSize: sceneSize)
+        case .cityBuildings:
+            // Implemented in a follow-up commit; falls back to legacy for now.
+            drawLegacyPillars(sceneSize: sceneSize)
+        case .stormClouds:
+            // Implemented in a follow-up commit; falls back to legacy for now.
+            drawLegacyPillars(sceneSize: sceneSize)
+        }
+    }
+
+    /// Original red+yellow striped pillar rendering. Removed in the final
+    /// commit of SKY-62 once all four real themes are implemented and
+    /// every level is mapped to one of them.
+    private func drawLegacyPillars(sceneSize: CGSize) {
         let pillarWidth: CGFloat = 60
 
         // Bottom pillar — from y=0 up to gapCenterY - gap/2.

@@ -34,26 +34,22 @@ final class ObstacleNode: SKNode {
     /// Routes obstacle rendering to the correct draw function for the
     /// current theme. Each theme function is responsible for adding the
     /// top and bottom pillars as child nodes with correct physics bodies.
-    /// During the SKY-62 incremental rollout, themes that have not yet
-    /// been implemented fall through to `drawLegacyPillars` so the game
-    /// remains playable while individual themes are added one commit at
-    /// a time.
+    /// All four real themes use sprite-based rendering (Stitch-generated
+    /// PNG assets in `Assets.xcassets`). If a theme's asset is missing
+    /// at runtime, the renderer falls back to `drawLegacyPillars` so the
+    /// level remains playable.
     private func buildPillars(sceneSize: CGSize) {
         switch theme {
         case .legacy:
             drawLegacyPillars(sceneSize: sceneSize)
         case .hotAirBalloons:
-            // Implemented in a follow-up commit; falls back to legacy for now.
-            drawLegacyPillars(sceneSize: sceneSize)
+            drawHotAirBalloons(sceneSize: sceneSize)
         case .harborPiers:
-            // Implemented in a follow-up commit; falls back to legacy for now.
-            drawLegacyPillars(sceneSize: sceneSize)
+            drawHarborPiers(sceneSize: sceneSize)
         case .cityBuildings:
-            // Implemented in a follow-up commit; falls back to legacy for now.
-            drawLegacyPillars(sceneSize: sceneSize)
+            drawCityBuildings(sceneSize: sceneSize)
         case .stormClouds:
-            // Implemented in a follow-up commit; falls back to legacy for now.
-            drawLegacyPillars(sceneSize: sceneSize)
+            drawStormClouds(sceneSize: sceneSize)
         }
     }
 
@@ -80,6 +76,259 @@ final class ObstacleNode: SKNode {
             addChild(top)
         }
     }
+
+    // MARK: - Sprite-based theme renderers
+
+    /// Hot Air Balloons theme. Stacks multiple balloon sprites vertically
+    /// to fill the pillar height, choosing a randomized color variant for
+    /// each balloon so a single pillar shows visual variety.
+    private func drawHotAirBalloons(sceneSize: CGSize) {
+        renderStackedSpriteTheme(
+            sceneSize: sceneSize,
+            textureNames: [
+                "balloon_red",
+                "balloon_blue",
+                "balloon_yellow",
+                "balloon_orange",
+            ],
+            spriteWidth: 56,
+            spriteHeight: 84,
+            spriteSpacing: 6
+        )
+    }
+
+    /// Storm Clouds theme. Stacks cloud sprites vertically. Cloud sprites
+    /// are wider than tall, so the visual silhouette is "puffy column" rather
+    /// than a vertical strip. Lightning variant occasionally appears for
+    /// atmospheric variety.
+    private func drawStormClouds(sceneSize: CGSize) {
+        renderStackedSpriteTheme(
+            sceneSize: sceneSize,
+            textureNames: [
+                "cloud_plain",
+                "cloud_plain",
+                "cloud_lightning",  // 1-in-3 chance per puff
+            ],
+            spriteWidth: 90,
+            spriteHeight: 50,
+            spriteSpacing: -8       // negative spacing so clouds overlap
+        )
+    }
+
+    /// Harbor Piers theme. A single tall pier sprite scaled vertically to
+    /// fill the pillar height. The cap end of the sprite is oriented to face
+    /// the gap (top pillar = cap at bottom, bottom pillar = cap at top).
+    private func drawHarborPiers(sceneSize: CGSize) {
+        renderScaledSpriteTheme(
+            sceneSize: sceneSize,
+            textureNames: [
+                "pier_stone",
+                "pier_steel",
+            ],
+            visualWidth: 60
+        )
+    }
+
+    /// City Buildings theme. A single tall building sprite scaled vertically
+    /// to fill the pillar height. The top feature (antenna, cornice, billboard)
+    /// is oriented to face the gap.
+    private func drawCityBuildings(sceneSize: CGSize) {
+        renderScaledSpriteTheme(
+            sceneSize: sceneSize,
+            textureNames: [
+                "building_skyscraper",
+                "building_residential",
+                "building_commercial",
+            ],
+            visualWidth: 60
+        )
+    }
+
+    // MARK: - Sprite rendering helpers
+
+    /// Renders an obstacle pair using a vertical stack of fixed-size sprite
+    /// units. One unit is one balloon, one cloud puff, etc. Multiple units
+    /// are stacked along the pillar height. Each unit randomizes its texture
+    /// from `textureNames`. If no texture in the list is present in the
+    /// asset catalog, the entire pair falls back to `drawLegacyPillars` so
+    /// the level remains playable while assets are missing.
+    private func renderStackedSpriteTheme(
+        sceneSize: CGSize,
+        textureNames: [String],
+        spriteWidth: CGFloat,
+        spriteHeight: CGFloat,
+        spriteSpacing: CGFloat
+    ) {
+        let availableTextures = textureNames.compactMap(Self.textureIfPresent)
+        guard !availableTextures.isEmpty else {
+            drawLegacyPillars(sceneSize: sceneSize)
+            return
+        }
+
+        let pillarWidth: CGFloat = 60
+
+        let bottomHeight = gapCenterY - gap / 2
+        if bottomHeight > 0 {
+            let bottom = makeStackedSpritePillar(
+                width: pillarWidth, height: bottomHeight, isTop: false,
+                textures: availableTextures,
+                spriteSize: CGSize(width: spriteWidth, height: spriteHeight),
+                spacing: spriteSpacing
+            )
+            bottom.position = CGPoint(x: 0, y: bottomHeight / 2)
+            addChild(bottom)
+        }
+
+        let topY0 = gapCenterY + gap / 2
+        let topHeight = sceneSize.height - topY0
+        if topHeight > 0 {
+            let top = makeStackedSpritePillar(
+                width: pillarWidth, height: topHeight, isTop: true,
+                textures: availableTextures,
+                spriteSize: CGSize(width: spriteWidth, height: spriteHeight),
+                spacing: spriteSpacing
+            )
+            top.position = CGPoint(x: 0, y: topY0 + topHeight / 2)
+            addChild(top)
+        }
+    }
+
+    /// Renders an obstacle pair using a single tall sprite scaled to fit
+    /// the pillar height. Used for piers and buildings where the obstacle
+    /// is one continuous structure rather than a stack of units. The cap
+    /// end of the sprite is oriented to face the gap.
+    private func renderScaledSpriteTheme(
+        sceneSize: CGSize,
+        textureNames: [String],
+        visualWidth: CGFloat
+    ) {
+        let availableTextures = textureNames.compactMap(Self.textureIfPresent)
+        guard !availableTextures.isEmpty else {
+            drawLegacyPillars(sceneSize: sceneSize)
+            return
+        }
+
+        let pillarWidth: CGFloat = 60
+
+        let bottomHeight = gapCenterY - gap / 2
+        if bottomHeight > 0 {
+            let texture = availableTextures.randomElement()!
+            let bottom = makeScaledSpritePillar(
+                width: pillarWidth, height: bottomHeight, isTop: false,
+                texture: texture,
+                visualWidth: visualWidth
+            )
+            bottom.position = CGPoint(x: 0, y: bottomHeight / 2)
+            addChild(bottom)
+        }
+
+        let topY0 = gapCenterY + gap / 2
+        let topHeight = sceneSize.height - topY0
+        if topHeight > 0 {
+            let texture = availableTextures.randomElement()!
+            let top = makeScaledSpritePillar(
+                width: pillarWidth, height: topHeight, isTop: true,
+                texture: texture,
+                visualWidth: visualWidth
+            )
+            top.position = CGPoint(x: 0, y: topY0 + topHeight / 2)
+            addChild(top)
+        }
+    }
+
+    /// Builds one pillar as a vertical stack of sprite units. Number of
+    /// units is computed from the pillar height so the stack roughly fills
+    /// it. Each unit picks a random texture from `textures`. Hitbox is the
+    /// standard 80% inset rectangle on the parent container.
+    private func makeStackedSpritePillar(
+        width: CGFloat, height: CGFloat, isTop: Bool,
+        textures: [SKTexture],
+        spriteSize: CGSize,
+        spacing: CGFloat
+    ) -> SKNode {
+        let container = SKNode()
+
+        let unitHeight = spriteSize.height + spacing
+        let count = max(1, Int((height + spacing) / unitHeight))
+        let totalContent = CGFloat(count) * spriteSize.height
+            + CGFloat(max(0, count - 1)) * spacing
+        let firstYOffset = -height / 2
+            + (height - totalContent) / 2
+            + spriteSize.height / 2
+
+        for i in 0..<count {
+            let yOffset = firstYOffset + CGFloat(i) * unitHeight
+            let texture = textures[Int.random(in: 0..<textures.count)]
+            let sprite = SKSpriteNode(texture: texture)
+            sprite.size = spriteSize
+            sprite.position = CGPoint(x: 0, y: yOffset)
+            container.addChild(sprite)
+        }
+
+        container.physicsBody = makeStandardHitbox(width: width, height: height)
+
+        #if DEBUG
+        print(String(format: "[ObstacleNode] stacked sprite pillar: %.0fx%.0f units=%d (%@)",
+                     width, height, count, isTop ? "top" : "bot"))
+        #endif
+
+        return container
+    }
+
+    /// Builds one pillar as a single sprite scaled to fit the pillar
+    /// dimensions. For top pillars, the sprite is vertically flipped so
+    /// the cap/feature end faces the gap. Hitbox is the standard 80%
+    /// inset rectangle on the parent container.
+    private func makeScaledSpritePillar(
+        width: CGFloat, height: CGFloat, isTop: Bool,
+        texture: SKTexture,
+        visualWidth: CGFloat
+    ) -> SKNode {
+        let container = SKNode()
+
+        let sprite = SKSpriteNode(texture: texture)
+        sprite.size = CGSize(width: visualWidth, height: height)
+        // Top pillar: flip vertically so the sprite's "top" (cap, antenna)
+        // points down toward the gap rather than off-screen.
+        if isTop {
+            sprite.yScale = -1
+        }
+        container.addChild(sprite)
+
+        container.physicsBody = makeStandardHitbox(width: width, height: height)
+
+        #if DEBUG
+        print(String(format: "[ObstacleNode] scaled sprite pillar: %.0fx%.0f (%@)",
+                     visualWidth, height, isTop ? "top, flipped" : "bot"))
+        #endif
+
+        return container
+    }
+
+    /// Standard 80% inset rectangular physics body, identical to the
+    /// hitbox the legacy pillar uses. All themed pillars share this so
+    /// gameplay is theme-independent.
+    private func makeStandardHitbox(width: CGFloat, height: CGFloat) -> SKPhysicsBody {
+        let hitboxWidth  = max(20, width  * 0.8)
+        let hitboxHeight = max(20, height * 0.8)
+        let pb = SKPhysicsBody(rectangleOf: CGSize(width: hitboxWidth, height: hitboxHeight))
+        pb.isDynamic = false
+        pb.categoryBitMask = PhysicsCategory.obstacle
+        pb.contactTestBitMask = PhysicsCategory.plane
+        pb.collisionBitMask = 0
+        return pb
+    }
+
+    /// Returns an `SKTexture` for the named asset only if the asset
+    /// exists in the bundle. Used to guard against missing Stitch assets
+    /// during development — themes whose texture is missing fall back to
+    /// the legacy renderer rather than rendering an invisible obstacle.
+    private static func textureIfPresent(_ name: String) -> SKTexture? {
+        guard UIImage(named: name) != nil else { return nil }
+        return SKTexture(imageNamed: name)
+    }
+
+    // MARK: - Legacy
 
     private func makePillar(width: CGFloat, height: CGFloat, isTop: Bool) -> SKNode {
         let container = SKNode()

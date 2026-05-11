@@ -6,6 +6,16 @@ enum ChallengeType {
     case coinChain
 }
 
+/// Per-level obstacle visual theme. Hitbox and gap mechanics are identical
+/// across themes; only the rendering differs. Each theme corresponds to a
+/// set of sprite assets in `Assets.xcassets` and a renderer in `ObstacleNode`.
+enum ObstacleTheme {
+    case hotAirBalloons
+    case harborPiers
+    case cityBuildings
+    case stormClouds
+}
+
 enum Chapter: Int {
     case clearSkies = 1
     case stormChaser = 2
@@ -25,6 +35,7 @@ struct Challenge {
     let type: ChallengeType
     let reward: Int
     let speedMultiplier: CGFloat
+    let theme: ObstacleTheme
 
     // Derived per-level difficulty knobs.
 
@@ -81,20 +92,26 @@ struct Challenge {
 enum ChallengeCatalog {
 
     // Static list — the order here is the order shown on the map.
+    //
+    // Each level is assigned an obstacle theme per the SKY-62 plan:
+    //   Levels 1-3 (free tier) → Hot Air Balloons
+    //   Levels 4-5             → Harbor Piers
+    //   Levels 6-7             → City Buildings
+    //   Levels 8-10            → Storm Clouds
     static let all: [Challenge] = [
         // Chapter 1 — Clear Skies
-        Challenge(id: 1,  chapter: .clearSkies,  name: "First Flight",       type: .obstacleCourse, reward: 100, speedMultiplier: 1.0),
-        Challenge(id: 2,  chapter: .clearSkies,  name: "Cloud Canyon",       type: .obstacleCourse, reward: 150, speedMultiplier: 1.1),
-        Challenge(id: 3,  chapter: .clearSkies,  name: "Sunny Sprint",       type: .timeTrial,      reward: 120, speedMultiplier: 1.0),
-        Challenge(id: 4,  chapter: .clearSkies,  name: "Coin Scatter",       type: .coinChain,      reward: 130, speedMultiplier: 1.1),
-        Challenge(id: 5,  chapter: .clearSkies,  name: "Gusty Gorge",        type: .obstacleCourse, reward: 180, speedMultiplier: 1.2),
+        Challenge(id: 1,  chapter: .clearSkies,  name: "First Flight",       type: .obstacleCourse, reward: 100, speedMultiplier: 1.0, theme: .hotAirBalloons),
+        Challenge(id: 2,  chapter: .clearSkies,  name: "Cloud Canyon",       type: .obstacleCourse, reward: 150, speedMultiplier: 1.1, theme: .hotAirBalloons),
+        Challenge(id: 3,  chapter: .clearSkies,  name: "Sunny Sprint",       type: .timeTrial,      reward: 120, speedMultiplier: 1.0, theme: .hotAirBalloons),
+        Challenge(id: 4,  chapter: .clearSkies,  name: "Coin Scatter",       type: .coinChain,      reward: 130, speedMultiplier: 1.1, theme: .harborPiers),
+        Challenge(id: 5,  chapter: .clearSkies,  name: "Gusty Gorge",        type: .obstacleCourse, reward: 180, speedMultiplier: 1.2, theme: .harborPiers),
 
         // Chapter 2 — Storm Chaser
-        Challenge(id: 6,  chapter: .stormChaser, name: "Lightning Dash",     type: .timeTrial,      reward: 200, speedMultiplier: 1.3),
-        Challenge(id: 7,  chapter: .stormChaser, name: "Thunder Gap",        type: .obstacleCourse, reward: 220, speedMultiplier: 1.4),
-        Challenge(id: 8,  chapter: .stormChaser, name: "The Coin Tornado",   type: .coinChain,      reward: 210, speedMultiplier: 1.3),
-        Challenge(id: 9,  chapter: .stormChaser, name: "Hurricane Alley",    type: .obstacleCourse, reward: 250, speedMultiplier: 1.5),
-        Challenge(id: 10, chapter: .stormChaser, name: "Sky Ace Challenge",  type: .obstacleCourse, reward: 300, speedMultiplier: 1.6)
+        Challenge(id: 6,  chapter: .stormChaser, name: "Lightning Dash",     type: .timeTrial,      reward: 200, speedMultiplier: 1.3, theme: .cityBuildings),
+        Challenge(id: 7,  chapter: .stormChaser, name: "Thunder Gap",        type: .obstacleCourse, reward: 220, speedMultiplier: 1.4, theme: .cityBuildings),
+        Challenge(id: 8,  chapter: .stormChaser, name: "The Coin Tornado",   type: .coinChain,      reward: 210, speedMultiplier: 1.3, theme: .stormClouds),
+        Challenge(id: 9,  chapter: .stormChaser, name: "Hurricane Alley",    type: .obstacleCourse, reward: 250, speedMultiplier: 1.5, theme: .stormClouds),
+        Challenge(id: 10, chapter: .stormChaser, name: "Sky Ace Challenge",  type: .obstacleCourse, reward: 300, speedMultiplier: 1.6, theme: .stormClouds)
     ]
 
     static func challenge(forID id: Int) -> Challenge? {

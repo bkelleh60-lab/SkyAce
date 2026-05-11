@@ -3,16 +3,6 @@
     {
       "filename" : "balloon_red.png",
       "idiom" : "universal",
-      "scale" : "1x"
-    },
-    {
-      "filename" : "balloon_red.png",
-      "idiom" : "universal",
-      "scale" : "2x"
-    },
-    {
-      "filename" : "balloon_red.png",
-      "idiom" : "universal",
       "scale" : "3x"
     }
   ],

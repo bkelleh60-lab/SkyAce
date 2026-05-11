@@ -34,14 +34,12 @@ final class ObstacleNode: SKNode {
     /// Routes obstacle rendering to the correct draw function for the
     /// current theme. Each theme function is responsible for adding the
     /// top and bottom pillars as child nodes with correct physics bodies.
-    /// All four real themes use sprite-based rendering (Stitch-generated
-    /// PNG assets in `Assets.xcassets`). If a theme's asset is missing
-    /// at runtime, the renderer falls back to `drawLegacyPillars` so the
-    /// level remains playable.
+    /// All four themes use sprite-based rendering (Stitch-generated PNG
+    /// assets in `Assets.xcassets`). If a theme's asset is missing at
+    /// runtime, the renderer falls back to `drawLegacyPillars` so the
+    /// level remains playable during development.
     private func buildPillars(sceneSize: CGSize) {
         switch theme {
-        case .legacy:
-            drawLegacyPillars(sceneSize: sceneSize)
         case .hotAirBalloons:
             drawHotAirBalloons(sceneSize: sceneSize)
         case .harborPiers:
@@ -53,9 +51,11 @@ final class ObstacleNode: SKNode {
         }
     }
 
-    /// Original red+yellow striped pillar rendering. Removed in the final
-    /// commit of SKY-62 once all four real themes are implemented and
-    /// every level is mapped to one of them.
+    /// Original red+yellow striped pillar rendering. No theme case routes
+    /// to this directly anymore — it survives as an internal fallback
+    /// that the sprite-rendering helpers call when their Stitch assets
+    /// are missing from the bundle, so the level remains playable in
+    /// development even if an asset has not yet been imported.
     private func drawLegacyPillars(sceneSize: CGSize) {
         let pillarWidth: CGFloat = 60
 
@@ -97,27 +97,145 @@ final class ObstacleNode: SKNode {
         )
     }
 
-    /// Storm Clouds theme. Stacks cloud sprites vertically. Cloud sprites
-    /// are wider than tall, so the visual silhouette is "puffy column" rather
-    /// than a vertical strip. Lightning variant occasionally appears for
-    /// atmospheric variety.
+    /// Storm Clouds theme. Custom renderer (does not use
+    /// `renderStackedSpriteTheme`) so we can stack plain cloud puffs with
+    /// horizontal jitter for an organic column silhouette AND drop a single
+    /// lightning bolt at the gap-facing edge of each pillar, oriented to
+    /// point INTO the gap (down on top pillars, up on bottom pillars).
     private func drawStormClouds(sceneSize: CGSize) {
-        renderStackedSpriteTheme(
-            sceneSize: sceneSize,
-            textureNames: [
-                "cloud_plain",
-                "cloud_plain",
-                "cloud_lightning",  // 1-in-3 chance per puff
-            ],
-            spriteWidth: 90,
-            spriteHeight: 50,
-            spriteSpacing: -8       // negative spacing so clouds overlap
-        )
+        guard let cloudTexture = Self.textureIfPresent("cloud_plain") else {
+            drawLegacyPillars(sceneSize: sceneSize)
+            return
+        }
+
+        let pillarWidth: CGFloat = 60
+        let cloudSize = CGSize(width: 90, height: 65)
+        let spacing: CGFloat = -25      // heavy overlap so adjacent clouds merge
+        let xJitter: CGFloat = 10       // horizontal stagger so the column isn't a rigid line
+
+        let bottomHeight = gapCenterY - gap / 2
+        if bottomHeight > 0 {
+            let bottom = makeStormCloudPillar(
+                width: pillarWidth, height: bottomHeight, isTop: false,
+                cloudTexture: cloudTexture, cloudSize: cloudSize,
+                spacing: spacing, xJitter: xJitter
+            )
+            bottom.position = CGPoint(x: 0, y: bottomHeight / 2)
+            addChild(bottom)
+        }
+
+        let topY0 = gapCenterY + gap / 2
+        let topHeight = sceneSize.height - topY0
+        if topHeight > 0 {
+            let top = makeStormCloudPillar(
+                width: pillarWidth, height: topHeight, isTop: true,
+                cloudTexture: cloudTexture, cloudSize: cloudSize,
+                spacing: spacing, xJitter: xJitter
+            )
+            top.position = CGPoint(x: 0, y: topY0 + topHeight / 2)
+            addChild(top)
+        }
+    }
+
+    /// A small cartoon lightning bolt — yellow fill, orange outline, classic
+    /// zigzag silhouette. Centered on the origin with the sharp point at the
+    /// bottom (`y = -size.height / 2`) so the bolt visually "strikes down"
+    /// in its default orientation. Flip vertically (`yScale = -1`) to make
+    /// it point up.
+    private func makeLightningBolt(size: CGSize) -> SKNode {
+        let container = SKNode()
+
+        let halfW = size.width / 2
+        let halfH = size.height / 2
+
+        let path = CGMutablePath()
+        path.move(to:    CGPoint(x: -halfW * 0.20, y:  halfH))               // top
+        path.addLine(to: CGPoint(x:  halfW * 0.50, y:  halfH * 0.10))        // right shoulder
+        path.addLine(to: CGPoint(x:  halfW * 0.10, y:  halfH * 0.10))        // inner indent
+        path.addLine(to: CGPoint(x:  halfW * 0.30, y: -halfH))               // bottom point (strike)
+        path.addLine(to: CGPoint(x: -halfW * 0.30, y: -halfH * 0.05))        // left shoulder
+        path.addLine(to: CGPoint(x: -halfW * 0.05, y: -halfH * 0.05))        // inner indent
+        path.closeSubpath()
+
+        let bolt = SKShapeNode(path: path)
+        bolt.fillColor = UIColor(red: 1.00, green: 0.92, blue: 0.30, alpha: 1.0)
+        bolt.strokeColor = UIColor(red: 0.95, green: 0.65, blue: 0.10, alpha: 1.0)
+        bolt.lineWidth = 1.2
+        container.addChild(bolt)
+
+        return container
+    }
+
+    /// Builds one storm cloud pillar: a column of overlapping cloud puffs
+    /// with x-jitter, plus a single lightning bolt at the gap-facing edge
+    /// oriented to point INTO the gap.
+    ///
+    /// For top pillars (hanging from the top of the screen), the gap-facing
+    /// edge is the bottom of the pillar; the lightning bolt renders naturally
+    /// (its sharp end points down).
+    ///
+    /// For bottom pillars (rising from the bottom of the screen), the
+    /// gap-facing edge is the top of the pillar; the bolt is vertically
+    /// flipped (`yScale = -1`) so its sharp end points up into the gap.
+    private func makeStormCloudPillar(
+        width: CGFloat, height: CGFloat, isTop: Bool,
+        cloudTexture: SKTexture, cloudSize: CGSize,
+        spacing: CGFloat, xJitter: CGFloat
+    ) -> SKNode {
+        let container = SKNode()
+
+        // Stack cloud puffs along the pillar height with horizontal jitter.
+        let unitHeight = cloudSize.height + spacing
+        let count = max(1, Int((height + spacing) / unitHeight))
+        let totalContent = CGFloat(count) * cloudSize.height
+            + CGFloat(max(0, count - 1)) * spacing
+        let firstYOffset = -height / 2
+            + (height - totalContent) / 2
+            + cloudSize.height / 2
+
+        for i in 0..<count {
+            let yOffset = firstYOffset + CGFloat(i) * unitHeight
+            let xPos = CGFloat.random(in: -xJitter ... xJitter)
+            let sprite = SKSpriteNode(texture: cloudTexture)
+            sprite.size = cloudSize
+            sprite.position = CGPoint(x: xPos, y: yOffset)
+            container.addChild(sprite)
+        }
+
+        // Single lightning bolt at the gap-facing edge, pointing INTO the gap.
+        let bolt = makeLightningBolt(size: CGSize(width: 18, height: 38))
+        let boltXJitter = CGFloat.random(in: -10 ... 10)
+        if isTop {
+            // Top pillar: bolt at bottom edge, point down naturally.
+            bolt.position = CGPoint(x: boltXJitter, y: -height / 2 + 22)
+        } else {
+            // Bottom pillar: bolt at top edge, flipped so the point goes up.
+            bolt.yScale = -1
+            bolt.position = CGPoint(x: boltXJitter, y: height / 2 - 22)
+        }
+        bolt.zPosition = 10
+        container.addChild(bolt)
+
+        // Standard 80% inset hitbox.
+        container.physicsBody = makeStandardHitbox(width: width, height: height)
+
+        #if DEBUG
+        print(String(format: "[ObstacleNode] storm cloud pillar: %.0fx%.0f puffs=%d bolt=%@",
+                     width, height, count, isTop ? "top→down" : "bot→up"))
+        #endif
+
+        return container
     }
 
     /// Harbor Piers theme. A single tall pier sprite scaled vertically to
     /// fill the pillar height. The cap end of the sprite is oriented to face
     /// the gap (top pillar = cap at bottom, bottom pillar = cap at top).
+    ///
+    /// Sprite PNGs are tight-cropped (no transparent padding), so
+    /// `visualWidth` directly controls the rendered pier width. 70pt gives
+    /// a small visual overhang past the 60pt hitbox so the pier reads as
+    /// substantial without making the pier wildly wider than its collision
+    /// area.
     private func drawHarborPiers(sceneSize: CGSize) {
         renderScaledSpriteTheme(
             sceneSize: sceneSize,
@@ -125,22 +243,31 @@ final class ObstacleNode: SKNode {
                 "pier_stone",
                 "pier_steel",
             ],
-            visualWidth: 60
+            visualWidth: 70
         )
     }
 
     /// City Buildings theme. A single tall building sprite scaled vertically
     /// to fill the pillar height. The top feature (antenna, cornice, billboard)
     /// is oriented to face the gap.
+    ///
+    /// Sprite PNGs are tight-cropped. `visualWidth` directly controls the
+    /// rendered building width. 70pt gives a small visual overhang past the
+    /// 60pt hitbox.
     private func drawCityBuildings(sceneSize: CGSize) {
         renderScaledSpriteTheme(
             sceneSize: sceneSize,
             textureNames: [
                 "building_skyscraper",
                 "building_residential",
-                "building_commercial",
+                // "building_commercial" — dropped during SKY-62: source design had
+                // a placeholder "Building Commercial" billboard text leaking
+                // through and a wide aspect ratio that distorted when stretched
+                // to fill a tall pillar. Imageset is removed from the bundle.
+                // If we want a third building variant later, re-generate in
+                // Stitch with a taller aspect ratio and no placeholder signage.
             ],
-            visualWidth: 60
+            visualWidth: 70
         )
     }
 

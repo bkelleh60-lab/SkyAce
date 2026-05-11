@@ -431,15 +431,17 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             }
 
         case .coinChain:
-            // Coin patterns frequent, obstacles occasional.
+            // Coin patterns frequent, obstacles occasional. Obstacle spawns
+            // first so the just-placed pillars are visible to the coin
+            // pattern's clearance check (SKY-60).
+            if currentTime - lastObstacleSpawn >= challenge.spawnInterval * 1.8 {
+                spawnObstaclePair()
+                lastObstacleSpawn = currentTime
+            }
             if currentTime - lastPatternSpawn >= 1.4 {
                 let pattern = nextCoinPattern()
                 spawnCoinPattern(pattern)
                 lastPatternSpawn = currentTime
-            }
-            if currentTime - lastObstacleSpawn >= challenge.spawnInterval * 1.8 {
-                spawnObstaclePair()
-                lastObstacleSpawn = currentTime
             }
         }
     }
@@ -451,6 +453,13 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         worldNode.addChild(obstacle)
         lastObstacleGapY = obstacle.gapCenterY
 
+        // SKY-60: a coin spawned earlier may have scrolled into this new
+        // obstacle's X column with a Y outside the new gap — at high levels
+        // (short spawnInterval) the cycles can put the next obstacle right
+        // on top of the previous coin line. Cull any embedded coin so we
+        // never present an uncollectible collectible.
+        removeCoinsEmbeddedIn(obstacle)
+
         let speed = plane.horizontalSpeed * challenge.speedMultiplier
         let distance = size.width + 200
         let duration = TimeInterval(distance / speed)
@@ -458,6 +467,22 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             SKAction.moveBy(x: -distance, y: 0, duration: duration),
             SKAction.removeFromParent()
         ]))
+    }
+
+    /// Removes any `CoinNode` whose current world position falls inside the
+    /// pillar (non-gap) area of `obstacle`, with the same buffer the coin
+    /// spawn-time clearance check uses. Counterpart to `isInsideObstacle`
+    /// that runs from the obstacle side (SKY-60).
+    private func removeCoinsEmbeddedIn(_ obstacle: ObstacleNode, buffer: CGFloat = 20) {
+        let pillarHalfWidth: CGFloat = 30
+        for case let coin as CoinNode in worldNode.children {
+            let dx = coin.position.x - obstacle.position.x
+            if abs(dx) > pillarHalfWidth + buffer { continue }
+            let dy = coin.position.y - obstacle.gapCenterY
+            if abs(dy) > obstacle.gap / 2 - buffer {
+                coin.removeFromParent()
+            }
+        }
     }
 
     private func spawnCoinLine() {
@@ -474,16 +499,22 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         let startX = size.width + 160  // was +40 — placed coins inside the pillar column
 
+        let speed = plane.horizontalSpeed * challenge.speedMultiplier
+        let distance = size.width + 320
+        let duration = TimeInterval(distance / speed)
+
         for i in 0..<4 {
+            let position = CGPoint(x: startX + CGFloat(i) * 40, y: centerY)
+            // Defense in depth (SKY-60): the gap-aligned Y plus wander can
+            // still graze a pillar edge on tight L10 gates. Skip any coin
+            // that would land embedded in a wall rather than spawning an
+            // uncollectible collectible.
+            if isInsideObstacle(position) { continue }
             let coin = CoinNode()
-            coin.position = CGPoint(x: startX + CGFloat(i) * 40, y: centerY)
+            coin.position = position
             coin.zPosition = 2
             worldNode.addChild(coin)
             state.registerCoinSpawned()
-
-            let speed = plane.horizontalSpeed * challenge.speedMultiplier
-            let distance = size.width + 320
-            let duration = TimeInterval(distance / speed)
             coin.run(SKAction.sequence([
                 SKAction.moveBy(x: -distance, y: 0, duration: duration),
                 SKAction.removeFromParent()
@@ -554,15 +585,25 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func spawnCoinPattern(_ pattern: CoinPattern) {
-        let centerY = CGFloat.random(in: size.height * 0.3...size.height * 0.7)
         let speed = plane.horizontalSpeed * challenge.speedMultiplier
         let distance = size.width + 260
         let duration = TimeInterval(distance / speed)
         let startX = size.width + 40
+        let offsets = patternOffsets(pattern)
 
-        func spawn(at offset: CGPoint) {
+        // Pick a centerY that keeps every coin in the pattern clear of any
+        // active obstacle pillar (SKY-60). The default random Y has no
+        // obstacle awareness, and in `.coinChain` mode an obstacle pair
+        // can spawn on the same tick at width+80 — in the middle of the
+        // pattern's X span. Try several candidates before falling back to
+        // per-coin culling so a tight pattern doesn't disappear entirely.
+        let centerY = pickPatternCenterY(startX: startX, offsets: offsets)
+
+        for offset in offsets {
+            let position = CGPoint(x: startX + offset.x, y: centerY + offset.y)
+            if isInsideObstacle(position) { continue }
             let coin = CoinNode()
-            coin.position = CGPoint(x: startX + offset.x, y: centerY + offset.y)
+            coin.position = position
             coin.zPosition = 2
             worldNode.addChild(coin)
             state.registerCoinSpawned()
@@ -571,26 +612,64 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 SKAction.removeFromParent()
             ]))
         }
+    }
 
+    private func patternOffsets(_ pattern: CoinPattern) -> [CGPoint] {
         switch pattern {
         case .line:
-            for i in 0..<5 { spawn(at: CGPoint(x: CGFloat(i) * 40, y: 0)) }
+            return (0..<5).map { CGPoint(x: CGFloat($0) * 40, y: 0) }
         case .arcUp:
-            for i in 0..<5 {
+            return (0..<5).map { i in
                 let t = CGFloat(i) / 4.0
-                spawn(at: CGPoint(x: CGFloat(i) * 42, y: sin(t * .pi) * 60))
+                return CGPoint(x: CGFloat(i) * 42, y: sin(t * .pi) * 60)
             }
         case .arcDown:
-            for i in 0..<5 {
+            return (0..<5).map { i in
                 let t = CGFloat(i) / 4.0
-                spawn(at: CGPoint(x: CGFloat(i) * 42, y: -sin(t * .pi) * 60))
+                return CGPoint(x: CGFloat(i) * 42, y: -sin(t * .pi) * 60)
             }
         case .zigzag:
-            for i in 0..<6 {
-                let y: CGFloat = (i % 2 == 0) ? -40 : 40
-                spawn(at: CGPoint(x: CGFloat(i) * 36, y: y))
+            return (0..<6).map { i in
+                CGPoint(x: CGFloat(i) * 36, y: (i % 2 == 0) ? -40 : 40)
             }
         }
+    }
+
+    /// Samples a few random Y values within the pattern's normal vertical
+    /// band and returns the first one for which every coin in the pattern
+    /// lands in clear space. Falls back to the last sampled Y so the spawn
+    /// loop's per-coin clearance check can drop only the embedded coins.
+    private func pickPatternCenterY(startX: CGFloat, offsets: [CGPoint]) -> CGFloat {
+        var lastCandidate: CGFloat = size.height / 2
+        for _ in 0..<6 {
+            let candidate = CGFloat.random(in: size.height * 0.3...size.height * 0.7)
+            lastCandidate = candidate
+            let allClear = offsets.allSatisfy { offset in
+                !isInsideObstacle(CGPoint(x: startX + offset.x, y: candidate + offset.y))
+            }
+            if allClear { return candidate }
+        }
+        return lastCandidate
+    }
+
+    /// Returns true if `worldPosition` sits inside (or within `buffer`pt of)
+    /// the pillar area of any active `ObstacleNode` in the world. The gap
+    /// between top/bottom pillars counts as clear space. Used by coin
+    /// spawners so a coin never appears embedded inside a wall the player
+    /// can't reach without crashing (SKY-60).
+    private func isInsideObstacle(_ worldPosition: CGPoint, buffer: CGFloat = 20) -> Bool {
+        let pillarHalfWidth: CGFloat = 30  // ObstacleNode pillar width is 60
+        for case let obstacle as ObstacleNode in worldNode.children {
+            let dx = worldPosition.x - obstacle.position.x
+            if abs(dx) > pillarHalfWidth + buffer { continue }
+            // X overlaps a pillar column. Reachable only if Y sits inside
+            // the gap with `buffer` clearance from each pillar edge.
+            let dy = worldPosition.y - obstacle.gapCenterY
+            if abs(dy) > obstacle.gap / 2 - buffer {
+                return true
+            }
+        }
+        return false
     }
 
     private func cullOffscreenChildren() {

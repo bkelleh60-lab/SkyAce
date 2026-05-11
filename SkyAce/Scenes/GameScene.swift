@@ -719,8 +719,10 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 SkyHaptics.collect()
                 flashCoinPill()
             }
-        case PhysicsCategory.obstacle, PhysicsCategory.boundary:
+        case PhysicsCategory.obstacle:
             handleHit(node: otherBody.node)
+        case PhysicsCategory.boundary:
+            handleBoundaryCrash()
         case PhysicsCategory.finish:
             handleFinishLineCross()
         default:
@@ -743,6 +745,17 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 SKAction.moveBy(x: -6, y: 4, duration: 0.08)
             ]))
         }
+    }
+
+    // Boundary contacts represent flying off the top or falling out of the
+    // sky — armor never saves you from that, so this skips registerHit and
+    // ends the run directly (SKY-72).
+    private func handleBoundaryCrash() {
+        plane.playHitFlash()
+        plane.run(AudioManager.shared.sfxAction(SkySFX.hit))
+        SkyHaptics.hit()
+        state.finish(won: false)
+        triggerFailSequence()
     }
 
     private func flashCoinPill() {

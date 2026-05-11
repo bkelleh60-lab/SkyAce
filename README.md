@@ -1,6 +1,6 @@
 # Sky Ace
 
-A 2D arcade flying game for kids, built in Swift and SpriteKit for iPhone and iPad.
+A 2D mission-based flying game for kids, built in Swift and SpriteKit for iPhone and iPad.
 
 Sky Ace is an independent project, designed and developed at the kitchen table by a working dad and his nine-year-old son. The kid drew the planes, picked the colors, named the worlds, and tested every level until it felt right. The dad wrote the code.
 
@@ -8,7 +8,9 @@ Sky Ace is an independent project, designed and developed at the kitchen table b
 
 - **Listed in the Apple App Store Kids Category** (ages 9-11).
 - **Press and hold to climb. Let go to dive.** That is the whole control scheme.
-- **Ten mission levels** across three challenge types: pillar-thread obstacle courses, time trials with coin chains, and mixed coin-and-obstacle stages.
+- **Ten mission levels** across three challenge types: obstacle courses, time trials with coin chains, and mixed coin-and-obstacle stages.
+- **Two chapters with sequential level progression** — Clear Skies (Levels 1–5) and Storm Chaser (Levels 6–10). Each level must be completed before the next one unlocks.
+- **1–3 star rating per mission** based on performance: coins collected and time remaining. Stars persist across sessions.
 - **Two open-world Free Flight modes** with no fail state: City World ("Skyline Tour") and Mountain World ("Mountain Expedition"). Both have landmarks to circle and rings that grant a temporary speed boost.
 - **A Hangar of unlockable planes**, each with distinct speed, armor, and handling stats.
 - **A Shop with upgradeable systems** (Armor Plating, Engine Boost) using earned in-game currency.

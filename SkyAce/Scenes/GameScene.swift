@@ -453,6 +453,13 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         worldNode.addChild(obstacle)
         lastObstacleGapY = obstacle.gapCenterY
 
+        // SKY-60: a coin spawned earlier may have scrolled into this new
+        // obstacle's X column with a Y outside the new gap — at high levels
+        // (short spawnInterval) the cycles can put the next obstacle right
+        // on top of the previous coin line. Cull any embedded coin so we
+        // never present an uncollectible collectible.
+        removeCoinsEmbeddedIn(obstacle)
+
         let speed = plane.horizontalSpeed * challenge.speedMultiplier
         let distance = size.width + 200
         let duration = TimeInterval(distance / speed)
@@ -460,6 +467,22 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             SKAction.moveBy(x: -distance, y: 0, duration: duration),
             SKAction.removeFromParent()
         ]))
+    }
+
+    /// Removes any `CoinNode` whose current world position falls inside the
+    /// pillar (non-gap) area of `obstacle`, with the same buffer the coin
+    /// spawn-time clearance check uses. Counterpart to `isInsideObstacle`
+    /// that runs from the obstacle side (SKY-60).
+    private func removeCoinsEmbeddedIn(_ obstacle: ObstacleNode, buffer: CGFloat = 20) {
+        let pillarHalfWidth: CGFloat = 30
+        for case let coin as CoinNode in worldNode.children {
+            let dx = coin.position.x - obstacle.position.x
+            if abs(dx) > pillarHalfWidth + buffer { continue }
+            let dy = coin.position.y - obstacle.gapCenterY
+            if abs(dy) > obstacle.gap / 2 - buffer {
+                coin.removeFromParent()
+            }
+        }
     }
 
     private func spawnCoinLine() {

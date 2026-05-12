@@ -54,14 +54,24 @@
 		B10001000000000000000703 /* SkyTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000703 /* SkyTabBar.swift */; };
 		B10001000000000000000704 /* CurrencyHUD.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000704 /* CurrencyHUD.swift */; };
 		B10001000000000000000705 /* SkyMenuTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000705 /* SkyMenuTopBar.swift */; };
-		B10002000000000000000601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000601 /* Assets.xcassets */; };
-		B10002000000000000000604 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000604 /* LaunchScreen.storyboard */; };
-		B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000602 /* PrivacyInfo.xcprivacy */; };
-		B10002000000000000000603 /* Sprites in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000603 /* Sprites */; };
 		B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010001 /* CurrencyManagerTests.swift */; };
 		B10001000000000000010002 /* StarRatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010002 /* StarRatingTests.swift */; };
 		B10001000000000000010003 /* IAPManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010003 /* IAPManagerTests.swift */; };
+		B10002000000000000000601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000601 /* Assets.xcassets */; };
+		B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000602 /* PrivacyInfo.xcprivacy */; };
+		B10002000000000000000603 /* Sprites in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000603 /* Sprites */; };
+		B10002000000000000000604 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000604 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		CP10011000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = P10008000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = T10004000000000000000001;
+			remoteInfo = SkyAce;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		1ACC06C32F94DE72005BEF70 /* PlusJakartaSans-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "PlusJakartaSans-Bold.ttf"; sourceTree = "<group>"; };
@@ -79,7 +89,9 @@
 		1ACC06FC2F95037E005BEF70 /* ring_pass.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ring_pass.wav; sourceTree = "<group>"; };
 		1ACC06FD2F95037E005BEF70 /* ui_tap.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = ui_tap.wav; sourceTree = "<group>"; };
 		1ACC06FE2F95037E005BEF70 /* win.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = win.wav; sourceTree = "<group>"; };
+		1AF4FD8B2FB3DBDD00A56686 /* SkyAce.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = SkyAce.storekit; sourceTree = "<group>"; };
 		F10000000000000000000001 /* SkyAce.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkyAce.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F10000000000000000000002 /* SkyAceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkyAceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10001000000000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10001000000000000000101 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		F10001000000000000000102 /* GameViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewController.swift; sourceTree = "<group>"; };
@@ -113,15 +125,14 @@
 		F10001000000000000000703 /* SkyTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyTabBar.swift; sourceTree = "<group>"; };
 		F10001000000000000000704 /* CurrencyHUD.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyHUD.swift; sourceTree = "<group>"; };
 		F10001000000000000000705 /* SkyMenuTopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyMenuTopBar.swift; sourceTree = "<group>"; };
-		F10002000000000000000601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		F10002000000000000000604 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
-		F10002000000000000000602 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		F10002000000000000000603 /* Sprites */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Sprites; sourceTree = "<group>"; };
-		F10000000000000000000002 /* SkyAceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkyAceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10001000000000000010001 /* CurrencyManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyManagerTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010002 /* StarRatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarRatingTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010003 /* IAPManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IAPManagerTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F10002000000000000000601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F10002000000000000000602 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		F10002000000000000000603 /* Sprites */ = {isa = PBXFileReference; lastKnownFileType = folder; path = Sprites; sourceTree = "<group>"; };
+		F10002000000000000000604 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -145,21 +156,11 @@
 		G10003000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				1AF4FD8B2FB3DBDD00A56686 /* SkyAce.storekit */,
 				G10003000000000000000002 /* SkyAce */,
 				G10003000000000000000020 /* SkyAceTests */,
 				G10003000000000000000099 /* Products */,
 			);
-			sourceTree = "<group>";
-		};
-		G10003000000000000000020 /* SkyAceTests */ = {
-			isa = PBXGroup;
-			children = (
-				F10001000000000000010001 /* CurrencyManagerTests.swift */,
-				F10001000000000000010002 /* StarRatingTests.swift */,
-				F10001000000000000010003 /* IAPManagerTests.swift */,
-				F10001000000000000010004 /* Info.plist */,
-			);
-			path = SkyAceTests;
 			sourceTree = "<group>";
 		};
 		G10003000000000000000002 /* SkyAce */ = {
@@ -275,6 +276,17 @@
 				F10001000000000000000705 /* SkyMenuTopBar.swift */,
 			);
 			path = UI;
+			sourceTree = "<group>";
+		};
+		G10003000000000000000020 /* SkyAceTests */ = {
+			isa = PBXGroup;
+			children = (
+				F10001000000000000010001 /* CurrencyManagerTests.swift */,
+				F10001000000000000010002 /* StarRatingTests.swift */,
+				F10001000000000000010003 /* IAPManagerTests.swift */,
+				F10001000000000000010004 /* Info.plist */,
+			);
+			path = SkyAceTests;
 			sourceTree = "<group>";
 		};
 		G10003000000000000000099 /* Products */ = {
@@ -441,16 +453,6 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXContainerItemProxy section */
-		CP10011000000000000000001 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = P10008000000000000000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = T10004000000000000000001;
-			remoteInfo = SkyAce;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXTargetDependency section */
 		D10010000000000000000001 /* PBXTargetDependency */ = {

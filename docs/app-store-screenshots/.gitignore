@@ -1,15 +1,7 @@
-# Raw simulator captures and intermediate frames are not committed.
-# Final, App Store-ready assets in iphone-6.7/final/, ipad-13/final/,
-# and video/app-preview.mp4 are tracked. Everything else is regenerated
-# from the simulator on demand.
+# Raw simulator captures are not committed. Final, App Store-ready assets in
+# iphone-6.7/final/ and ipad-13/final/ are tracked. Everything else is
+# regenerated from the simulator on demand.
 
 # Raw simulator screenshots (used as compose input).
 iphone-6.7/raw/
 ipad-13/raw/
-
-# Raw recordings from `xcrun simctl io recordVideo` — too large for git
-# (each can exceed GitHub's 100MB per-file limit).
-video/raw-*.mov
-
-# Intermediate contact sheets generated when picking a frame from a recording.
-video/contact-sheet.jpg

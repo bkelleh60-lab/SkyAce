@@ -65,21 +65,20 @@ The host app is UIKit + SpriteKit (no SwiftUI). Reusable scene content lives in 
 
 ## App Store submission assets
 
-App Store screenshots, App Preview videos, and the privacy and support pages live in `docs/`:
+App Store screenshots and the privacy and support pages live in `docs/`:
 
 ```
 docs/
 ├── privacy.html
 ├── support.html
 └── app-store-screenshots/
+    ├── CAPTURE.md             slot-by-slot capture and recapture guide
     ├── _compose.py            composition script for marketing frames
-    ├── _contact_sheet.py      contact sheet builder for picking gameplay stills
-    ├── iphone-6.7/final/      six 1284x2778 marketing screenshots
-    ├── ipad-13/final/         six 2064x2752 marketing screenshots
-    └── video/                 three App Preview videos (H.264, with silent AAC)
+    ├── iphone-6.7/final/      five 1284x2778 marketing screenshots
+    └── ipad-13/final/         five 2064x2752 marketing screenshots
 ```
 
-Raw simulator captures and source recordings are gitignored. Run the scripts to regenerate any final asset.
+Raw simulator captures are gitignored. Run `_compose.py` to regenerate any final asset. See `docs/app-store-screenshots/CAPTURE.md` for the slot sequence, captions, and per-slot capture state.
 
 ## License
 

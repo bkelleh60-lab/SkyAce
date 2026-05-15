@@ -58,20 +58,27 @@ final class ObstacleNode: SKNode {
     /// development even if an asset has not yet been imported.
     private func drawLegacyPillars(sceneSize: CGSize) {
         let pillarWidth: CGFloat = 60
+        addTopAndBottomPillars(sceneSize: sceneSize) { height, isTop in
+            makePillar(width: pillarWidth, height: height, isTop: isTop)
+        }
+    }
 
-        // Bottom pillar — from y=0 up to gapCenterY - gap/2.
+    /// Calls `build` once for the bottom pillar (isTop=false) and once for
+    /// the top pillar (isTop=true), passing the pillar's height. The returned
+    /// node is positioned at the pillar's center and added as a child. A
+    /// pillar with non-positive height is skipped, which happens when the
+    /// gap eats the full bottom or top band on extreme `gapCenterY` rolls.
+    private func addTopAndBottomPillars(sceneSize: CGSize, build: (_ height: CGFloat, _ isTop: Bool) -> SKNode) {
         let bottomHeight = gapCenterY - gap / 2
         if bottomHeight > 0 {
-            let bottom = makePillar(width: pillarWidth, height: bottomHeight, isTop: false)
+            let bottom = build(bottomHeight, false)
             bottom.position = CGPoint(x: 0, y: bottomHeight / 2)
             addChild(bottom)
         }
-
-        // Top pillar — from gapCenterY + gap/2 up to sceneHeight.
         let topY0 = gapCenterY + gap / 2
         let topHeight = sceneSize.height - topY0
         if topHeight > 0 {
-            let top = makePillar(width: pillarWidth, height: topHeight, isTop: true)
+            let top = build(topHeight, true)
             top.position = CGPoint(x: 0, y: topY0 + topHeight / 2)
             addChild(top)
         }
@@ -113,27 +120,12 @@ final class ObstacleNode: SKNode {
         let spacing: CGFloat = -25      // heavy overlap so adjacent clouds merge
         let xJitter: CGFloat = 10       // horizontal stagger so the column isn't a rigid line
 
-        let bottomHeight = gapCenterY - gap / 2
-        if bottomHeight > 0 {
-            let bottom = makeStormCloudPillar(
-                width: pillarWidth, height: bottomHeight, isTop: false,
+        addTopAndBottomPillars(sceneSize: sceneSize) { height, isTop in
+            makeStormCloudPillar(
+                width: pillarWidth, height: height, isTop: isTop,
                 cloudTexture: cloudTexture, cloudSize: cloudSize,
                 spacing: spacing, xJitter: xJitter
             )
-            bottom.position = CGPoint(x: 0, y: bottomHeight / 2)
-            addChild(bottom)
-        }
-
-        let topY0 = gapCenterY + gap / 2
-        let topHeight = sceneSize.height - topY0
-        if topHeight > 0 {
-            let top = makeStormCloudPillar(
-                width: pillarWidth, height: topHeight, isTop: true,
-                cloudTexture: cloudTexture, cloudSize: cloudSize,
-                spacing: spacing, xJitter: xJitter
-            )
-            top.position = CGPoint(x: 0, y: topY0 + topHeight / 2)
-            addChild(top)
         }
     }
 
@@ -293,30 +285,14 @@ final class ObstacleNode: SKNode {
         }
 
         let pillarWidth: CGFloat = 60
-
-        let bottomHeight = gapCenterY - gap / 2
-        if bottomHeight > 0 {
-            let bottom = makeStackedSpritePillar(
-                width: pillarWidth, height: bottomHeight, isTop: false,
+        let spriteSize = CGSize(width: spriteWidth, height: spriteHeight)
+        addTopAndBottomPillars(sceneSize: sceneSize) { height, isTop in
+            makeStackedSpritePillar(
+                width: pillarWidth, height: height, isTop: isTop,
                 textures: availableTextures,
-                spriteSize: CGSize(width: spriteWidth, height: spriteHeight),
+                spriteSize: spriteSize,
                 spacing: spriteSpacing
             )
-            bottom.position = CGPoint(x: 0, y: bottomHeight / 2)
-            addChild(bottom)
-        }
-
-        let topY0 = gapCenterY + gap / 2
-        let topHeight = sceneSize.height - topY0
-        if topHeight > 0 {
-            let top = makeStackedSpritePillar(
-                width: pillarWidth, height: topHeight, isTop: true,
-                textures: availableTextures,
-                spriteSize: CGSize(width: spriteWidth, height: spriteHeight),
-                spacing: spriteSpacing
-            )
-            top.position = CGPoint(x: 0, y: topY0 + topHeight / 2)
-            addChild(top)
         }
     }
 
@@ -336,30 +312,14 @@ final class ObstacleNode: SKNode {
         }
 
         let pillarWidth: CGFloat = 60
-
-        let bottomHeight = gapCenterY - gap / 2
-        if bottomHeight > 0 {
+        addTopAndBottomPillars(sceneSize: sceneSize) { height, isTop in
+            // Each pillar picks its own random texture so a top/bottom pair
+            // can show two different variants on the same obstacle.
             let texture = availableTextures.randomElement()!
-            let bottom = makeScaledSpritePillar(
-                width: pillarWidth, height: bottomHeight, isTop: false,
-                texture: texture,
-                visualWidth: visualWidth
+            return makeScaledSpritePillar(
+                width: pillarWidth, height: height, isTop: isTop,
+                texture: texture, visualWidth: visualWidth
             )
-            bottom.position = CGPoint(x: 0, y: bottomHeight / 2)
-            addChild(bottom)
-        }
-
-        let topY0 = gapCenterY + gap / 2
-        let topHeight = sceneSize.height - topY0
-        if topHeight > 0 {
-            let texture = availableTextures.randomElement()!
-            let top = makeScaledSpritePillar(
-                width: pillarWidth, height: topHeight, isTop: true,
-                texture: texture,
-                visualWidth: visualWidth
-            )
-            top.position = CGPoint(x: 0, y: topY0 + topHeight / 2)
-            addChild(top)
         }
     }
 
@@ -450,9 +410,17 @@ final class ObstacleNode: SKNode {
     /// exists in the bundle. Used to guard against missing Stitch assets
     /// during development — themes whose texture is missing fall back to
     /// the legacy renderer rather than rendering an invisible obstacle.
+    ///
+    /// Results are memoized: each name triggers at most one `UIImage(named:)`
+    /// bundle lookup and one `SKTexture` allocation per app run. Obstacle
+    /// spawns happen every ~1s and each spawn previously did 1-4 lookups,
+    /// so the cache eliminates a recurring per-spawn cost on the main thread.
+    private static var textureCache: [String: SKTexture?] = [:]
     private static func textureIfPresent(_ name: String) -> SKTexture? {
-        guard UIImage(named: name) != nil else { return nil }
-        return SKTexture(imageNamed: name)
+        if let cached = textureCache[name] { return cached }
+        let texture: SKTexture? = (UIImage(named: name) != nil) ? SKTexture(imageNamed: name) : nil
+        textureCache[name] = texture
+        return texture
     }
 
     // MARK: - Legacy
@@ -477,20 +445,11 @@ final class ObstacleNode: SKNode {
         stripes.zPosition = 1
         container.addChild(stripes)
 
-        // Physics body inset ~20% from visible edges on both axes, so the plane
-        // only registers a crash when clearly inside the barrier.
-        let hitboxWidth  = max(20, width  * 0.8)
-        let hitboxHeight = max(20, height * 0.8)
-        let pb = SKPhysicsBody(rectangleOf: CGSize(width: hitboxWidth, height: hitboxHeight))
-        pb.isDynamic = false
-        pb.categoryBitMask = PhysicsCategory.obstacle
-        pb.contactTestBitMask = PhysicsCategory.plane
-        pb.collisionBitMask = 0
-        container.physicsBody = pb
+        container.physicsBody = makeStandardHitbox(width: width, height: height)
 
         #if DEBUG
-        print(String(format: "[ObstacleNode] pillar visual: %.0fx%.0f  hitbox: %.0fx%.0f (80%% inset, %@)",
-                     width, height, hitboxWidth, hitboxHeight, isTop ? "top" : "bot"))
+        print(String(format: "[ObstacleNode] legacy pillar: %.0fx%.0f (%@)",
+                     width, height, isTop ? "top" : "bot"))
         #endif
 
         return container

@@ -474,14 +474,9 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// spawn-time clearance check uses. Counterpart to `isInsideObstacle`
     /// that runs from the obstacle side (SKY-60).
     private func removeCoinsEmbeddedIn(_ obstacle: ObstacleNode, buffer: CGFloat = 20) {
-        let pillarHalfWidth: CGFloat = 30
-        for case let coin as CoinNode in worldNode.children {
-            let dx = coin.position.x - obstacle.position.x
-            if abs(dx) > pillarHalfWidth + buffer { continue }
-            let dy = coin.position.y - obstacle.gapCenterY
-            if abs(dy) > obstacle.gap / 2 - buffer {
-                coin.removeFromParent()
-            }
+        for case let coin as CoinNode in worldNode.children
+            where isInsidePillar(coin.position, of: obstacle, buffer: buffer) {
+            coin.removeFromParent()
         }
     }
 
@@ -658,18 +653,21 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// spawners so a coin never appears embedded inside a wall the player
     /// can't reach without crashing (SKY-60).
     private func isInsideObstacle(_ worldPosition: CGPoint, buffer: CGFloat = 20) -> Bool {
-        let pillarHalfWidth: CGFloat = 30  // ObstacleNode pillar width is 60
         for case let obstacle as ObstacleNode in worldNode.children {
-            let dx = worldPosition.x - obstacle.position.x
-            if abs(dx) > pillarHalfWidth + buffer { continue }
-            // X overlaps a pillar column. Reachable only if Y sits inside
-            // the gap with `buffer` clearance from each pillar edge.
-            let dy = worldPosition.y - obstacle.gapCenterY
-            if abs(dy) > obstacle.gap / 2 - buffer {
-                return true
-            }
+            if isInsidePillar(worldPosition, of: obstacle, buffer: buffer) { return true }
         }
         return false
+    }
+
+    /// True when `position` falls inside (or within `buffer`pt of) a pillar
+    /// of `obstacle` — i.e. outside the navigable gap. Pillar width is fixed
+    /// at 60pt in `ObstacleNode`, so we use 30pt as the half-width here.
+    private func isInsidePillar(_ position: CGPoint, of obstacle: ObstacleNode, buffer: CGFloat) -> Bool {
+        let pillarHalfWidth: CGFloat = 30
+        let dx = position.x - obstacle.position.x
+        guard abs(dx) <= pillarHalfWidth + buffer else { return false }
+        let dy = position.y - obstacle.gapCenterY
+        return abs(dy) > obstacle.gap / 2 - buffer
     }
 
     private func cullOffscreenChildren() {

@@ -509,7 +509,12 @@ final class MenuScene: SKScene {
     /// silence gets silence (music, engine ambience, and SFX all off) without
     /// having to mute the device.
     private func toggleSound() {
-        let nextState = !AudioManager.shared.musicEnabled
+        // Read both flags — they're persisted independently and can land in
+        // a mixed state (e.g. an older install that pre-dates the unified
+        // toggle). Treat "sound on" as either flag enabled so the first tap
+        // always behaves as a mute when anything is audible.
+        let isSoundOn = AudioManager.shared.musicEnabled || AudioManager.shared.sfxEnabled
+        let nextState = !isSoundOn
         AudioManager.shared.musicEnabled = nextState
         AudioManager.shared.sfxEnabled = nextState
         if nextState {

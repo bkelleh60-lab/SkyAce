@@ -143,12 +143,17 @@ final class AudioManager {
         }
     }
 
+    /// Halts and releases the engine slot immediately. Safe to call when no
+    /// engine loop is playing.
     func stopEngineLoop() {
         enginePlayer?.stop()
         enginePlayer = nil
         currentEngineLoop = nil
     }
 
+    /// Linearly tapers the engine slot's volume to zero over `duration`, then
+    /// stops the player. Used by GameScene's win/fail sequences so the engine
+    /// ambience doesn't clip out abruptly under the result SFX.
     func fadeOutEngineLoop(duration: TimeInterval = 0.4) {
         guard let player = enginePlayer else { return }
         let start = player.volume
@@ -189,6 +194,8 @@ final class AudioManager {
         }
     }
 
+    /// Halts and releases the looping-SFX slot. Safe to call when no looping
+    /// SFX is active.
     func stopLoopingSFX() {
         loopingSfxPlayer?.stop()
         loopingSfxPlayer = nil
@@ -212,31 +219,50 @@ final class AudioManager {
     }
 }
 
-// Standard SFX filenames — kept as constants so scenes don't have to remember strings.
+/// Standard SFX filenames — kept as constants so scenes don't have to remember
+/// raw strings. SKY-75 additions ship as CAF for lowest-latency playback and
+/// best loop performance on iOS.
 enum SkySFX {
+    /// Chime triggered when the plane intersects a CoinNode.
     static let coinCollect = "coin_collect"
+    /// Whoosh triggered when the plane crosses a ring or the finish gate.
     static let ringPass    = "ring_pass"
+    /// Hit cue used for obstacle and boundary contacts.
     static let hit         = "hit"
+    /// End-of-run fail stinger.
     static let fail        = "fail"
+    /// End-of-run win fanfare.
     static let win         = "win"
+    /// UI tap blip for buttons, gear, and overlay actions.
     static let uiTap       = "ui_tap"
 
-    // SKY-75 additions. CAF instead of WAV — the assets ship as CAF for
-    // lowest-latency playback and best loop performance on iOS.
+    /// SKY-75: looping cue played while a time-trial run is in the warning
+    /// band (`GameScene.timerWarningThreshold`).
     static let timerWarning      = "sfx_timer_warning"
+    /// SKY-75: instant of runway contact in Landing Practice, before the
+    /// landing quality tier is determined. Wired in SKY-83.
     static let landingTouchdown  = "sfx_landing_touchdown"
+    /// SKY-75: smooth-landing chaser after `landingTouchdown`. Wired in SKY-83.
     static let landingSuccess    = "sfx_landing_success"
+    /// SKY-75: rough-landing impact replacing `landingTouchdown`. Wired in SKY-83.
     static let landingRough      = "sfx_landing_rough"
+    /// SKY-75: crash-landing impact replacing `landingTouchdown`. Wired in SKY-83.
     static let landingCrash      = "sfx_landing_crash"
 }
 
+/// Background music filenames for the looping-music slot.
 enum SkyMusic {
+    /// Menu / hangar / map / shop ambient bed.
     static let menu             = "menu_music"
+    /// Mission-mode gameplay track.
     static let gameplay         = "gameplay_music"
+    /// Free Flight City world track.
     static let freeFlightCity   = "freeflight_city_music"
+    /// Free Flight Mountain world track.
     static let freeFlightMntn   = "freeflight_mountain_music"
 
-    // SKY-75 — Landing Practice mode (SKY-83) ships its own music track.
+    /// SKY-75: Landing Practice mode music. Hooked up by the Landing Practice
+    /// scene in SKY-83.
     static let landingPractice  = "music_landing_practice"
 }
 

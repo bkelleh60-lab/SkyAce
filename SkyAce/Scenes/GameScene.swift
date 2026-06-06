@@ -70,6 +70,8 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// warning loop kicks in. 10s leaves a clear "last seconds" band on the
     /// 45s timeTrialDuration without feeling premature.
     private static let timerWarningThreshold: TimeInterval = 10
+    /// Latched once the timer-warning loop has been started for this run so
+    /// it isn't restarted every frame.
     private var timerWarningActive = false
 
     // MARK: - Init
@@ -431,6 +433,9 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         else { updateHUD() }
     }
 
+    /// Starts the timer-warning loop the first frame a time-trial run drops
+    /// into the warning band. Idempotent thereafter — the loop is stopped
+    /// from the win/fail sequences and on scene exit.
     private func updateTimerWarning() {
         guard challenge.type == .timeTrial, !timerWarningActive else { return }
         if state.timeRemaining <= GameScene.timerWarningThreshold && state.timeRemaining > 0 {

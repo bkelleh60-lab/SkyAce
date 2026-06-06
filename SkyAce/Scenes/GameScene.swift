@@ -66,6 +66,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     // End-of-run flag so we can ignore contacts after a result.
     private var runHasFinished = false
 
+    /// SKY-75: seconds of `timeRemaining` at which the time-trial timer
+    /// warning loop kicks in. 10s leaves a clear "last seconds" band on the
+    /// 45s timeTrialDuration without feeling premature.
+    private static let timerWarningThreshold: TimeInterval = 10
+    private var timerWarningActive = false
+
     // MARK: - Init
 
     init(size: CGSize, challenge: Challenge) {
@@ -92,6 +98,22 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         buildHUD()
         buildStartHint()
         scheduleFinishLine()
+
+        // SKY-75: engine ambience runs alongside the gameplay music. Played
+        // from the AudioManager engine slot so it coexists with the music
+        // track instead of replacing it.
+        AudioManager.shared.playEngineLoop(
+            SkyEngineLoop.filename(forPlaneID: ProgressManager.shared.selectedPlaneID)
+        )
+    }
+
+    // Stop the engine loop on any scene exit (results, map, restart). The
+    // dedicated engine player would otherwise keep looping under the next
+    // scene's music until the player's next gameplay run replaced it.
+    override func willMove(from view: SKView) {
+        super.willMove(from: view)
+        AudioManager.shared.stopEngineLoop()
+        AudioManager.shared.stopLoopingSFX()
     }
 
     // SKY-55: iPad rotation. Unlike menu scenes we can't rebuild from scratch
@@ -398,9 +420,23 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         // Cull off-screen gameplay nodes.
         cullOffscreenChildren()
 
+        // SKY-75: start the timer-warning loop the first time a timeTrial
+        // run drops into the warning band. Stop it the moment the run ends
+        // is handled in the win/fail sequences so the cue doesn't bleed
+        // into the results scene.
+        updateTimerWarning()
+
         // End conditions.
         if state.isGameOver { finishRun() }
         else { updateHUD() }
+    }
+
+    private func updateTimerWarning() {
+        guard challenge.type == .timeTrial, !timerWarningActive else { return }
+        if state.timeRemaining <= GameScene.timerWarningThreshold && state.timeRemaining > 0 {
+            timerWarningActive = true
+            AudioManager.shared.playLoopingSFX(SkySFX.timerWarning, fileExtension: "caf", volume: 0.55)
+        }
     }
 
     // MARK: - Spawning
@@ -795,6 +831,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         runHasFinished = true
         SkyHaptics.fail()
 
+        // SKY-75: cut the engine and timer-warning loop the moment the run
+        // ends so the fail SFX + plane-crash sequence reads cleanly.
+        AudioManager.shared.fadeOutEngineLoop()
+        AudioManager.shared.stopLoopingSFX()
+
         // Red vignette flash.
         let vignette = SKSpriteNode(color: UIColor.systemRed.withAlphaComponent(0.0), size: size)
         vignette.anchorPoint = .zero
@@ -826,6 +867,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
 
     private func triggerWinSequence() {
         SkyHaptics.win()
+
+        // SKY-75: cut the engine and timer-warning loop before the win
+        // fanfare so the celebratory SFX isn't competing with ambience.
+        AudioManager.shared.fadeOutEngineLoop()
+        AudioManager.shared.stopLoopingSFX()
 
         // Coin burst.
         for _ in 0..<16 {

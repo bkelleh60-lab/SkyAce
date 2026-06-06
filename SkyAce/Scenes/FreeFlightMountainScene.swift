@@ -107,6 +107,16 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         physicsWorld.contactDelegate = self
         SkyHaptics.prepare()
         layoutScene()
+
+        // SKY-75: engine ambience.
+        AudioManager.shared.playEngineLoop(
+            SkyEngineLoop.filename(forPlaneID: ProgressManager.shared.selectedPlaneID)
+        )
+    }
+
+    override func willMove(from view: SKView) {
+        super.willMove(from: view)
+        AudioManager.shared.stopEngineLoop()
     }
 
     // SKY-55: see FreeFlightCityScene.didChangeSize — same rationale (no win/

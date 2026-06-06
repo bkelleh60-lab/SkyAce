@@ -490,7 +490,7 @@ final class MenuScene: SKScene {
                 case "settingsGear":
                     AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
                     SkyHaptics.uiTap()
-                    toggleMusic()
+                    toggleSound()
                     return
                 default:
                     break
@@ -504,9 +504,15 @@ final class MenuScene: SKScene {
         }
     }
 
-    private func toggleMusic() {
-        AudioManager.shared.musicEnabled.toggle()
-        if AudioManager.shared.musicEnabled {
+    /// SKY-75: settings gear is a single Sound on/off switch — toggling it
+    /// flips both the music and SFX flags together so a player who wants
+    /// silence gets silence (music, engine ambience, and SFX all off) without
+    /// having to mute the device.
+    private func toggleSound() {
+        let nextState = !AudioManager.shared.musicEnabled
+        AudioManager.shared.musicEnabled = nextState
+        AudioManager.shared.sfxEnabled = nextState
+        if nextState {
             AudioManager.shared.playMusic(SkyMusic.menu)
         }
     }

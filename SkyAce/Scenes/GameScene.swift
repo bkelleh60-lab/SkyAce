@@ -405,13 +405,20 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Spawning
 
-    /// Coin-spawn cadence per mission type. Lowered from the post-SKY-60
-    /// values (obstacleCourse: ×1.5, timeTrial: 0.8s) by ~28-30% so that a
-    /// player who routes around a near-pillar coin still leaves a run feeling
-    /// rewarded. coinChain levels (Coin Scatter, Coin Tornado) are already
-    /// dense by design and keep their original cadence per SKY-84 guidance.
+    /// Multiplier on `Challenge.spawnInterval` for coin-line cadence in
+    /// `obstacleCourse` levels. Lowered from 1.5 (post-SKY-60) to 1.15 — a
+    /// ~30% density bump so a player who routes around a near-pillar coin
+    /// still leaves the run feeling rewarded (SKY-84).
     static let obstacleCourseCoinIntervalMultiplier: Double = 1.15
+
+    /// Seconds between coin-pattern spawns in `timeTrial` levels. Lowered
+    /// from 0.8s (post-SKY-60) to 0.62s — a ~28% density bump matching the
+    /// obstacleCourse adjustment above (SKY-84).
     static let timeTrialCoinInterval: TimeInterval = 0.62
+
+    /// Seconds between coin-pattern spawns in `coinChain` levels (Coin
+    /// Scatter, Coin Tornado). Unchanged at 1.4s — these levels are already
+    /// dense by design and were tuned separately per SKY-84 guidance.
     static let coinChainPatternInterval: TimeInterval = 1.4
 
     private func spawnTick(currentTime: TimeInterval) {

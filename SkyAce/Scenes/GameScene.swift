@@ -88,7 +88,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
 
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimaryContainer
-        physicsWorld.gravity = CGVector(dx: 0, dy: -5.0)
+        physicsWorld.gravity = CGVector(dx: 0, dy: PlaneNode.gravity)
         physicsWorld.contactDelegate = self
         SkyHaptics.prepare()
 

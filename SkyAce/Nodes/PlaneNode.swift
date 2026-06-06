@@ -14,18 +14,55 @@ struct PhysicsCategory {
 
 /// Player-controlled plane.
 ///
-/// Control model: touch-and-hold applies a burst of upward velocity each frame
-/// via `climb()`. On release, world gravity (dy = -5.0) pulls it down.
-/// Velocity is clamped so the plane never spirals out of control.
+/// Control model — momentum-based (SKY-78):
+///  * Tap onset: `climbImpulse` is added to the current vertical velocity,
+///    capped at `maxClimbVelocity`. Rapid tapping therefore stacks toward
+///    the cap (momentum), whereas the legacy hard-reset feel is preserved
+///    for single taps from rest because 0 + climbImpulse ≈ legacy peak.
+///  * Sustained hold: an additional per-frame upward acceleration is applied
+///    that ramps from 0 to `holdImpulseScale * climbImpulse` over
+///    `holdImpulseDuration` seconds. Holding therefore gives a stronger,
+///    committed climb than a tap.
+///  * Descent: gravity (`PlaneNode.gravity`, wired into each scene's
+///    `physicsWorld.gravity`) pulls the plane down. Vertical velocity is
+///    clamped to `[maxDownVelocity, maxClimbVelocity]` so it never runs away.
 final class PlaneNode: SKNode {
 
-    // Stats — set from ProgressManager upgrade levels on init.
+    // MARK: - Tunable physics constants
+    //
+    // The five tunables called out in SKY-78. Treat as playtest dials —
+    // `climbImpulse` here is the *base* value before per-plane upgrade
+    // scaling; the upgrade-scaled instance value lives on `self.climbImpulse`
+    // and is derived in `init` via `UpgradeFormulas.climbVelocity(wingLevel:)`.
+
+    /// Hard ceiling on upward velocity (pt/s). Additive tap impulses and the
+    /// hold-impulse contribution both clamp against this.
+    static let maxClimbVelocity: CGFloat = 500.0
+
+    /// Multiplier applied to `climbImpulse` to produce the per-second hold
+    /// acceleration at full ramp. Final per-second contribution while held
+    /// at full ramp = `climbImpulse * holdImpulseScale` pt/s.
+    static let holdImpulseScale: CGFloat = 1.5
+
+    /// Seconds of continuous hold required for the hold-impulse to reach
+    /// `holdImpulseScale`. Linear ramp from 0 to 1 over this window.
+    static let holdImpulseDuration: TimeInterval = 0.2
+
+    /// Downward acceleration applied via the scene's physics world gravity.
+    /// Each scene sets `physicsWorld.gravity.dy = PlaneNode.gravity` so this
+    /// is the single source of truth for descent feel.
+    static let gravity: CGFloat = -5.0
+
+    /// Floor on downward velocity (pt/s). Not part of the SKY-78 five but
+    /// kept so a long fall doesn't blow past collision sweeps.
+    static let maxDownVelocity: CGFloat = -400.0
+
+    // MARK: - Per-plane stats (set from ProgressManager upgrades on init)
+
     let horizontalSpeed: CGFloat
-    let climbVelocity: CGFloat
-    // SpriteKit uses positive-Y-up, so the "up" cap is positive and the
-    // "down" cap is negative. Gravity.dy = -5 pulls velocity.dy toward -∞.
-    let maxUpVelocity:   CGFloat =  500.0
-    let maxDownVelocity: CGFloat = -400.0
+    /// Upgrade-scaled additive impulse applied to vertical velocity on each
+    /// tap onset. Base value comes from `UpgradeFormulas.baseClimbVelocity`.
+    let climbImpulse: CGFloat
 
     let plane: Plane
 
@@ -39,6 +76,15 @@ final class PlaneNode: SKNode {
     private var boostTrail: SKEmitterNode?
     private static let boostTrailFullBirthRate: CGFloat = 240
 
+    /// Wall-clock time the current hold began (set on tap onset, nilled when
+    /// the touch is released). Nil ⇒ not currently holding.
+    private var holdStartTime: TimeInterval?
+
+    /// Set to true inside `climb()`, read+cleared by `update()`. Lets
+    /// `update()` detect a touch release (no climb this frame) and reset
+    /// the hold state.
+    private var climbActiveThisFrame = false
+
     // MARK: - Init
 
     /// - Parameter visualScale: multiplies the rendered sprite size only.
@@ -51,7 +97,7 @@ final class PlaneNode: SKNode {
         let engine = ProgressManager.shared.upgradeLevel(for: UpgradeKind.engine.rawValue)
         let wings  = ProgressManager.shared.upgradeLevel(for: UpgradeKind.wings.rawValue)
         self.horizontalSpeed = UpgradeFormulas.horizontalSpeed(engineLevel: engine)
-        self.climbVelocity   = UpgradeFormulas.climbVelocity(wingLevel: wings)
+        self.climbImpulse    = UpgradeFormulas.climbVelocity(wingLevel: wings)
 
         self.body = PlaneNode.makeBody(for: plane)
         super.init()
@@ -151,8 +197,41 @@ final class PlaneNode: SKNode {
     // MARK: - Control
 
     /// Apply a climb impulse. Called every frame while touch is held.
+    ///
+    /// First call of a hold = "tap onset": adds `climbImpulse` to dy,
+    /// but never lets the post-tap velocity drop below `climbImpulse`. So a
+    /// tap from rest matches the legacy hard-reset feel (dy → climbImpulse),
+    /// a tap mid-descent reverses direction (dy → climbImpulse), and a tap
+    /// while already ascending stacks momentum toward `maxClimbVelocity`.
+    ///
+    /// Subsequent calls = "sustained hold": drive dy up to a ramping target
+    /// that goes from `climbImpulse` at hold-start to
+    /// `climbImpulse * holdImpulseScale` after `holdImpulseDuration`. The
+    /// hold keeps the plane climbing even against gravity — same dominance
+    /// as the legacy per-frame velocity reset, but stronger than a tap.
     func climb() {
-        physicsBody?.velocity.dy = min(climbVelocity, maxUpVelocity)
+        guard let pb = physicsBody else { return }
+        let now = CACurrentMediaTime()
+
+        if holdStartTime == nil {
+            // Tap onset — additive impulse with a floor of `climbImpulse` so
+            // a tap always lifts the plane, and a ceiling of `maxClimbVelocity`.
+            holdStartTime = now
+            let boosted = max(pb.velocity.dy + climbImpulse, climbImpulse)
+            pb.velocity.dy = min(boosted, PlaneNode.maxClimbVelocity)
+        } else if let start = holdStartTime {
+            // Sustained hold — drive dy toward a ramping hold target.
+            let heldFor = now - start
+            let ramp = CGFloat(min(heldFor / PlaneNode.holdImpulseDuration, 1.0))
+            let holdTarget = climbImpulse * (1 + (PlaneNode.holdImpulseScale - 1) * ramp)
+            let clamped = min(holdTarget, PlaneNode.maxClimbVelocity)
+            if pb.velocity.dy < clamped {
+                pb.velocity.dy = clamped
+            }
+        }
+
+        climbActiveThisFrame = true
+
         // Tilt nose up.
         let targetRotation: CGFloat = 0.25
         body.zRotation += (targetRotation - body.zRotation) * 0.25
@@ -161,9 +240,17 @@ final class PlaneNode: SKNode {
     /// Called every frame (by the scene) to clamp velocity and settle rotation.
     func update() {
         guard let pb = physicsBody else { return }
+
+        // Detect touch release: climb() wasn't called this frame, so reset
+        // the hold state so the next tap fires a fresh onset impulse.
+        if !climbActiveThisFrame {
+            holdStartTime = nil
+        }
+        climbActiveThisFrame = false
+
         var v = pb.velocity
-        if v.dy > maxUpVelocity   { v.dy = maxUpVelocity }
-        if v.dy < maxDownVelocity { v.dy = maxDownVelocity }
+        if v.dy > PlaneNode.maxClimbVelocity { v.dy = PlaneNode.maxClimbVelocity }
+        if v.dy < PlaneNode.maxDownVelocity  { v.dy = PlaneNode.maxDownVelocity }
         pb.velocity = v
 
         // Tilt nose down while falling.

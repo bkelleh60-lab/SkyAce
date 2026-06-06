@@ -101,7 +101,7 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
 
     override func didMove(to view: SKView) {
         backgroundColor = UIColor(hex: 0xCDE5FF)
-        physicsWorld.gravity = CGVector(dx: 0, dy: -5.0)
+        physicsWorld.gravity = CGVector(dx: 0, dy: PlaneNode.gravity)
         physicsWorld.contactDelegate = self
         SkyHaptics.prepare()
         layoutScene()

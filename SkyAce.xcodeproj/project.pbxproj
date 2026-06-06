@@ -35,6 +35,7 @@
 		B10001000000000000000302 /* Upgrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000302 /* Upgrade.swift */; };
 		B10001000000000000000303 /* Challenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000303 /* Challenge.swift */; };
 		B10001000000000000000304 /* GameState.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000304 /* GameState.swift */; };
+		B10001000000000000000305 /* FreeFlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000305 /* FreeFlight.swift */; };
 		B10001000000000000000401 /* PlaneNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000401 /* PlaneNode.swift */; };
 		B10001000000000000000402 /* CoinNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000402 /* CoinNode.swift */; };
 		B10001000000000000000403 /* ObstacleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000403 /* ObstacleNode.swift */; };
@@ -57,6 +58,7 @@
 		B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010001 /* CurrencyManagerTests.swift */; };
 		B10001000000000000010002 /* StarRatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010002 /* StarRatingTests.swift */; };
 		B10001000000000000010003 /* IAPManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010003 /* IAPManagerTests.swift */; };
+		B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */; };
 		B10002000000000000000601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000601 /* Assets.xcassets */; };
 		B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000602 /* PrivacyInfo.xcprivacy */; };
 		B10002000000000000000603 /* Sprites in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000603 /* Sprites */; };
@@ -106,6 +108,7 @@
 		F10001000000000000000302 /* Upgrade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Upgrade.swift; sourceTree = "<group>"; };
 		F10001000000000000000303 /* Challenge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Challenge.swift; sourceTree = "<group>"; };
 		F10001000000000000000304 /* GameState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameState.swift; sourceTree = "<group>"; };
+		F10001000000000000000305 /* FreeFlight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlight.swift; sourceTree = "<group>"; };
 		F10001000000000000000401 /* PlaneNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaneNode.swift; sourceTree = "<group>"; };
 		F10001000000000000000402 /* CoinNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinNode.swift; sourceTree = "<group>"; };
 		F10001000000000000000403 /* ObstacleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObstacleNode.swift; sourceTree = "<group>"; };
@@ -128,6 +131,7 @@
 		F10001000000000000010001 /* CurrencyManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyManagerTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010002 /* StarRatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarRatingTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010003 /* IAPManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IAPManagerTests.swift; sourceTree = "<group>"; };
+		F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightCoinAccumulatorTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10002000000000000000601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10002000000000000000602 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -202,6 +206,7 @@
 				F10001000000000000000302 /* Upgrade.swift */,
 				F10001000000000000000303 /* Challenge.swift */,
 				F10001000000000000000304 /* GameState.swift */,
+				F10001000000000000000305 /* FreeFlight.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -284,6 +289,7 @@
 				F10001000000000000010001 /* CurrencyManagerTests.swift */,
 				F10001000000000000010002 /* StarRatingTests.swift */,
 				F10001000000000000010003 /* IAPManagerTests.swift */,
+				F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */,
 				F10001000000000000010004 /* Info.plist */,
 			);
 			path = SkyAceTests;
@@ -420,6 +426,7 @@
 				B10001000000000000000302 /* Upgrade.swift in Sources */,
 				B10001000000000000000303 /* Challenge.swift in Sources */,
 				B10001000000000000000304 /* GameState.swift in Sources */,
+				B10001000000000000000305 /* FreeFlight.swift in Sources */,
 				B10001000000000000000401 /* PlaneNode.swift in Sources */,
 				B10001000000000000000402 /* CoinNode.swift in Sources */,
 				B10001000000000000000403 /* ObstacleNode.swift in Sources */,
@@ -449,6 +456,7 @@
 				B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */,
 				B10001000000000000010002 /* StarRatingTests.swift in Sources */,
 				B10001000000000000010003 /* IAPManagerTests.swift in Sources */,
+				B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

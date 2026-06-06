@@ -92,6 +92,11 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
     // Currency HUD (top-right).
     private var currencyHUD: CurrencyHUD!
 
+    // SKY-67: rate-adjusted bridge from Free Flight pickups to the persistent
+    // coin balance. The HUD totals (CurrencyManager) stay at 1:1 with what the
+    // player visibly collected; only the ProgressManager credit is reduced.
+    private var coinCreditAccumulator = FreeFlight.CoinAccumulator()
+
     // Ring speed boost. See FreeFlightCityScene for design notes — this
     // mirrors the same multiplier-on-scroll-speed approach.
     private let boostPeakMultiplier: CGFloat = 1.75
@@ -767,7 +772,8 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         case PhysicsCategory.coin:
             if let coin = otherBody.node as? CoinNode {
                 coin.collect()
-                ProgressManager.shared.addCoins(1)
+                let credit = coinCreditAccumulator.credit(faceValue: 1)
+                if credit > 0 { ProgressManager.shared.addCoins(credit) }
                 CurrencyManager.shared.addCoins(1)
                 coin.run(AudioManager.shared.sfxAction(SkySFX.coinCollect))
                 SkyHaptics.collect()
@@ -782,7 +788,8 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
                     ]),
                     SKAction.removeFromParent()
                 ]))
-                ProgressManager.shared.addCoins(5)
+                let credit = coinCreditAccumulator.credit(faceValue: 5)
+                if credit > 0 { ProgressManager.shared.addCoins(credit) }
                 CurrencyManager.shared.addRings(1)
                 ring.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
                 SkyHaptics.collect()

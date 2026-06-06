@@ -51,6 +51,27 @@ final class ProgressManager {
         coins = coins + amount
     }
 
+    // MARK: - Free Flight credit
+
+    /// SKY-67: in-memory accumulator that turns a stream of Free Flight
+    /// pickups into rate-adjusted integer credits. Held on the singleton so
+    /// the half-coin residual carries across a City ↔ Mountain transition
+    /// (a scene-local accumulator would silently reset it). Resets on app
+    /// launch, which is acceptable — the worst-case loss is sub-coin.
+    private var freeFlightCoinAccumulator = FreeFlight.CoinAccumulator()
+
+    /// Credits a Free Flight coin / ring pickup to the persistent balance
+    /// at `FreeFlight.coinCreditRate`. Pass the same face value the player
+    /// visibly collected (1 per coin, 5 per ring); the accumulator handles
+    /// the half-coin residual so a stream of solo coins doesn't round each
+    /// to zero. Visible HUD totals (CurrencyManager) are unaffected — the
+    /// caller still updates those at 1:1.
+    func creditFreeFlightPickup(faceValue: Int) {
+        let credit = freeFlightCoinAccumulator.credit(faceValue: faceValue)
+        guard credit > 0 else { return }
+        addCoins(credit)
+    }
+
     @discardableResult
     func spendCoins(_ amount: Int) -> Bool {
         guard coins >= amount else { return false }
@@ -158,6 +179,7 @@ final class ProgressManager {
          Key.selectedPlane, Key.upgradeLevels, Key.fullUnlockCached].forEach {
             defaults.removeObject(forKey: $0)
         }
+        freeFlightCoinAccumulator = FreeFlight.CoinAccumulator()
         registerDefaults()
     }
     #endif

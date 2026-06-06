@@ -67,4 +67,35 @@ final class FreeFlightCoinAccumulatorTests: XCTestCase {
                        "Zero-value pickup must not erase the half-coin residual that follows.")
         XCTAssertEqual(acc.credit(faceValue: 1), 1)
     }
+
+    // MARK: - ProgressManager integration
+
+    // The accumulator lives on ProgressManager so its residual survives a
+    // City ↔ Mountain scene transition. These tests exercise that contract
+    // via the public credit method.
+
+    func testProgressManagerCreditsHalfOfFaceValueOverStream() {
+        ProgressManager.shared.resetAllProgress()
+        let before = ProgressManager.shared.coins
+        for _ in 0..<10 {
+            ProgressManager.shared.creditFreeFlightPickup(faceValue: 1)
+        }
+        XCTAssertEqual(ProgressManager.shared.coins - before, 5,
+                       "10 coin pickups must credit exactly 5 at the 0.5 rate.")
+    }
+
+    func testProgressManagerResidualSurvivesAcrossCallSites() {
+        ProgressManager.shared.resetAllProgress()
+        let before = ProgressManager.shared.coins
+        // First pickup leaves 0.5 in residual (no credit applied yet).
+        ProgressManager.shared.creditFreeFlightPickup(faceValue: 1)
+        XCTAssertEqual(ProgressManager.shared.coins, before,
+                       "One face-value-1 pickup must not credit anything yet — the half-coin is held.")
+        // Simulates a different caller (e.g., the player exiting City to
+        // Mountain) hitting the same singleton: the held residual must
+        // combine with the new pickup, not reset.
+        ProgressManager.shared.creditFreeFlightPickup(faceValue: 1)
+        XCTAssertEqual(ProgressManager.shared.coins - before, 1,
+                       "Second pickup must combine with held residual to credit 1 — not reset to 0.5 then 0.")
+    }
 }

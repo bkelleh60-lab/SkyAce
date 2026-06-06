@@ -405,6 +405,22 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Spawning
 
+    /// Multiplier on `Challenge.spawnInterval` for coin-line cadence in
+    /// `obstacleCourse` levels. Lowered from 1.5 (post-SKY-60) to 1.15 — a
+    /// ~30% density bump so a player who routes around a near-pillar coin
+    /// still leaves the run feeling rewarded (SKY-84).
+    static let obstacleCourseCoinIntervalMultiplier: Double = 1.15
+
+    /// Seconds between coin-pattern spawns in `timeTrial` levels. Lowered
+    /// from 0.8s (post-SKY-60) to 0.62s — a ~28% density bump matching the
+    /// obstacleCourse adjustment above (SKY-84).
+    static let timeTrialCoinInterval: TimeInterval = 0.62
+
+    /// Seconds between coin-pattern spawns in `coinChain` levels (Coin
+    /// Scatter, Coin Tornado). Unchanged at 1.4s — these levels are already
+    /// dense by design and were tuned separately per SKY-84 guidance.
+    static let coinChainPatternInterval: TimeInterval = 1.4
+
     private func spawnTick(currentTime: TimeInterval) {
         // Stop populating the run once the finish gate is on its way — gives
         // the player a clean approach without a hazard right at the line.
@@ -416,15 +432,15 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 spawnObstaclePair()
                 lastObstacleSpawn = currentTime
             }
-            // Occasional coin clusters in the gap, less frequent than obstacles.
-            if currentTime - lastCoinSpawn >= challenge.spawnInterval * 1.5 {
+            // Coin clusters in the gap, paced to the obstacle cadence.
+            if currentTime - lastCoinSpawn >= challenge.spawnInterval * GameScene.obstacleCourseCoinIntervalMultiplier {
                 spawnCoinLine()
                 lastCoinSpawn = currentTime
             }
 
         case .timeTrial:
             // Dense coin spawns, no pillars.
-            if currentTime - lastCoinSpawn >= 0.8 {
+            if currentTime - lastCoinSpawn >= GameScene.timeTrialCoinInterval {
                 let pattern = nextCoinPattern()
                 spawnCoinPattern(pattern)
                 lastCoinSpawn = currentTime
@@ -438,7 +454,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 spawnObstaclePair()
                 lastObstacleSpawn = currentTime
             }
-            if currentTime - lastPatternSpawn >= 1.4 {
+            if currentTime - lastPatternSpawn >= GameScene.coinChainPatternInterval {
                 let pattern = nextCoinPattern()
                 spawnCoinPattern(pattern)
                 lastPatternSpawn = currentTime
@@ -469,11 +485,20 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         ]))
     }
 
+    /// Minimum clearance, in points, between a coin's center and the nearest
+    /// obstacle pillar edge. Sized so the plane (54pt-wide hitbox) plus the
+    /// coin's 13pt radius plus a small margin all fit between the coin and
+    /// the pillar — a player flying straight at a coin should never have to
+    /// clip the pillar to collect it. Used by every coin spawn-time and
+    /// post-spawn clearance check (SKY-84, supersedes the 20pt buffer from
+    /// SKY-60).
+    static let coinClearanceBuffer: CGFloat = 55
+
     /// Removes any `CoinNode` whose current world position falls inside the
     /// pillar (non-gap) area of `obstacle`, with the same buffer the coin
     /// spawn-time clearance check uses. Counterpart to `isInsideObstacle`
     /// that runs from the obstacle side (SKY-60).
-    private func removeCoinsEmbeddedIn(_ obstacle: ObstacleNode, buffer: CGFloat = 20) {
+    private func removeCoinsEmbeddedIn(_ obstacle: ObstacleNode, buffer: CGFloat = GameScene.coinClearanceBuffer) {
         for case let coin as CoinNode in worldNode.children
             where isInsidePillar(coin.position, of: obstacle, buffer: buffer) {
             coin.removeFromParent()
@@ -652,7 +677,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// between top/bottom pillars counts as clear space. Used by coin
     /// spawners so a coin never appears embedded inside a wall the player
     /// can't reach without crashing (SKY-60).
-    private func isInsideObstacle(_ worldPosition: CGPoint, buffer: CGFloat = 20) -> Bool {
+    private func isInsideObstacle(_ worldPosition: CGPoint, buffer: CGFloat = GameScene.coinClearanceBuffer) -> Bool {
         for case let obstacle as ObstacleNode in worldNode.children {
             if isInsidePillar(worldPosition, of: obstacle, buffer: buffer) { return true }
         }

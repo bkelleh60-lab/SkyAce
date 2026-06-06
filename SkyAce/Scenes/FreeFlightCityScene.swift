@@ -661,7 +661,10 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         case PhysicsCategory.coin:
             if let coin = otherBody.node as? CoinNode {
                 coin.collect()
-                ProgressManager.shared.addCoins(1)
+                // SKY-67: persistent balance credits at FreeFlight.coinCreditRate
+                // via ProgressManager (residual carries across scene swaps).
+                // CurrencyManager HUD still ticks 1:1 with what the player saw.
+                ProgressManager.shared.creditFreeFlightPickup(faceValue: 1)
                 CurrencyManager.shared.addCoins(1)
                 coin.run(AudioManager.shared.sfxAction(SkySFX.coinCollect))
                 SkyHaptics.collect()
@@ -676,7 +679,7 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
                     ]),
                     SKAction.removeFromParent()
                 ]))
-                ProgressManager.shared.addCoins(5)
+                ProgressManager.shared.creditFreeFlightPickup(faceValue: 5)
                 CurrencyManager.shared.addRings(1)
                 ring.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
                 SkyHaptics.collect()

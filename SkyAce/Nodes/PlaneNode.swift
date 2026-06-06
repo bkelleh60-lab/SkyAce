@@ -80,10 +80,6 @@ final class PlaneNode: SKNode {
     /// the touch is released). Nil ⇒ not currently holding.
     private var holdStartTime: TimeInterval?
 
-    /// Wall-clock time of the previous `climb()` call within the current
-    /// hold. Used to compute the per-frame dt for the hold-impulse integral.
-    private var lastClimbTime: TimeInterval?
-
     /// Set to true inside `climb()`, read+cleared by `update()`. Lets
     /// `update()` detect a touch release (no climb this frame) and reset
     /// the hold state.
@@ -202,29 +198,38 @@ final class PlaneNode: SKNode {
 
     /// Apply a climb impulse. Called every frame while touch is held.
     ///
-    /// First call of a hold = "tap onset": adds `climbImpulse` to dy (capped
-    /// at `maxClimbVelocity`). Subsequent calls = "sustained hold": adds a
-    /// per-frame contribution that ramps from 0 → `climbImpulse *
-    /// holdImpulseScale` pt/s over `holdImpulseDuration` seconds.
+    /// First call of a hold = "tap onset": adds `climbImpulse` to dy,
+    /// but never lets the post-tap velocity drop below `climbImpulse`. So a
+    /// tap from rest matches the legacy hard-reset feel (dy → climbImpulse),
+    /// a tap mid-descent reverses direction (dy → climbImpulse), and a tap
+    /// while already ascending stacks momentum toward `maxClimbVelocity`.
+    ///
+    /// Subsequent calls = "sustained hold": drive dy up to a ramping target
+    /// that goes from `climbImpulse` at hold-start to
+    /// `climbImpulse * holdImpulseScale` after `holdImpulseDuration`. The
+    /// hold keeps the plane climbing even against gravity — same dominance
+    /// as the legacy per-frame velocity reset, but stronger than a tap.
     func climb() {
         guard let pb = physicsBody else { return }
         let now = CACurrentMediaTime()
 
         if holdStartTime == nil {
-            // Tap onset — single additive impulse, capped.
+            // Tap onset — additive impulse with a floor of `climbImpulse` so
+            // a tap always lifts the plane, and a ceiling of `maxClimbVelocity`.
             holdStartTime = now
-            pb.velocity.dy = min(pb.velocity.dy + climbImpulse, PlaneNode.maxClimbVelocity)
-        } else if let last = lastClimbTime {
-            // Sustained hold — integrate ramped per-frame contribution.
-            // Clamp dt to guard against frame-skip / background pauses.
-            let dt = CGFloat(max(0, min(now - last, 0.1)))
-            let heldFor = now - (holdStartTime ?? now)
+            let boosted = max(pb.velocity.dy + climbImpulse, climbImpulse)
+            pb.velocity.dy = min(boosted, PlaneNode.maxClimbVelocity)
+        } else if let start = holdStartTime {
+            // Sustained hold — drive dy toward a ramping hold target.
+            let heldFor = now - start
             let ramp = CGFloat(min(heldFor / PlaneNode.holdImpulseDuration, 1.0))
-            let perSecond = climbImpulse * PlaneNode.holdImpulseScale * ramp
-            pb.velocity.dy = min(pb.velocity.dy + perSecond * dt, PlaneNode.maxClimbVelocity)
+            let holdTarget = climbImpulse * (1 + (PlaneNode.holdImpulseScale - 1) * ramp)
+            let clamped = min(holdTarget, PlaneNode.maxClimbVelocity)
+            if pb.velocity.dy < clamped {
+                pb.velocity.dy = clamped
+            }
         }
 
-        lastClimbTime = now
         climbActiveThisFrame = true
 
         // Tilt nose up.
@@ -240,7 +245,6 @@ final class PlaneNode: SKNode {
         // the hold state so the next tap fires a fresh onset impulse.
         if !climbActiveThisFrame {
             holdStartTime = nil
-            lastClimbTime = nil
         }
         climbActiveThisFrame = false
 

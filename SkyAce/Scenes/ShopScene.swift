@@ -423,11 +423,11 @@ final class ShopScene: SKScene {
         name.position = CGPoint(x: -cardSize.width / 2 + 130, y: 22)
         node.addChild(name)
 
-        // 3 stat bars.
+        // 3 stat bars — one block per purchased upgrade level, out of 5.
         let stats: [(String, Int)] = [
-            ("SPEED",    UpgradeState.current(.engine).currentLevel + 2),
-            ("ARMOR",    UpgradeState.current(.armor).currentLevel + 1),
-            ("HANDLING", UpgradeState.current(.wings).currentLevel + 2)
+            ("SPEED",    UpgradeState.current(.engine).currentLevel),
+            ("ARMOR",    UpgradeState.current(.armor).currentLevel),
+            ("HANDLING", UpgradeState.current(.wings).currentLevel)
         ]
         for (index, (label, filled)) in stats.enumerated() {
             let row = statBar(label: label, filled: filled)

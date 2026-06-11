@@ -40,25 +40,25 @@ enum UpgradeKind: String, CaseIterable {
         case .engine: return "+15% top speed per level"
         case .wings:  return "+10% climb power per level"
         case .fuel:   return "Coming in Phase 2"
-        case .armor:  return "Absorb crashes: 1 hit at L1, 2 at L2"
+        case .armor:  return "Absorb crashes: 1 hit at L1, up to 5 hits at L5."
         }
     }
 
     var maxLevel: Int {
         switch self {
-        case .engine: return 3
-        case .wings:  return 3
+        case .engine: return 5
+        case .wings:  return 5
         case .fuel:   return 3
-        case .armor:  return 2
+        case .armor:  return 5
         }
     }
 
     var costs: [Int] {
         switch self {
-        case .engine: return [200, 450, 800]
-        case .wings:  return [250, 500, 900]
+        case .engine: return [200, 450, 800, 1300, 2000]
+        case .wings:  return [250, 500, 900, 1500, 2400]
         case .fuel:   return [300, 600, 1000]
-        case .armor:  return [350, 700]
+        case .armor:  return [350, 700, 1200, 1900, 2800]
         }
     }
 
@@ -93,16 +93,14 @@ enum UpgradeFormulas {
     static let baseClimbVelocity:   CGFloat = 320.0
 
     static func horizontalSpeed(engineLevel: Int) -> CGFloat {
-        return baseHorizontalSpeed * CGFloat(pow(1.15, Float(engineLevel)))
+        return baseHorizontalSpeed * (1.0 + 0.15 * CGFloat(engineLevel))
     }
 
     static func climbVelocity(wingLevel: Int) -> CGFloat {
-        return baseClimbVelocity * CGFloat(pow(1.10, Float(wingLevel)))
+        return baseClimbVelocity * (1.0 + 0.10 * CGFloat(wingLevel))
     }
 
     static func hitsAllowed(armorLevel: Int) -> Int {
-        if armorLevel >= 2 { return 2 }
-        if armorLevel >= 1 { return 1 }
-        return 0
+        return max(0, min(armorLevel, UpgradeKind.armor.maxLevel))
     }
 }

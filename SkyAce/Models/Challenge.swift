@@ -46,19 +46,21 @@ struct Challenge {
 
     /// Per-level gate-width multipliers applied to `baseObstacleGap`.
     /// Indexed by `id - 1` (level 1 → first entry). The curve eases the
-    /// player in (L1 wide, gentle ramp through L3) and tightens steadily
-    /// from L4 onward, ending at 75% for the L10 finale.
+    /// player in through Clear Skies (L1–L4), sharpens at the chapter
+    /// transition into Storm Chaser (L5 → L6 drops from 175pt to 160pt),
+    /// and steepens through the Storm Chaser chapter ending at 56% (112pt)
+    /// for the L10 finale.
     static let obstacleGapMultipliers: [CGFloat] = [
-        1.20, // L1
-        1.10, // L2
-        1.00, // L3
-        0.95, // L4
-        0.90, // L5
-        0.87, // L6
-        0.84, // L7
-        0.81, // L8
-        0.78, // L9
-        0.75  // L10
+        1.20,  // L1  — 240pt
+        1.10,  // L2  — 220pt
+        1.00,  // L3  — 200pt
+        0.95,  // L4  — 190pt
+        0.875, // L5  — 175pt
+        0.80,  // L6  — 160pt
+        0.74,  // L7  — 148pt
+        0.68,  // L8  — 136pt
+        0.62,  // L9  — 124pt
+        0.56   // L10 — 112pt
     ]
 
     /// Gap between top/bottom obstacle pairs, narrowing with level.

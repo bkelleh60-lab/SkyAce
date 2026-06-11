@@ -252,9 +252,10 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
 
     private func buildPlane() {
         // Mission mode uses a 1.4x visual scale — lands the plane's rendered
-        // height at ~26% of the easiest obstacle gap (240pt at L1) while
-        // staying well inside the narrowest late-game gap (150pt at L10)
-        // thanks to the unchanged 54x27 hitbox.
+        // height at ~26% of the easiest obstacle gap (240pt at L1). At the
+        // narrowest late-game gap (112pt at L10) the visual fills ~56% of
+        // the gap, but the unchanged 54x27 hitbox stays at ~24% of it so
+        // collisions remain fair.
         plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID, visualScale: 1.4)
         plane.position = CGPoint(x: size.width * 0.25, y: size.height / 2)
         plane.zPosition = 10

@@ -5,14 +5,12 @@ import Foundation
 enum UpgradeKind: String, CaseIterable {
     case engine = "engine"
     case wings  = "wings"
-    case fuel   = "fuel"
     case armor  = "armor"
 
     var displayName: String {
         switch self {
         case .engine: return "Engine Boost"
         case .wings:  return "Wing Tech"
-        case .fuel:   return "Fuel Tank"
         case .armor:  return "Armor Plating"
         }
     }
@@ -21,7 +19,6 @@ enum UpgradeKind: String, CaseIterable {
         switch self {
         case .engine: return "ENGINE"
         case .wings:  return "WINGS"
-        case .fuel:   return "FUEL"
         case .armor:  return "ARMOR"
         }
     }
@@ -30,7 +27,6 @@ enum UpgradeKind: String, CaseIterable {
         switch self {
         case .engine: return "⚙️"
         case .wings:  return "🪽"
-        case .fuel:   return "⛽"
         case .armor:  return "🛡"
         }
     }
@@ -39,7 +35,6 @@ enum UpgradeKind: String, CaseIterable {
         switch self {
         case .engine: return "+15% top speed per level"
         case .wings:  return "+10% climb power per level"
-        case .fuel:   return "Coming in Phase 2"
         case .armor:  return "Absorb crashes: 1 hit at L1, up to 5 hits at L5."
         }
     }
@@ -48,7 +43,6 @@ enum UpgradeKind: String, CaseIterable {
         switch self {
         case .engine: return 5
         case .wings:  return 5
-        case .fuel:   return 3
         case .armor:  return 5
         }
     }
@@ -57,14 +51,8 @@ enum UpgradeKind: String, CaseIterable {
         switch self {
         case .engine: return [200, 450, 800, 1300, 2000]
         case .wings:  return [250, 500, 900, 1500, 2400]
-        case .fuel:   return [300, 600, 1000]
         case .armor:  return [350, 700, 1200, 1900, 2800]
         }
-    }
-
-    /// "Phase 2" — shown but not purchasable in v1.
-    var isAvailable: Bool {
-        return self != .fuel
     }
 }
 

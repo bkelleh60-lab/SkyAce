@@ -123,7 +123,6 @@ final class ShopScene: SKScene {
             place(buildFeaturedCard(for: featured))
         }
 
-        // Small upgrade cards for the remaining tracks (including fuel).
         let smallKinds = UpgradeKind.allCases.filter { $0 != featured?.kind }
         for kind in smallKinds {
             place(buildSmallUpgradeCard(kind: kind))
@@ -133,7 +132,7 @@ final class ShopScene: SKScene {
     }
 
     private func firstFeatured() -> UpgradeState? {
-        for kind in [UpgradeKind.engine, .wings, .armor] where kind.isAvailable {
+        for kind in [UpgradeKind.engine, .wings, .armor] {
             let state = UpgradeState.current(kind)
             if !state.isMaxed { return state }
         }
@@ -285,14 +284,11 @@ final class ShopScene: SKScene {
         let textLeft = -cardWidth / 2 + 110
 
         // The right-side content reserves a different width depending on what
-        // is shown (locked vs purchasable vs maxed). Compute the leftmost edge
-        // of that content so the description never collides with the button.
+        // is shown (purchasable vs maxed). Compute the leftmost edge of that
+        // content so the description never collides with the button.
         let buttonReservedWidth: CGFloat
         let buttonCenterX: CGFloat
-        if !kind.isAvailable {
-            buttonReservedWidth = 150
-            buttonCenterX = cardWidth / 2 - 92
-        } else if state.isMaxed {
+        if state.isMaxed {
             buttonReservedWidth = 60
             buttonCenterX = cardWidth / 2 - 40
         } else {
@@ -357,11 +353,7 @@ final class ShopScene: SKScene {
         node.addChild(hint)
 
         // Button vertically centered on the card.
-        if !kind.isAvailable {
-            let soon = SkyPillButton(title: "🔒 COMING SOON", style: .disabled, size: CGSize(width: 150, height: 36)) { }
-            soon.position = CGPoint(x: buttonCenterX, y: 0)
-            node.addChild(soon)
-        } else if state.isMaxed {
+        if state.isMaxed {
             let maxed = SKLabelNode(text: "MAX")
             maxed.fontName = SkyFonts.headlineName
             maxed.fontSize = 12
@@ -582,7 +574,6 @@ final class ShopScene: SKScene {
 
     private func attemptBuy(upgrade: UpgradeState) {
         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-        guard upgrade.kind.isAvailable else { return }
         if !IAPManager.shared.isContentUnlocked {
             SkyNavigator.shared.showUnlock()
             return

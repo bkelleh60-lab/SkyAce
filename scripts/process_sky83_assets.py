@@ -128,7 +128,7 @@ def component_bboxes(img, min_alpha=1):
             maxx = maxy = -1
             while q:
                 x, y = q.popleft()
-                r, g, b, a = px[x, y]
+                r, g, b, _ = px[x, y]
                 n += 1
                 minx, maxx = min(minx, x), max(maxx, x)
                 miny, maxy = min(miny, y), max(maxy, y)

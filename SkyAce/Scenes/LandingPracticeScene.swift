@@ -197,6 +197,11 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// plane's lane.
     private func beginApproach() {
         phase = .approach
+        // Gravity stays off through the reset fade (update() doesn't clamp
+        // position while resetting, so the plane would sink); it turns back
+        // on only when the approach — and the position clamp — are live.
+        plane.physicsBody?.velocity = .zero
+        plane.physicsBody?.affectedByGravity = true
 
         let decelStartX = laneX + Self.decelDistance
         let cruiseDistance = runway.position.x - decelStartX
@@ -507,7 +512,6 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
                 self.plane.setLandingGear(deployed: false)
                 self.plane.levelOut(duration: 0)
                 self.plane.physicsBody?.velocity = .zero
-                self.plane.physicsBody?.affectedByGravity = true
             },
             SKAction.fadeIn(withDuration: 0.25)
         ]))

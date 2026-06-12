@@ -187,7 +187,8 @@ final class ProgressManager {
     #if DEBUG
     func resetAllProgress() {
         [Key.coins, Key.completedLevels, Key.starRatings, Key.ownedPlanes,
-         Key.selectedPlane, Key.upgradeLevels, Key.fullUnlockCached].forEach {
+         Key.selectedPlane, Key.upgradeLevels, Key.fullUnlockCached,
+         Key.landingPracticeInstructionShown].forEach {
             defaults.removeObject(forKey: $0)
         }
         freeFlightCoinAccumulator = FreeFlight.CoinAccumulator()

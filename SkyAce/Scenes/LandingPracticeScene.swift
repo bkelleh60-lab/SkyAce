@@ -47,8 +47,13 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Layout constants
 
-    /// Screen Y of the runway surface (tarmac top edge).
+    /// Screen Y of the runway strip's top edge (LandingZoneNode origin).
     private var groundY: CGFloat { 150 }
+    /// Screen Y of the visual touchdown line — the road's centerline
+    /// dashes, `surfaceDrop` below the strip top. All landing geometry
+    /// keys off this so the plane sits *in* the road with its wheels on
+    /// the dashes, matching the art's gentle perspective.
+    private var touchdownSurfaceY: CGFloat { groundY - (runway?.surfaceDrop ?? 0) }
     /// Plane lane — same fraction as the Free Flight scenes.
     private var laneX: CGFloat { size.width * 0.28 }
     private var planeStartY: CGFloat { size.height * 0.55 }
@@ -60,13 +65,14 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// the floor drops at halt (≈ -285 pt/s — the gentlest touchdown the
     /// physics can produce). Descending to and holding this band is the
     /// controlled approach the smooth tier rewards.
-    private var approachFloorY: CGFloat { groundY + 80 }
+    private var approachFloorY: CGFloat { touchdownSurfaceY + 80 }
     /// Floor once the runway has halted — deep enough to enter the sensor.
-    private var landingFloorY: CGFloat { groundY + 16 }
-    /// Where the plane settles so its wheels sit on the tarmac: gear-down
-    /// wheel bottoms sit 22–30pt below the node center at the 2x visual
-    /// scale, so center at +26 grazes the surface for all four planes.
-    private var landedPlaneY: CGFloat { groundY + 26 }
+    private var landingFloorY: CGFloat { touchdownSurfaceY + 16 }
+    /// Where the plane settles so its wheels sit on the touchdown line:
+    /// gear-down wheel bottoms sit 22–30pt below the node center at the
+    /// 2x visual scale, so center at +26 grazes the line for all four
+    /// planes.
+    private var landedPlaneY: CGFloat { touchdownSurfaceY + 26 }
 
     // MARK: - State
 
@@ -369,7 +375,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         run(AudioManager.shared.sfxAction(SkySFX.landingCrash, fileExtension: "caf"))
         SkyHaptics.fail()
         shakeWorld(amplitude: 12)
-        burstDustCloud(at: CGPoint(x: laneX, y: groundY + 12))
+        burstDustCloud(at: CGPoint(x: laneX, y: touchdownSurfaceY + 12))
         showFeedbackText("Try again!")
         scheduleReset(after: Self.crashResetDelay)
     }

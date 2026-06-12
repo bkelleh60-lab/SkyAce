@@ -40,8 +40,20 @@ final class LandingZoneNode: SKNode {
     /// markers near the approach threshold.
     private static let touchdownFraction: CGFloat = 0.3
 
+    /// Fraction of the strip's height (from its top edge) where the
+    /// centerline dashes sit in the runway art — measured rows 114–123 of
+    /// 240. The road is drawn in gentle perspective, so the *visual*
+    /// touchdown line is the dash row, not the strip's top edge: a plane
+    /// belongs in the road with its wheels on the dashes.
+    private static let surfaceFraction: CGFloat = 0.494
+
     /// Total rendered width of the runway strip.
     private(set) var stripWidth: CGFloat = 0
+
+    /// How far below the node origin (the strip's top edge) the visual
+    /// touchdown line sits. Scenes settle the plane's wheels here and the
+    /// touchdown sensor rises from here.
+    private(set) var surfaceDrop: CGFloat = 0
 
     init(sceneWidth: CGFloat) {
         super.init()
@@ -73,10 +85,12 @@ final class LandingZoneNode: SKNode {
             )
         }
         stripWidth = strip.size.width
+        surfaceDrop = strip.size.height * LandingZoneNode.surfaceFraction
 
-        // Origin sits on the surface at the touchdown point: the strip's
-        // top edge is the surface, with `touchdownFraction` of it extending
-        // left of the origin and the rest trailing off to the right.
+        // Origin sits at the strip's top edge over the touchdown point,
+        // with `touchdownFraction` of the strip extending left of the
+        // origin and the rest trailing off to the right. The visual
+        // touchdown line (centerline dashes) sits `surfaceDrop` below.
         strip.anchorPoint = CGPoint(x: LandingZoneNode.touchdownFraction, y: 1.0)
         strip.position = .zero
         strip.zPosition = 0
@@ -90,9 +104,12 @@ final class LandingZoneNode: SKNode {
         } else {
             zone = SKSpriteNode(color: UIColor(hex: 0xFFD709), size: LandingZoneNode.zoneSize)
         }
-        // Hover above the surface pointing down at the touchdown spot, with
-        // a gentle bob so it reads as "land here" on approach.
-        zone.position = CGPoint(x: 0, y: LandingZoneNode.zoneSize.height / 2 + 26)
+        // Hover above the touchdown line pointing down at it, with a
+        // gentle bob so it reads as "land here" on approach.
+        zone.position = CGPoint(
+            x: 0,
+            y: -surfaceDrop + LandingZoneNode.zoneSize.height / 2 + 26
+        )
         zone.zPosition = 1
         zone.run(SKAction.repeatForever(SKAction.sequence([
             SKAction.moveBy(x: 0, y: 8, duration: 0.7),
@@ -102,14 +119,14 @@ final class LandingZoneNode: SKNode {
     }
 
     private func configurePhysics() {
-        // Sensor band rising from the surface over the touchdown zone. The
+        // Sensor band rising from the touchdown line over the zone. The
         // plane's descending hitbox enters it right where the indicator
         // points; contact-only so the plane never bounces off it.
         let size = CGSize(width: LandingZoneNode.zoneSize.width,
                           height: LandingZoneNode.sensorHeight)
         let pb = SKPhysicsBody(
             rectangleOf: size,
-            center: CGPoint(x: 0, y: size.height / 2)
+            center: CGPoint(x: 0, y: -surfaceDrop + size.height / 2)
         )
         pb.isDynamic = false
         pb.categoryBitMask = PhysicsCategory.landingZone

@@ -1,49 +1,93 @@
 import SpriteKit
 
-/// Free Flight — Landing Practice (SKY-83).
+/// Free Flight — Landing Practice (SKY-83, approach redesign SKY-94).
 ///
-/// A pure-sandbox third Free Flight mode: the plane holds its fixed X lane
-/// while a finite runway strip scrolls in from the right, decelerates, and
-/// halts with the touchdown zone under the plane. The player manages descent
-/// rate (hold to climb, release to land) and contacts the zone at one of
-/// three quality tiers read from vertical velocity. No fail state — every
-/// outcome auto-resets into a fresh approach.
+/// A pure-sandbox third Free Flight mode with a two-phase approach:
+///
+/// * **Free approach** — the runway cruises in from the right and keeps
+///   scrolling (tiles recycle) while the player flies hold-to-climb /
+///   release-to-descend, choosing when to start the landing.
+/// * **Final approach** — descending through the approach window
+///   (`approachAltitudeThresholdFraction`) commits the landing: the runway
+///   decelerates, the landing zone is revealed where the deceleration will
+///   halt it (the plane's X lane), and controls invert to tap-to-correct
+///   ("keep the nose up") for fine descent-rate management to touchdown.
+///
+/// Touchdown reads vertical velocity into one of three quality tiers. No
+/// fail state — every outcome auto-resets into a fresh approach.
 ///
 /// Architecture is Option A from docs/landing-practice-movement-investigation.md:
 /// modeled on FreeFlightCityScene (fixed-X plane, world moves, no camera),
 /// with the FinishLineNode contact pattern repurposed as LandingZoneNode.
 final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
+    // MARK: - Tunable approach constants (SKY-94, Connor's playtest dials)
+
+    /// Constant runway scroll speed during the free approach phase (pt/s).
+    static let approachScrollSpeed: CGFloat = 200
+
+    /// The approach window: descending below this fraction of scene height
+    /// commits the landing — the runway decelerates, the landing zone
+    /// appears, and controls switch to tap-to-correct.
+    static let approachAltitudeThresholdFraction: CGFloat = 0.35
+
+    /// Upward correction added to the plane's dy per tap on final approach
+    /// (pt/s). Deliberately a fraction of the Phase-1 climb impulse (base
+    /// 320): against gravity (~750 pt/s²) a steady ~5 taps/s holds a gentle
+    /// descent, and a single well-timed flare tap inside the final drop
+    /// softens an untouched ~-180 glide-in into the smooth band.
+    static let finalApproachTapImpulse: CGFloat = 140
+
+    /// How quickly the runway sheds speed once the approach window opens
+    /// (pt/s²). Stopping distance (v²/2a) and duration (v/a) both derive
+    /// from this and `approachScrollSpeed`.
+    static let runwayDecelerationRate: CGFloat = 100
+
+    /// Pause between the threshold crossing and the landing zone fade-in
+    /// (0.0–0.5s) — a beat of "the runway is slowing… there's the zone".
+    static let landingZoneRevealDelay: TimeInterval = 0.15
+
     // MARK: - Tunable landing constants (Connor's playtest dials)
     //
-    // Velocity tiers are calibrated against logged touchdown velocities
-    // under the post-SKY-78 momentum physics (gravity -5 ⇒ ~750 pt/s²
-    // descent, tap onset floors dy at +320, maxDownVelocity -400, with
-    // contact reads up to ~12 pt/s past the clamp). The ticket's
-    // pre-SKY-78 values (-80 / -180) are unreachable under this model.
-    // Three regimes actually occur at the sensor:
-    //   ~ -285  gentle glide-in from the low-approach band → Smooth
-    //   -320…-400  tap-flare near the deck (a tap always rebounds the
-    //              plane ~68pt up, so it returns at ≥ ~320) → Rough
-    //   ≤ -400  drop from altitude, no/late flare (terminal) → Crash
+    // Velocity tiers are calibrated against the SKY-94 two-phase approach.
+    // When the runway halts, the floor drops from the final-approach band
+    // (surface + 48) and the plane falls ~21.5pt into the sensor (contact
+    // at center ≈ surface + 26.5), so under gravity (~750 pt/s²):
+    //   ~ -180  untouched glide-in from the band → Rough
+    //   a flare tap (+`finalApproachTapImpulse`) inside that drop lands
+    //   between ~ -40 (last instant) and ~ -115, and a rhythmic ~5 tap/s
+    //   descent holds dy above ~ -90 the whole way down → Smooth
+    //   ≲ -400  arriving from altitude with no descent management
+    //   (terminal) → Crash
+    // The SKY-83 tiers (-300 / -395) assumed hold-to-climb's full-impulse
+    // flare rebound; tap-to-correct makes gentle touchdowns genuinely
+    // reachable, so the tiers reward them.
 
     /// Touchdown dy at or above this reads as a Smooth Landing.
-    static let smoothLandingMaxDescent: CGFloat = -300
+    static let smoothLandingMaxDescent: CGFloat = -120
     /// Touchdown dy at or above this (and below smooth) is a Rough Landing;
     /// anything faster is a Crash Landing.
-    static let roughLandingMaxDescent: CGFloat = -395
-
-    /// Constant runway scroll-in speed during the cruise phase (pt/s).
-    static let approachScrollSpeed: CGFloat = 200
-    /// Distance over which the runway decelerates to its halt point. The
-    /// ease-out curve's initial slope matches `approachScrollSpeed` when
-    /// decelDistance / decelDuration == approachScrollSpeed / 2.
-    static let decelDistance: CGFloat = 200
-    static let decelDuration: TimeInterval = 2.0
+    static let roughLandingMaxDescent: CGFloat = -300
 
     static let smoothResetDelay: TimeInterval = 2.5
     static let roughResetDelay: TimeInterval = 2.5
     static let crashResetDelay: TimeInterval = 1.5
+
+    // MARK: - Derived approach geometry
+
+    /// Altitude (points) below which the final approach activates.
+    private var approachAltitudeThreshold: CGFloat {
+        size.height * Self.approachAltitudeThresholdFraction
+    }
+    /// Ground the runway covers while decelerating: v² / 2a.
+    private var decelStoppingDistance: CGFloat {
+        Self.approachScrollSpeed * Self.approachScrollSpeed
+            / (2 * Self.runwayDecelerationRate)
+    }
+    /// Time the deceleration takes: v / a.
+    private var decelDuration: TimeInterval {
+        TimeInterval(Self.approachScrollSpeed / Self.runwayDecelerationRate)
+    }
 
     // MARK: - Layout constants
 
@@ -58,14 +102,17 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private var laneX: CGFloat { size.width * 0.28 }
     private var planeStartY: CGFloat { size.height * 0.55 }
     private var planeMaxY: CGFloat { size.height - 50 }
-    /// Floor while the runway is still moving: the low-approach band. It
-    /// keeps the plane's hitbox clear of the touchdown sensor so contact
-    /// can only begin after the runway halts, and it defines the smooth
-    /// landing: a plane riding this band glides ~53pt onto the zone when
-    /// the floor drops at halt (≈ -285 pt/s — the gentlest touchdown the
-    /// physics can produce). Descending to and holding this band is the
-    /// controlled approach the smooth tier rewards.
+    /// Floor during the free approach phase — the low-approach band the
+    /// plane rides if it descends before the runway is established and the
+    /// approach window can open. Keeps the hitbox well clear of the
+    /// touchdown sensor.
     private var approachFloorY: CGFloat { touchdownSurfaceY + 80 }
+    /// Floor on final approach while the runway is still decelerating: low
+    /// enough to feel "on the deck", high enough that the hitbox bottom
+    /// (center − 13.5) stays clear of the sensor band (surface + 13) until
+    /// the zone halts under the plane. Its height above the contact line
+    /// sets the committed final drop the landing tiers are calibrated to.
+    private var finalApproachFloorY: CGFloat { touchdownSurfaceY + 48 }
     /// Floor once the runway has halted — deep enough to enter the sensor.
     private var landingFloorY: CGFloat { touchdownSurfaceY + 16 }
     /// Where the plane settles so its wheels sit on the touchdown line:
@@ -76,14 +123,16 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - State
 
-    private enum Phase { case approach, halted, landed, resetting }
+    private enum Phase { case freeApproach, finalApproach, halted, landed, resetting }
 
-    private var phase: Phase = .approach
+    private var phase: Phase = .freeApproach
     private let worldNode = SKNode()
     private let feedbackLayer = SKNode()
     private var plane: PlaneNode!
     private var runway: LandingZoneNode!
     private var isTouching = false
+    private var lastUpdateTime: TimeInterval = 0
+    private weak var instructionPrompt: SKLabelNode?
 
     // MARK: - Lifecycle
 
@@ -117,8 +166,9 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         feedbackLayer.removeFromParent()
         plane = nil
         runway = nil
-        phase = .approach
+        phase = .freeApproach
         isTouching = false
+        lastUpdateTime = 0
         removeAllChildren()
         removeAllActions()
         layoutScene()
@@ -185,43 +235,66 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         worldNode.addChild(runway)
     }
 
-    /// Origin X that puts the entire strip past the right screen edge. The
-    /// node origin sits 30% in from the strip's left end.
+    /// Origin X that puts the tarmac's leading edge past the right screen
+    /// edge, ready to cruise in.
     private var offscreenRunwayX: CGFloat {
-        size.width + runway.stripWidth * 0.3 + 20
+        runway.startOriginX(sceneWidth: size.width)
     }
 
-    /// Scrolls the runway in: cruise at constant speed, hand off to an
-    /// ease-out deceleration (gear deploys at the handoff — the ticket's
-    /// "deceleration trigger point"), halt with the touchdown zone on the
-    /// plane's lane.
+    /// Opens a fresh free approach: gravity on, hold-to-climb live, runway
+    /// cruising in from the right at constant speed (driven from
+    /// `update(_:)` so it can scroll indefinitely while tiles recycle). The
+    /// approach stays open — no scripted halt — until the plane descends
+    /// through the approach window.
     private func beginApproach() {
-        phase = .approach
+        phase = .freeApproach
         // Gravity stays off through the reset fade (update() doesn't clamp
         // position while resetting, so the plane would sink); it turns back
         // on only when the approach — and the position clamp — are live.
         plane.physicsBody?.velocity = .zero
         plane.physicsBody?.affectedByGravity = true
+    }
 
-        let decelStartX = laneX + Self.decelDistance
-        let cruiseDistance = runway.position.x - decelStartX
-        let cruise = SKAction.moveTo(
-            x: decelStartX,
-            duration: TimeInterval(max(0, cruiseDistance) / Self.approachScrollSpeed)
-        )
-        let deployGear = SKAction.run { [weak self] in
-            // Red Baron MK-1 has fixed gear baked into its base art — the
-            // deploy trigger must not fire anything for it: no sprite swap
-            // and no gear SFX, ever (SKY-83 playtest bug 1).
-            guard ProgressManager.shared.selectedPlaneID != "red_baron" else { return }
-            self?.plane.setLandingGear(deployed: true)
+    /// The commit moment (SKY-94): the plane has descended through the
+    /// approach window, so the runway begins its deceleration, the landing
+    /// zone is revealed where the deceleration will halt it, the gear
+    /// deploys, and controls invert to tap-to-correct.
+    private func beginFinalApproach() {
+        phase = .finalApproach
+        // A finger still held from Phase 1 must not keep climbing — final
+        // approach input is discrete taps only.
+        isTouching = false
+
+        // Red Baron MK-1 has fixed gear baked into its base art — the
+        // deploy trigger must not fire anything for it: no sprite swap
+        // and no gear SFX, ever (SKY-83 playtest bug 1).
+        if ProgressManager.shared.selectedPlaneID != "red_baron" {
+            plane.setLandingGear(deployed: true)
         }
-        let decel = SKAction.moveTo(x: laneX, duration: Self.decelDuration)
+
+        // Halt geometry: the runway sheds `approachScrollSpeed` at
+        // `runwayDecelerationRate`, covering v²/2a more points. Re-anchor
+        // the still-hidden zone exactly that far right of the lane (the
+        // tarmac doesn't move — only the origin jumps) so the deceleration
+        // ends with the zone on the plane's X lane.
+        runway.realignOrigin(toX: laneX + decelStoppingDistance)
+
+        // Ease-out over T = v/a: average speed v/2 means the curve's
+        // initial slope matches the cruise speed, so the handoff from
+        // constant scroll doesn't pop.
+        let decel = SKAction.moveTo(x: laneX, duration: decelDuration)
         decel.timingMode = .easeOut
-        let halt = SKAction.run { [weak self] in
-            self?.phase = .halted
-        }
-        runway.run(SKAction.sequence([cruise, deployGear, decel, halt]))
+        runway.run(SKAction.sequence([
+            decel,
+            SKAction.run { [weak self] in self?.phase = .halted }
+        ]))
+
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: Self.landingZoneRevealDelay),
+            SKAction.run { [weak self] in self?.runway.setZoneRevealed(true, fade: 0.3) }
+        ]))
+
+        showTapToCorrectCue()
     }
 
     // MARK: - Plane
@@ -270,7 +343,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         guard !ProgressManager.shared.landingPracticeInstructionShown else { return }
         ProgressManager.shared.landingPracticeInstructionShown = true
 
-        let prompt = SKLabelNode(text: "Hold to climb. Release to land.")
+        let prompt = SKLabelNode(text: "Hold to climb. Release to descend.")
         prompt.fontName = SkyFonts.headlineName
         prompt.fontSize = 20
         prompt.fontColor = SkyColors.skOnPrimary
@@ -279,6 +352,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         prompt.zPosition = 150
         prompt.alpha = 0
         addChild(prompt)
+        instructionPrompt = prompt
         prompt.run(SKAction.sequence([
             SKAction.fadeIn(withDuration: 0.3),
             SKAction.wait(forDuration: 3.0),
@@ -287,18 +361,81 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         ]))
     }
 
+    // MARK: - Final approach cue
+
+    /// "Tap to correct!" — shown on every threshold crossing, not just the
+    /// first launch: the control inversion needs re-anchoring each approach.
+    /// Same treatment as the first-launch instruction.
+    private func showTapToCorrectCue() {
+        // The cue shares the instruction's screen slot; clear the prompt if
+        // the player committed inside its 3-second run.
+        if let prompt = instructionPrompt {
+            prompt.removeAllActions()
+            prompt.run(SKAction.sequence([
+                SKAction.fadeOut(withDuration: 0.15),
+                SKAction.removeFromParent()
+            ]))
+        }
+
+        let cue = SKLabelNode(text: "Tap to correct!")
+        cue.fontName = SkyFonts.headlineName
+        cue.fontSize = 20
+        cue.fontColor = SkyColors.skOnPrimary
+        cue.verticalAlignmentMode = .center
+        cue.position = CGPoint(x: size.width / 2, y: size.height * 0.72)
+        cue.zPosition = 150
+        cue.alpha = 0
+        addChild(cue)
+        cue.run(SKAction.sequence([
+            SKAction.fadeIn(withDuration: 0.3),
+            SKAction.wait(forDuration: 1.6),
+            SKAction.fadeOut(withDuration: 0.5),
+            SKAction.removeFromParent()
+        ]))
+    }
+
     // MARK: - Update
 
     override func update(_ currentTime: TimeInterval) {
+        // The cruise scroll is integrated manually so it can run for an
+        // unbounded free approach; clamp dt so a frame hitch can't
+        // teleport the runway.
+        let delta: TimeInterval = lastUpdateTime == 0
+            ? 0
+            : min(currentTime - lastUpdateTime, 1.0 / 30.0)
+        lastUpdateTime = currentTime
+
         guard let plane = plane else { return }
 
-        let controlsLive = phase == .approach || phase == .halted
-        if isTouching && controlsLive { plane.climb() }
+        if phase == .freeApproach {
+            runway.position.x -= Self.approachScrollSpeed * CGFloat(delta)
+        }
+        if phase == .freeApproach || phase == .finalApproach {
+            runway.updateTiling(in: self)
+        }
+
+        if isTouching && phase == .freeApproach { plane.climb() }
         plane.update()
 
+        let controlsLive = phase == .freeApproach || phase == .finalApproach || phase == .halted
         guard controlsLive else { return }
 
-        let floor = phase == .approach ? approachFloorY : landingFloorY
+        // The commit moment: the plane sinks through the approach window
+        // while the runway is established beneath it (leading edge past the
+        // screen's left edge — descending any earlier just rides Phase 1's
+        // floor until the tarmac arrives).
+        if phase == .freeApproach,
+           plane.position.y <= approachAltitudeThreshold,
+           runway.leadingEdgeX(in: self) <= 0 {
+            beginFinalApproach()
+        }
+
+        let floor: CGFloat
+        switch phase {
+        case .freeApproach:  floor = approachFloorY
+        case .finalApproach: floor = finalApproachFloorY
+        default:             floor = landingFloorY
+        }
         if plane.position.y <= floor {
             plane.position.y = floor
             // Resting on the floor must also rest the body: without this,
@@ -322,9 +459,9 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func handleLandingZoneContact() {
-        // The approach floor keeps the plane clear of the sensor until the
-        // runway halts, so a contact can only begin once a landing is
-        // actually in progress — but guard anyway against double-fires.
+        // The approach floors keep the plane's hitbox clear of the sensor
+        // until the runway halts, so a contact can only begin once a landing
+        // is actually in progress — but guard anyway against double-fires.
         guard phase == .halted else { return }
         let descentRate = plane.physicsBody?.velocity.dy ?? 0
         phase = .landed
@@ -495,13 +632,21 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             }
         ]))
 
-        // The fresh approach starts from the runway's own chain so its
-        // moveTo can never overlap a roll-out still in flight.
-        let rollOut = SKAction.moveTo(x: offscreenRunwayX, duration: 0.7)
+        // Scroll the tarmac fully off the right edge, then rebuild the
+        // strip for the next pass. The fresh approach starts from the
+        // runway's own chain so the cruise scroll can never overlap a
+        // roll-out still in flight.
+        let clearDistance = size.width - runway.leadingEdgeX(in: self) + 40
+        let rollOut = SKAction.moveBy(x: clearDistance, y: 0, duration: 0.7)
         rollOut.timingMode = .easeIn
         runway.run(SKAction.sequence([
             rollOut,
-            SKAction.run { [weak self] in self?.beginApproach() }
+            SKAction.run { [weak self] in
+                guard let self = self else { return }
+                self.runway.prepareForApproach()
+                self.runway.position.x = self.offscreenRunwayX
+                self.beginApproach()
+            }
         ]))
 
         plane.run(SKAction.sequence([
@@ -528,7 +673,16 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
                 return
             }
         }
-        isTouching = true
+        switch phase {
+        case .freeApproach:
+            isTouching = true
+        case .finalApproach, .halted:
+            // Phase 2: discrete "keep the nose up" corrections — gravity
+            // keeps pulling, each tap trims the descent rate.
+            plane.applyCorrectionTap(impulse: Self.finalApproachTapImpulse)
+        case .landed, .resetting:
+            break
+        }
     }
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) { isTouching = false }
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { isTouching = false }

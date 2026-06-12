@@ -325,6 +325,21 @@ final class PlaneNode: SKNode {
         body.run(SKAction.rotate(toAngle: 0, duration: duration, shortestUnitArc: true))
     }
 
+    /// Touchdown flare for clean landings: planes land nose-high on the
+    /// main gear, hold the attitude a beat, then rock forward as the nose
+    /// gear settles onto the runway.
+    func playTouchdownFlare() {
+        let flareUp = SKAction.rotate(toAngle: 0.18, duration: 0.12, shortestUnitArc: true)
+        flareUp.timingMode = .easeOut
+        let settle = SKAction.rotate(toAngle: 0, duration: 0.3, shortestUnitArc: true)
+        settle.timingMode = .easeInEaseOut
+        body.run(SKAction.sequence([
+            flareUp,
+            SKAction.wait(forDuration: 0.35),
+            settle
+        ]))
+    }
+
     // MARK: - Effects
 
     /// Plays hit feedback but does not change physics — scene owns run state.

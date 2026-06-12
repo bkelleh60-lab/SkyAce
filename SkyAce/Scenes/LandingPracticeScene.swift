@@ -325,10 +325,11 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         phase = .landed
         isTouching = false
 
-        // Freeze the plane and settle it onto the tarmac.
+        // Freeze the plane and settle it onto the tarmac. Attitude is
+        // per-tier: clean landings flare nose-up; crashes keep the frozen
+        // nose-down descent tilt under the dust cloud (reset re-levels).
         plane.physicsBody?.velocity = .zero
         plane.physicsBody?.affectedByGravity = false
-        plane.levelOut()
         let settle = SKAction.move(
             to: CGPoint(x: laneX, y: landedPlaneY),
             duration: 0.15
@@ -351,6 +352,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             SKAction.wait(forDuration: 0.25),
             AudioManager.shared.sfxAction(SkySFX.landingSuccess, fileExtension: "caf")
         ]))
+        plane.playTouchdownFlare()
         SkyHaptics.win()
         showCelebrationBadge()
         scheduleReset(after: Self.smoothResetDelay)
@@ -362,6 +364,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
         // Visual bounce off the tarmac, then a brief shake. No fanfare —
         // the missing celebration is the feedback.
+        plane.playTouchdownFlare()
         plane.run(SKAction.sequence([
             SKAction.moveBy(x: 0, y: 16, duration: 0.12),
             SKAction.moveBy(x: 0, y: -16, duration: 0.14)

@@ -465,9 +465,14 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             }
         ]))
 
+        // The fresh approach starts from the runway's own chain so its
+        // moveTo can never overlap a roll-out still in flight.
         let rollOut = SKAction.moveTo(x: offscreenRunwayX, duration: 0.7)
         rollOut.timingMode = .easeIn
-        runway.run(rollOut)
+        runway.run(SKAction.sequence([
+            rollOut,
+            SKAction.run { [weak self] in self?.beginApproach() }
+        ]))
 
         plane.run(SKAction.sequence([
             SKAction.fadeOut(withDuration: 0.25),
@@ -479,8 +484,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
                 self.plane.physicsBody?.velocity = .zero
                 self.plane.physicsBody?.affectedByGravity = true
             },
-            SKAction.fadeIn(withDuration: 0.25),
-            SKAction.run { [weak self] in self?.beginApproach() }
+            SKAction.fadeIn(withDuration: 0.25)
         ]))
     }
 

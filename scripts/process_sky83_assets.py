@@ -261,13 +261,13 @@ def process_gear_down(name, gear_up_path, strict_checker=False,
     body = dark_bbox(img) if register_on_dark else full
     body_w = body[2] - body[0]
 
-    # Scale so the body matches the gear-up content width; if the flame
-    # overhangs the canvas at that scale, shrink the whole thing to fit
-    # (a few percent at most — imperceptible at 90pt display width).
+    # Scale so the body matches the gear-up content width EXACTLY — the
+    # registration contract PlaneNode.setLandingGear(deployed:) relies on.
+    # If art overhang (exhaust flame) would fall off-canvas at that scale,
+    # clip the overhang rather than shrinking or shifting the body.
     canvas_w = gear_up.size[0]
     scale = up_w / body_w
     full_w = full[2] - full[0]
-    scale = min(scale, canvas_w / full_w)
 
     content = img.crop(full)
     scaled = content.resize(
@@ -276,11 +276,18 @@ def process_gear_down(name, gear_up_path, strict_checker=False,
         Image.LANCZOS,
     )
 
-    # Paste so the body lands at the gear-up content's top-left.
+    # Paste so the body lands at the gear-up content's top-left, trimming
+    # only the off-canvas left/right overhang before pasting.
     paste_x = round(up_left - (body[0] - full[0]) * scale)
-    paste_y = round(up_top - (body[1] - full[1]) * scale)
-    paste_x = max(0, min(paste_x, canvas_w - scaled.size[0]))
-    paste_y = max(0, paste_y)
+    paste_y = max(0, round(up_top - (body[1] - full[1]) * scale))
+
+    clip_left = max(0, -paste_x)
+    clip_right = max(0, paste_x + scaled.size[0] - canvas_w)
+    if clip_left or clip_right:
+        scaled = scaled.crop(
+            (clip_left, 0, scaled.size[0] - clip_right, scaled.size[1])
+        )
+    paste_x = max(0, paste_x)
 
     canvas_h = max(gear_up.size[1], paste_y + scaled.size[1])
     canvas = Image.new("RGBA", (canvas_w, canvas_h), (0, 0, 0, 0))

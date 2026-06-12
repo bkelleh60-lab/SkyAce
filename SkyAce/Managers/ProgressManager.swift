@@ -18,6 +18,7 @@ final class ProgressManager {
         static let fullUnlockCached    = "skyace.fullUnlockCached"
         static let musicEnabled        = "skyace.musicEnabled"
         static let sfxEnabled          = "skyace.sfxEnabled"
+        static let landingPracticeInstructionShown = "skyace.landingPracticeInstructionShown"
     }
 
     private let defaults = UserDefaults.standard
@@ -36,7 +37,8 @@ final class ProgressManager {
             Key.upgradeLevels:    [String: Int](),
             Key.fullUnlockCached: false,
             Key.musicEnabled:     true,
-            Key.sfxEnabled:       true
+            Key.sfxEnabled:       true,
+            Key.landingPracticeInstructionShown: false
         ])
     }
 
@@ -158,6 +160,15 @@ final class ProgressManager {
     var isFullUnlockCached: Bool {
         get { defaults.bool(forKey: Key.fullUnlockCached) }
         set { defaults.set(newValue, forKey: Key.fullUnlockCached) }
+    }
+
+    // MARK: - Landing Practice (SKY-83)
+
+    /// True once the one-time "Hold to climb. Release to land." prompt has
+    /// been shown on first launch of Landing Practice mode.
+    var landingPracticeInstructionShown: Bool {
+        get { defaults.bool(forKey: Key.landingPracticeInstructionShown) }
+        set { defaults.set(newValue, forKey: Key.landingPracticeInstructionShown) }
     }
 
     // MARK: - Audio toggles

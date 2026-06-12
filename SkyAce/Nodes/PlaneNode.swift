@@ -319,6 +319,12 @@ final class PlaneNode: SKNode {
         }
     }
 
+    /// Smoothly levels the body's nose tilt — used when the plane settles
+    /// onto the runway after a Landing Practice touchdown.
+    func levelOut(duration: TimeInterval = 0.2) {
+        body.run(SKAction.rotate(toAngle: 0, duration: duration, shortestUnitArc: true))
+    }
+
     // MARK: - Effects
 
     /// Plays hit feedback but does not change physics — scene owns run state.

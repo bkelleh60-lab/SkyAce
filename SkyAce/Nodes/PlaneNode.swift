@@ -244,6 +244,19 @@ final class PlaneNode: SKNode {
         body.zRotation += (targetRotation - body.zRotation) * 0.25
     }
 
+    /// Final-approach "keep the nose up" correction for Landing Practice
+    /// (SKY-94). One small additive lift per tap — no onset floor and no
+    /// hold ramp — so the player trims descent rate in fine increments
+    /// instead of the full climb-impulse rebound of `climb()`. Does not
+    /// touch the hold state, so it can never arm a sustained-hold climb.
+    func applyCorrectionTap(impulse: CGFloat) {
+        guard let pb = physicsBody else { return }
+        pb.velocity.dy = min(pb.velocity.dy + impulse, PlaneNode.maxClimbVelocity)
+
+        // Brief nose-up acknowledgement; update() resumes the fall tilt.
+        body.zRotation += (0.18 - body.zRotation) * 0.5
+    }
+
     /// Called every frame (by the scene) to clamp velocity and settle rotation.
     func update() {
         guard let pb = physicsBody else { return }

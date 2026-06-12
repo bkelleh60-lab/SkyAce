@@ -308,6 +308,12 @@ final class MenuScene: SKScene {
         closeX.name = "worldSelectClose"
         card.addChild(closeX)
 
+        // Three peer world tiles (SKY-83): City, Mountain, Landing Practice.
+        let tileGap: CGFloat = 10
+        let tileWidth = (cardSize.width - 24 - 2 * tileGap) / 3
+        let tileSize = CGSize(width: tileWidth, height: 150)
+        let slotX = tileWidth + tileGap
+
         // City tile — free.
         let city = worldTile(
             title: "CITY",
@@ -315,9 +321,10 @@ final class MenuScene: SKScene {
             iconAsset: SkySprites.iconWorldCity,
             iconFallback: "🏙",
             locked: false,
-            tileColor: UIColor(hex: 0xFF9A6C)
+            tileColor: UIColor(hex: 0xFF9A6C),
+            tileSize: tileSize
         )
-        city.position = CGPoint(x: -cardSize.width / 4 - 4, y: -20)
+        city.position = CGPoint(x: -slotX, y: -20)
         city.name = "worldSelectCity"
         card.addChild(city)
 
@@ -329,11 +336,18 @@ final class MenuScene: SKScene {
             iconAsset: SkySprites.iconWorldMountain,
             iconFallback: "🏔",
             locked: !unlocked,
-            tileColor: SkyColors.primary
+            tileColor: SkyColors.primary,
+            tileSize: tileSize
         )
-        mountain.position = CGPoint(x: cardSize.width / 4 + 4, y: -20)
+        mountain.position = CGPoint(x: 0, y: -20)
         mountain.name = "worldSelectMountain"
         card.addChild(mountain)
+
+        // Landing Practice tile — free, no unlock (SKY-83).
+        let landing = landingPracticeTile(tileSize: tileSize)
+        landing.position = CGPoint(x: slotX, y: -20)
+        landing.name = "worldSelectLanding"
+        card.addChild(landing)
 
         addChild(overlay)
         worldSelectOverlay = overlay
@@ -347,9 +361,12 @@ final class MenuScene: SKScene {
                            iconAsset: String,
                            iconFallback: String,
                            locked: Bool,
-                           tileColor: UIColor) -> SKNode {
+                           tileColor: UIColor,
+                           tileSize: CGSize = CGSize(width: 120, height: 180)) -> SKNode {
         let container = SKNode()
-        let size = CGSize(width: 120, height: 180)
+        let size = tileSize
+        // Type scales down with the tile so three-across still fits.
+        let compact = size.width < 110
 
         let bg = SKShapeNode(rectOf: size, cornerRadius: 20)
         bg.fillColor = tileColor
@@ -363,7 +380,7 @@ final class MenuScene: SKScene {
             let icon = SkySprites.iconNode(
                 named: iconAsset,
                 fallbackEmoji: iconFallback,
-                size: 64,
+                size: (size.width * 0.53).rounded(),
                 color: SkyColors.onPrimary
             )
             icon.position = CGPoint(x: 0, y: 6)
@@ -386,7 +403,8 @@ final class MenuScene: SKScene {
             lock.position = CGPoint(x: 0, y: 16)
             container.addChild(lock)
 
-            let unlockBadge = SKShapeNode(rectOf: CGSize(width: 90, height: 26), cornerRadius: 13)
+            let badgeWidth = min(90, size.width - 12)
+            let unlockBadge = SKShapeNode(rectOf: CGSize(width: badgeWidth, height: 26), cornerRadius: 13)
             unlockBadge.fillColor = SkyColors.tertiaryContainer
             unlockBadge.strokeColor = .clear
             unlockBadge.position = CGPoint(x: 0, y: -30)
@@ -403,7 +421,7 @@ final class MenuScene: SKScene {
 
         let titleLabel = SKLabelNode(text: title)
         titleLabel.fontName = SkyFonts.headlineName
-        titleLabel.fontSize = 16
+        titleLabel.fontSize = compact ? 13 : 16
         titleLabel.fontColor = SkyColors.skOnPrimary
         titleLabel.verticalAlignmentMode = .center
         titleLabel.position = CGPoint(x: 0, y: size.height / 2 - 22)
@@ -411,13 +429,36 @@ final class MenuScene: SKScene {
 
         let subtitleLabel = SKLabelNode(text: subtitle)
         subtitleLabel.fontName = SkyFonts.bodyName
-        subtitleLabel.fontSize = 11
+        subtitleLabel.fontSize = compact ? 10 : 11
         subtitleLabel.fontColor = SkyColors.skOnPrimary.withAlphaComponent(0.85)
         subtitleLabel.verticalAlignmentMode = .center
         subtitleLabel.position = CGPoint(x: 0, y: -size.height / 2 + 20)
         container.addChild(subtitleLabel)
 
         return container
+    }
+
+    /// Landing Practice world tile (SKY-83). The Stitch card art bakes in
+    /// the golden background, "LANDING" label, airfield illustration, and
+    /// "Clear for landing." descriptor, so the tile is a single sprite
+    /// stretched to the shared slot size of its programmatic peers.
+    private func landingPracticeTile(tileSize: CGSize) -> SKNode {
+        if let texture = SkySprites.texture(named: SkySprites.landingPracticeCard) {
+            let container = SKNode()
+            let sprite = SKSpriteNode(texture: texture, size: tileSize)
+            container.addChild(sprite)
+            return container
+        }
+        // Asset missing — programmatic peer tile so the mode stays reachable.
+        return worldTile(
+            title: "LANDING",
+            subtitle: "Clear for landing.",
+            iconAsset: SkySprites.landingPracticeCard,
+            iconFallback: "🛬",
+            locked: false,
+            tileColor: UIColor(hex: 0xF3B100),
+            tileSize: tileSize
+        )
     }
 
     private func dismissWorldSelect() {
@@ -456,6 +497,12 @@ final class MenuScene: SKScene {
                         } else {
                             SkyNavigator.shared.showUnlock()
                         }
+                        return
+                    }
+                    if current.name == "worldSelectLanding" {
+                        dismissWorldSelect()
+                        AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
+                        SkyNavigator.shared.showLandingPractice()
                         return
                     }
                     n = current.parent

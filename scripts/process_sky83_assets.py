@@ -40,6 +40,12 @@ DARK_MAX = 110  # outline/body pixels — used for registration bboxes
 
 
 def is_chroma_flat_bg(px):
+    """True if the pixel reads as matte background: bright and chroma-flat.
+
+    Covers white mattes and every grey checker tone in the cell-shaded
+    exports, while stopping at the artwork's saturated fills and dark
+    outlines.
+    """
     r, g, b = px[:3]
     if min(r, g, b) < BG_MIN_BRIGHTNESS:
         return False
@@ -62,6 +68,7 @@ def sample_checker_tones(img, n=2):
 
 
 def near(px, tone, tol):
+    """True if every RGB channel of `px` is within `tol` of `tone`."""
     return all(abs(px[i] - tone[i]) <= tol for i in range(3))
 
 
@@ -184,6 +191,7 @@ def dark_bbox(img):
 
 
 def cropped_content(img, pad=4):
+    """Crop to the alpha bounding box plus `pad` transparent pixels."""
     bbox = img.split()[3].getbbox()
     if bbox is None:
         raise ValueError("image is fully transparent after knockout")
@@ -196,6 +204,7 @@ def cropped_content(img, pad=4):
 
 
 def process_simple(name, out_name=None):
+    """Convert one scene/UI export to a cropped, true-alpha sprite PNG."""
     img = Image.open(SRC / f"{name}.png").convert("RGBA")
     # Later Stitch re-exports ship with a real alpha channel (transparent
     # corners) — those only need cropping, and keying them would eat
@@ -282,6 +291,7 @@ def process_gear_down(name, gear_up_path, strict_checker=False,
 
 
 def main():
+    """Process all eight SKY-83 Stitch exports into Resources/Sprites."""
     process_simple("runway_strip")
     process_simple("landing_zone_indicator")
     process_simple("badge_smooth_landing")

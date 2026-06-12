@@ -188,6 +188,14 @@ final class SkyNavigator {
         present(FreeFlightMountainScene(size: sceneSize()), music: SkyMusic.freeFlightMntn)
     }
 
+    func showLandingPractice() {
+        present(
+            LandingPracticeScene(size: sceneSize()),
+            music: SkyMusic.landingPractice,
+            musicExtension: "m4a"
+        )
+    }
+
     func presentParentalGate(onSuccess: @escaping () -> Void) {
         presenter?.presentParentalGate(onSuccess: onSuccess)
     }
@@ -199,14 +207,14 @@ final class SkyNavigator {
         return UIScreen.main.bounds.size
     }
 
-    private func present(_ scene: SKScene, music: String?) {
+    private func present(_ scene: SKScene, music: String?, musicExtension: String = "wav") {
         guard let view = view else { return }
         scene.scaleMode = .resizeFill
         let transition = SKTransition.fade(withDuration: 0.35)
         view.presentScene(scene, transition: transition)
 
         if let music = music {
-            AudioManager.shared.playMusic(music, fileExtension: "wav")
+            AudioManager.shared.playMusic(music, fileExtension: musicExtension)
         }
     }
 }

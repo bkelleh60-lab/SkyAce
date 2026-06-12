@@ -51,6 +51,7 @@
 		B10001000000000000000403 /* ObstacleNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000403 /* ObstacleNode.swift */; };
 		B10001000000000000000404 /* RingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000404 /* RingNode.swift */; };
 		B10001000000000000000405 /* FinishLineNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000405 /* FinishLineNode.swift */; };
+		B10001000000000000000406 /* LandingZoneNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000406 /* LandingZoneNode.swift */; };
 		B10001000000000000000501 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000501 /* GameScene.swift */; };
 		B10001000000000000000502 /* MenuScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000502 /* MenuScene.swift */; };
 		B10001000000000000000503 /* MapScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000503 /* MapScene.swift */; };
@@ -60,6 +61,7 @@
 		B10001000000000000000507 /* HangarScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000507 /* HangarScene.swift */; };
 		B10001000000000000000508 /* FreeFlightCityScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000508 /* FreeFlightCityScene.swift */; };
 		B10001000000000000000509 /* FreeFlightMountainScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000509 /* FreeFlightMountainScene.swift */; };
+		B1000100000000000000050A /* LandingPracticeScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000100000000000000050A /* LandingPracticeScene.swift */; };
 		B10001000000000000000701 /* SkyUIEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000701 /* SkyUIEffects.swift */; };
 		B10001000000000000000702 /* SkyChunkyButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000702 /* SkyChunkyButton.swift */; };
 		B10001000000000000000703 /* SkyTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000703 /* SkyTabBar.swift */; };
@@ -134,6 +136,7 @@
 		F10001000000000000000403 /* ObstacleNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObstacleNode.swift; sourceTree = "<group>"; };
 		F10001000000000000000404 /* RingNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingNode.swift; sourceTree = "<group>"; };
 		F10001000000000000000405 /* FinishLineNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinishLineNode.swift; sourceTree = "<group>"; };
+		F10001000000000000000406 /* LandingZoneNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingZoneNode.swift; sourceTree = "<group>"; };
 		F10001000000000000000501 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000502 /* MenuScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000503 /* MapScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapScene.swift; sourceTree = "<group>"; };
@@ -143,6 +146,7 @@
 		F10001000000000000000507 /* HangarScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HangarScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000508 /* FreeFlightCityScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightCityScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000509 /* FreeFlightMountainScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightMountainScene.swift; sourceTree = "<group>"; };
+		F1000100000000000000050A /* LandingPracticeScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingPracticeScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000701 /* SkyUIEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyUIEffects.swift; sourceTree = "<group>"; };
 		F10001000000000000000702 /* SkyChunkyButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyChunkyButton.swift; sourceTree = "<group>"; };
 		F10001000000000000000703 /* SkyTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyTabBar.swift; sourceTree = "<group>"; };
@@ -239,6 +243,7 @@
 				F10001000000000000000403 /* ObstacleNode.swift */,
 				F10001000000000000000404 /* RingNode.swift */,
 				F10001000000000000000405 /* FinishLineNode.swift */,
+				F10001000000000000000406 /* LandingZoneNode.swift */,
 			);
 			path = Nodes;
 			sourceTree = "<group>";
@@ -255,6 +260,7 @@
 				F10001000000000000000507 /* HangarScene.swift */,
 				F10001000000000000000508 /* FreeFlightCityScene.swift */,
 				F10001000000000000000509 /* FreeFlightMountainScene.swift */,
+				F1000100000000000000050A /* LandingPracticeScene.swift */,
 			);
 			path = Scenes;
 			sourceTree = "<group>";
@@ -472,6 +478,7 @@
 				B10001000000000000000403 /* ObstacleNode.swift in Sources */,
 				B10001000000000000000404 /* RingNode.swift in Sources */,
 				B10001000000000000000405 /* FinishLineNode.swift in Sources */,
+				B10001000000000000000406 /* LandingZoneNode.swift in Sources */,
 				B10001000000000000000501 /* GameScene.swift in Sources */,
 				B10001000000000000000502 /* MenuScene.swift in Sources */,
 				B10001000000000000000503 /* MapScene.swift in Sources */,
@@ -481,6 +488,7 @@
 				B10001000000000000000507 /* HangarScene.swift in Sources */,
 				B10001000000000000000508 /* FreeFlightCityScene.swift in Sources */,
 				B10001000000000000000509 /* FreeFlightMountainScene.swift in Sources */,
+				B1000100000000000000050A /* LandingPracticeScene.swift in Sources */,
 				B10001000000000000000701 /* SkyUIEffects.swift in Sources */,
 				B10001000000000000000702 /* SkyChunkyButton.swift in Sources */,
 				B10001000000000000000703 /* SkyTabBar.swift in Sources */,

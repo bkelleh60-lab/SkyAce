@@ -18,6 +18,7 @@ final class ProgressManager {
         static let fullUnlockCached    = "skyace.fullUnlockCached"
         static let musicEnabled        = "skyace.musicEnabled"
         static let sfxEnabled          = "skyace.sfxEnabled"
+        static let landingPracticeInstructionShown = "skyace.landingPracticeInstructionShown"
     }
 
     private let defaults = UserDefaults.standard
@@ -36,7 +37,8 @@ final class ProgressManager {
             Key.upgradeLevels:    [String: Int](),
             Key.fullUnlockCached: false,
             Key.musicEnabled:     true,
-            Key.sfxEnabled:       true
+            Key.sfxEnabled:       true,
+            Key.landingPracticeInstructionShown: false
         ])
     }
 
@@ -160,6 +162,15 @@ final class ProgressManager {
         set { defaults.set(newValue, forKey: Key.fullUnlockCached) }
     }
 
+    // MARK: - Landing Practice (SKY-83)
+
+    /// True once the one-time "Hold to climb. Release to land." prompt has
+    /// been shown on first launch of Landing Practice mode.
+    var landingPracticeInstructionShown: Bool {
+        get { defaults.bool(forKey: Key.landingPracticeInstructionShown) }
+        set { defaults.set(newValue, forKey: Key.landingPracticeInstructionShown) }
+    }
+
     // MARK: - Audio toggles
 
     var musicEnabled: Bool {
@@ -176,7 +187,8 @@ final class ProgressManager {
     #if DEBUG
     func resetAllProgress() {
         [Key.coins, Key.completedLevels, Key.starRatings, Key.ownedPlanes,
-         Key.selectedPlane, Key.upgradeLevels, Key.fullUnlockCached].forEach {
+         Key.selectedPlane, Key.upgradeLevels, Key.fullUnlockCached,
+         Key.landingPracticeInstructionShown].forEach {
             defaults.removeObject(forKey: $0)
         }
         freeFlightCoinAccumulator = FreeFlight.CoinAccumulator()

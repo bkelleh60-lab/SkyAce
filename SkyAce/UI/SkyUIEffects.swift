@@ -279,6 +279,15 @@ enum SkySprites {
     static let mountainJaggedPeaks = "mountain_jagged_peaks"
     static let mountainSkyIsland   = "mountain_sky_island"
 
+    // Landing Practice (SKY-83) sprites (Resources/Sprites/). The per-plane
+    // gear-down variants are looked up by PlaneNode as "<planeID>_gear_down"
+    // and intentionally have no constants here.
+    static let runwayStrip          = "runway_strip"
+    static let landingZoneIndicator = "landing_zone_indicator"
+    static let badgeSmoothLanding   = "badge_smooth_landing"
+    static let dustCloud            = "dust_cloud"
+    static let landingPracticeCard  = "free_flight_landing_practice_card"
+
     // Free Flight Mountain scenery (Resources/Sprites/). Three parallax
     // background strips, a pine tree foreground strip, and ambient props.
     static let mountainBgFar       = "mountain_bg_far"

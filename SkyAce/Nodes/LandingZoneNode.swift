@@ -27,8 +27,10 @@ final class LandingZoneNode: SKNode {
     static let zoneSize = CGSize(width: 84, height: 64)
 
     /// Touchdown sensor: zone-box width, extending this far up from the
-    /// runway surface so a descending plane registers contact.
-    static let sensorHeight: CGFloat = 56
+    /// runway surface so a descending plane registers contact. Kept shallow
+    /// so the velocity read in handleLandingZoneContact() happens close to
+    /// the visual touchdown rather than high above the tarmac.
+    static let sensorHeight: CGFloat = 30
 
     /// Fraction of the strip's width (from its left end) where the
     /// touchdown zone sits — short of halfway, like real touchdown

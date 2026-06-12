@@ -16,18 +16,23 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Tunable landing constants (Connor's playtest dials)
     //
-    // Velocity tiers are tuned against the post-SKY-78 momentum physics —
-    // gravity -5, climb impulse ~300 with hold-ramp to 1.5x, max descent
-    // -400 pt/s. A feathered final approach (short taps near the deck)
-    // holds dy well above -80; a plain release falls through -80 after
-    // ~0.1s and -180 after ~0.25s, so smooth landings demand active
-    // descent management without being out of reach for kids.
+    // Velocity tiers are tuned against the post-SKY-78 momentum physics
+    // (gravity -5 ⇒ ~750 pt/s² descent, tap onset floors dy at +320,
+    // maxDownVelocity -400). Ballistic symmetry means that after the
+    // player's final tap the plane re-enters the touchdown band at
+    // ≈ -320 pt/s minimum — falling back through a 320-impulse rise — and
+    // a no-input drop arrives near terminal. The ticket's pre-SKY-78
+    // values (-80 / -180) are therefore unreachable under the momentum
+    // model; these tiers map the actual reachable envelope:
+    //   ≥ -340  final tap within ~9pt of the band  → Smooth
+    //   ≥ -390  final tap within ~33pt             → Rough
+    //   below   late/no flare (near-terminal)      → Crash
 
     /// Touchdown dy at or above this reads as a Smooth Landing.
-    static let smoothLandingMaxDescent: CGFloat = -80
+    static let smoothLandingMaxDescent: CGFloat = -340
     /// Touchdown dy at or above this (and below smooth) is a Rough Landing;
     /// anything faster is a Crash Landing.
-    static let roughLandingMaxDescent: CGFloat = -180
+    static let roughLandingMaxDescent: CGFloat = -390
 
     /// Constant runway scroll-in speed during the cruise phase (pt/s).
     static let approachScrollSpeed: CGFloat = 200
@@ -49,10 +54,13 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private var laneX: CGFloat { size.width * 0.28 }
     private var planeStartY: CGFloat { size.height * 0.55 }
     private var planeMaxY: CGFloat { size.height - 50 }
-    /// Floor while the runway is still moving: keeps the plane's hitbox
-    /// clear of the touchdown sensor (top = groundY + 56) so the begin-
-    /// contact event can only fire after the runway halts.
-    private var approachFloorY: CGFloat { groundY + 84 }
+    /// Floor while the runway is still moving. Serves two purposes: keeps
+    /// the plane's hitbox clear of the touchdown sensor so begin-contact
+    /// can only fire after the runway halts, and sits high enough that a
+    /// player who just parks on the floor free-falls to a near-terminal
+    /// (crash-tier) touchdown when it drops — landing well requires an
+    /// actively timed flare, not waiting.
+    private var approachFloorY: CGFloat { groundY + 160 }
     /// Floor once the runway has halted — deep enough to enter the sensor.
     private var landingFloorY: CGFloat { groundY + 20 }
     /// Where the plane settles so its wheels sit on the tarmac.

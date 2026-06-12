@@ -196,7 +196,15 @@ def cropped_content(img, pad=4):
 
 
 def process_simple(name, out_name=None):
-    img = knock_out(Image.open(SRC / f"{name}.png"), is_chroma_flat_bg)
+    img = Image.open(SRC / f"{name}.png").convert("RGBA")
+    # Later Stitch re-exports ship with a real alpha channel (transparent
+    # corners) — those only need cropping, and keying them would eat
+    # light-grey artwork. Knock out the matte only on opaque exports.
+    alpha = img.split()[3]
+    w, h = img.size
+    corners = [alpha.getpixel(p) for p in [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)]]
+    if max(corners) > 0:
+        img = knock_out(img, is_chroma_flat_bg)
     out = cropped_content(img)
     out_path = DST / f"{out_name or name}.png"
     out.save(out_path)

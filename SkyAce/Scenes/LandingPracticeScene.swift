@@ -128,6 +128,9 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private var phase: Phase = .freeApproach
     private let worldNode = SKNode()
     private let feedbackLayer = SKNode()
+    // Implicitly unwrapped: both are built in layoutScene() (didMove /
+    // didChangeSize rebuild) before any touch or update path can run, and
+    // update() additionally guards plane against the teardown window.
     private var plane: PlaneNode!
     private var runway: LandingZoneNode!
     private var isTouching = false

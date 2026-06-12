@@ -222,6 +222,9 @@ def process_simple(name, out_name=None):
 
 def process_gear_down(name, gear_up_path, strict_checker=False,
                       register_on_dark=True):
+    """Cut the background and re-canvas a gear-down export so it registers
+    against its bundled gear-up sprite per the contract in the module
+    docstring (equal canvas width, body matched and top-aligned)."""
     src = Image.open(SRC / f"{name}.png")
 
     if strict_checker:

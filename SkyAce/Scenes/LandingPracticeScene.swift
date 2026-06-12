@@ -16,23 +16,22 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Tunable landing constants (Connor's playtest dials)
     //
-    // Velocity tiers are tuned against the post-SKY-78 momentum physics
-    // (gravity -5 ⇒ ~750 pt/s² descent, tap onset floors dy at +320,
-    // maxDownVelocity -400). Ballistic symmetry means that after the
-    // player's final tap the plane re-enters the touchdown band at
-    // ≈ -320 pt/s minimum — falling back through a 320-impulse rise — and
-    // a no-input drop arrives near terminal. The ticket's pre-SKY-78
-    // values (-80 / -180) are therefore unreachable under the momentum
-    // model; these tiers map the actual reachable envelope:
-    //   ≥ -340  final tap within ~9pt of the band  → Smooth
-    //   ≥ -390  final tap within ~33pt             → Rough
-    //   below   late/no flare (near-terminal)      → Crash
+    // Velocity tiers are calibrated against logged touchdown velocities
+    // under the post-SKY-78 momentum physics (gravity -5 ⇒ ~750 pt/s²
+    // descent, tap onset floors dy at +320, maxDownVelocity -400, with
+    // contact reads up to ~12 pt/s past the clamp). The ticket's
+    // pre-SKY-78 values (-80 / -180) are unreachable under this model.
+    // Three regimes actually occur at the sensor:
+    //   ~ -285  gentle glide-in from the low-approach band → Smooth
+    //   -320…-400  tap-flare near the deck (a tap always rebounds the
+    //              plane ~68pt up, so it returns at ≥ ~320) → Rough
+    //   ≤ -400  drop from altitude, no/late flare (terminal) → Crash
 
     /// Touchdown dy at or above this reads as a Smooth Landing.
-    static let smoothLandingMaxDescent: CGFloat = -340
+    static let smoothLandingMaxDescent: CGFloat = -300
     /// Touchdown dy at or above this (and below smooth) is a Rough Landing;
     /// anything faster is a Crash Landing.
-    static let roughLandingMaxDescent: CGFloat = -390
+    static let roughLandingMaxDescent: CGFloat = -395
 
     /// Constant runway scroll-in speed during the cruise phase (pt/s).
     static let approachScrollSpeed: CGFloat = 200
@@ -54,17 +53,20 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private var laneX: CGFloat { size.width * 0.28 }
     private var planeStartY: CGFloat { size.height * 0.55 }
     private var planeMaxY: CGFloat { size.height - 50 }
-    /// Floor while the runway is still moving. Serves two purposes: keeps
-    /// the plane's hitbox clear of the touchdown sensor so begin-contact
-    /// can only fire after the runway halts, and sits high enough that a
-    /// player who just parks on the floor free-falls to a near-terminal
-    /// (crash-tier) touchdown when it drops — landing well requires an
-    /// actively timed flare, not waiting.
-    private var approachFloorY: CGFloat { groundY + 160 }
+    /// Floor while the runway is still moving: the low-approach band. It
+    /// keeps the plane's hitbox clear of the touchdown sensor so contact
+    /// can only begin after the runway halts, and it defines the smooth
+    /// landing: a plane riding this band glides ~53pt onto the zone when
+    /// the floor drops at halt (≈ -285 pt/s — the gentlest touchdown the
+    /// physics can produce). Descending to and holding this band is the
+    /// controlled approach the smooth tier rewards.
+    private var approachFloorY: CGFloat { groundY + 80 }
     /// Floor once the runway has halted — deep enough to enter the sensor.
-    private var landingFloorY: CGFloat { groundY + 20 }
-    /// Where the plane settles so its wheels sit on the tarmac.
-    private var landedPlaneY: CGFloat { groundY + 34 }
+    private var landingFloorY: CGFloat { groundY + 16 }
+    /// Where the plane settles so its wheels sit on the tarmac: gear-down
+    /// wheel bottoms sit 22–30pt below the node center at the 2x visual
+    /// scale, so center at +26 grazes the surface for all four planes.
+    private var landedPlaneY: CGFloat { groundY + 26 }
 
     // MARK: - State
 
@@ -197,6 +199,10 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             duration: TimeInterval(max(0, cruiseDistance) / Self.approachScrollSpeed)
         )
         let deployGear = SKAction.run { [weak self] in
+            // Red Baron MK-1 has fixed gear baked into its base art — the
+            // deploy trigger must not fire anything for it: no sprite swap
+            // and no gear SFX, ever (SKY-83 playtest bug 1).
+            guard ProgressManager.shared.selectedPlaneID != "red_baron" else { return }
             self?.plane.setLandingGear(deployed: true)
         }
         let decel = SKAction.moveTo(x: laneX, duration: Self.decelDuration)
@@ -282,7 +288,17 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         guard controlsLive else { return }
 
         let floor = phase == .approach ? approachFloorY : landingFloorY
-        plane.position.y = min(planeMaxY, max(floor, plane.position.y))
+        if plane.position.y <= floor {
+            plane.position.y = floor
+            // Resting on the floor must also rest the body: without this,
+            // gravity keeps integrating dy toward terminal while the clamp
+            // holds the position, and the post-halt glide then starts at
+            // full terminal speed — every landing read as a crash.
+            if let pb = plane.physicsBody, pb.velocity.dy < 0 {
+                pb.velocity.dy = 0
+            }
+        }
+        plane.position.y = min(planeMaxY, plane.position.y)
         plane.position.x += (laneX - plane.position.x) * 0.12
     }
 

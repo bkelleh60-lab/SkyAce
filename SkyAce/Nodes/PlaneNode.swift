@@ -4,12 +4,13 @@ import SpriteKit
 /// contactTestBitMask is used for detection; collisionBitMask is always 0
 /// so SpriteKit never resolves physics contacts itself.
 struct PhysicsCategory {
-    static let plane:    UInt32 = 0b000001  // 1
-    static let obstacle: UInt32 = 0b000010  // 2
-    static let coin:     UInt32 = 0b000100  // 4
-    static let ring:     UInt32 = 0b001000  // 8
-    static let boundary: UInt32 = 0b010000  // 16
-    static let finish:   UInt32 = 0b100000  // 32
+    static let plane:       UInt32 = 0b0000001  // 1
+    static let obstacle:    UInt32 = 0b0000010  // 2
+    static let coin:        UInt32 = 0b0000100  // 4
+    static let ring:        UInt32 = 0b0001000  // 8
+    static let boundary:    UInt32 = 0b0010000  // 16
+    static let finish:      UInt32 = 0b0100000  // 32
+    static let landingZone: UInt32 = 0b1000000  // 64 — SKY-83 touchdown sensor
 }
 
 /// Player-controlled plane.
@@ -68,6 +69,11 @@ final class PlaneNode: SKNode {
 
     private let body: SKNode
 
+    /// The textured sprite inside `body`, when the bundled plane art is in
+    /// use (nil for the programmatic fallback body). Held so the landing
+    /// gear swap (SKY-83) can change its texture in place.
+    private weak var bodySprite: SKSpriteNode?
+
     /// Speed-trail emitter, lazily attached the first time
     /// `setBoostIntensity(_:)` is called with a non-zero value. Lives as a
     /// child of `body` so it inherits the visual scale, and uses the scene
@@ -104,6 +110,7 @@ final class PlaneNode: SKNode {
 
         body.setScale(visualScale)
         addChild(body)
+        bodySprite = body.children.compactMap { $0 as? SKSpriteNode }.first
         configurePhysics()
     }
 
@@ -257,6 +264,58 @@ final class PlaneNode: SKNode {
         if v.dy < 0 {
             let targetRotation: CGFloat = -0.3
             body.zRotation += (targetRotation - body.zRotation) * 0.08
+        }
+    }
+
+    // MARK: - Landing gear (SKY-83)
+
+    /// True while the gear-down sprite variant is showing.
+    private(set) var isGearDeployed = false
+
+    /// Gear-up texture and display size, captured on deploy so retract can
+    /// restore them exactly.
+    private var gearUpTexture: SKTexture?
+    private var gearUpSize: CGSize = .zero
+
+    /// Swaps the body sprite between the gear-up art and the bundled
+    /// "<planeID>_gear_down" variant. Used by Landing Practice: deploy at
+    /// the runway deceleration trigger, retract on approach reset.
+    ///
+    /// The gear-down exports are registered against the gear-up art by
+    /// scripts/process_sky83_assets.py: equal canvas width, fuselage
+    /// top-aligned, any extra canvas height is gear hanging below. Display
+    /// therefore keeps the gear-up width, scales height by the relative
+    /// texture aspect, and shifts the sprite down by half the extra height
+    /// so the fuselage doesn't move or resize on swap.
+    ///
+    /// Planes without a gear-down asset no-op and keep their existing
+    /// sprite throughout (Red Baron's gear is fixed in its base art).
+    func setLandingGear(deployed: Bool) {
+        guard deployed != isGearDeployed, let sprite = bodySprite else { return }
+
+        if deployed {
+            guard let gearTexture = SkySprites.texture(named: plane.id + "_gear_down"),
+                  let upTexture = sprite.texture else { return }
+            let up = upTexture.size()
+            let down = gearTexture.size()
+            guard up.width > 0, up.height > 0, down.width > 0 else { return }
+
+            gearUpTexture = upTexture
+            gearUpSize = sprite.size
+
+            let heightFactor = (down.height / down.width) / (up.height / up.width)
+            let newHeight = gearUpSize.height * heightFactor
+            sprite.texture = gearTexture
+            sprite.size = CGSize(width: gearUpSize.width, height: newHeight)
+            sprite.position.y = -(newHeight - gearUpSize.height) / 2
+            isGearDeployed = true
+        } else {
+            if let upTexture = gearUpTexture {
+                sprite.texture = upTexture
+                sprite.size = gearUpSize
+                sprite.position.y = 0
+            }
+            isGearDeployed = false
         }
     }
 

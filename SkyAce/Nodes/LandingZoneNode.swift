@@ -104,12 +104,11 @@ final class LandingZoneNode: SKNode {
         } else {
             zone = SKSpriteNode(color: UIColor(hex: 0xFFD709), size: LandingZoneNode.zoneSize)
         }
-        // Hover above the touchdown line pointing down at it, with a
-        // gentle bob so it reads as "land here" on approach.
-        zone.position = CGPoint(
-            x: 0,
-            y: -surfaceDrop + LandingZoneNode.zoneSize.height / 2 + 26
-        )
+        // Hover above the runway strip pointing down at the touchdown
+        // spot, with a gentle bob so it reads as "land here" on approach.
+        // Anchored to the strip's top edge (not the touchdown line) so the
+        // box never overlaps the road, including at the bottom of the bob.
+        zone.position = CGPoint(x: 0, y: LandingZoneNode.zoneSize.height / 2 + 26)
         zone.zPosition = 1
         zone.run(SKAction.repeatForever(SKAction.sequence([
             SKAction.moveBy(x: 0, y: 8, duration: 0.7),

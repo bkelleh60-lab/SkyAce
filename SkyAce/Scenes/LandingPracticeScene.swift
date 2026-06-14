@@ -33,9 +33,9 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     /// Upward correction added to the plane's dy per tap on final approach
     /// (pt/s). Deliberately a fraction of the Phase-1 climb impulse (base
-    /// 320): against gravity (~750 pt/s²) a steady ~5 taps/s holds a gentle
-    /// descent, and a single well-timed flare tap inside the final drop
-    /// softens an untouched ~-180 glide-in into the smooth band.
+    /// 320): against gravity (~750 pt/s²) a steady ~5 taps/s roughly cancels
+    /// gravity for a slow, gentle descent (Smooth), while sparse taps let the
+    /// plane build speed toward Rough/Crash. One tap ≈ a 140 pt/s save.
     static let finalApproachTapImpulse: CGFloat = 140
 
     /// How quickly the runway sheds speed once the approach window opens
@@ -47,27 +47,36 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// (0.0–0.5s) — a beat of "the runway is slowing… there's the zone".
     static let landingZoneRevealDelay: TimeInterval = 0.15
 
+    /// Height above the touchdown surface at which the plane lines up while
+    /// the runway decelerates, and from which it is released into the
+    /// committed final descent the instant the runway halts. This drop
+    /// distance (≈ height − 26.5pt sensor) is what the player taps to manage,
+    /// so it must be tall enough that no taps reaches terminal (Crash) while
+    /// steady taps stay gentle (Smooth) — that spread is the whole skill.
+    /// Kept just under the smallest phone's 0.35-height window (~233pt) so
+    /// crossing the threshold doesn't pop the plane upward onto the band.
+    static let finalApproachHoverHeight: CGFloat = 130
+
     // MARK: - Tunable landing constants (Connor's playtest dials)
     //
-    // Velocity tiers are calibrated against the SKY-94 two-phase approach.
-    // When the runway halts, the floor drops from the final-approach band
-    // (surface + 48) and the plane falls ~21.5pt into the sensor (contact
-    // at center ≈ surface + 26.5), so under gravity (~750 pt/s²):
-    //   ~ -180  untouched glide-in from the band → Rough
-    //   a flare tap (+`finalApproachTapImpulse`) inside that drop lands
-    //   between ~ -40 (last instant) and ~ -115, and a rhythmic ~5 tap/s
-    //   descent holds dy above ~ -90 the whole way down → Smooth
-    //   ≲ -400  arriving from altitude with no descent management
-    //   (terminal) → Crash
-    // The SKY-83 tiers (-300 / -395) assumed hold-to-climb's full-impulse
-    // flare rebound; tap-to-correct makes gentle touchdowns genuinely
-    // reachable, so the tiers reward them.
+    // Velocity tiers are calibrated against the SKY-94 committed final
+    // descent. At the runway's halt the plane is released from the line-up
+    // band (`finalApproachHoverHeight`, ~130pt up) and falls to the sensor
+    // (contact at center ≈ surface + 26.5), a ~103pt drop under tap control.
+    // Under gravity (~750 pt/s²), with each tap adding `finalApproachTapImpulse`:
+    //   no taps → terminal (≈ -394, clamped toward -400) → Crash
+    //   a tap or two during the drop → ~ -160…-330 → Rough
+    //   a steady ~5 tap/s feather holds dy shallow all the way down → Smooth
+    // The earlier build held the plane at surface+48 and dropped it only
+    // ~21.5pt, so every touchdown read ≈ -180 (Rough) and neither Crash nor
+    // Smooth was reachable — raising the band and lengthening the drop is
+    // what restores the three-tier skill spread.
 
     /// Touchdown dy at or above this reads as a Smooth Landing.
-    static let smoothLandingMaxDescent: CGFloat = -120
+    static let smoothLandingMaxDescent: CGFloat = -150
     /// Touchdown dy at or above this (and below smooth) is a Rough Landing;
     /// anything faster is a Crash Landing.
-    static let roughLandingMaxDescent: CGFloat = -300
+    static let roughLandingMaxDescent: CGFloat = -330
 
     static let smoothResetDelay: TimeInterval = 2.5
     static let roughResetDelay: TimeInterval = 2.5
@@ -107,12 +116,15 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// approach window can open. Keeps the hitbox well clear of the
     /// touchdown sensor.
     private var approachFloorY: CGFloat { touchdownSurfaceY + 80 }
-    /// Floor on final approach while the runway is still decelerating: low
-    /// enough to feel "on the deck", high enough that the hitbox bottom
-    /// (center − 13.5) stays clear of the sensor band (surface + 13) until
-    /// the zone halts under the plane. Its height above the contact line
-    /// sets the committed final drop the landing tiers are calibrated to.
-    private var finalApproachFloorY: CGFloat { touchdownSurfaceY + 48 }
+    /// Line-up band the plane holds while the runway decelerates: high
+    /// enough above the sensor (center − 13.5 stays clear of the surface+13
+    /// band) that contact can't fire until the runway halts, and tall enough
+    /// that the post-halt release becomes a real, tappable final descent
+    /// rather than a fixed ~20pt drop. Its height above the contact line is
+    /// the committed drop the landing tiers are calibrated to.
+    private var finalApproachFloorY: CGFloat {
+        touchdownSurfaceY + Self.finalApproachHoverHeight
+    }
     /// Floor once the runway has halted — deep enough to enter the sensor.
     private var landingFloorY: CGFloat { touchdownSurfaceY + 16 }
     /// Where the plane settles so its wheels sit on the touchdown line:

@@ -5,7 +5,11 @@ import SpriteKit
 ///
 /// The tarmac is a row of identical strip tiles inside `tileContainer`,
 /// recycled left-to-right by `updateTiling(in:)` so the runway can keep
-/// scrolling for as long as the free-approach phase lasts. The landing zone
+/// scrolling for as long as the free-approach phase lasts. Each tile is one
+/// centerline-dash period cropped from the flat-shaded middle of the strip
+/// art (see `tileTextureRect`) — NOT the whole picture — so only the
+/// lane-marker tarmac repeats and the painted runway-end threshold bars
+/// never tile across the screen (SKY-94 playtest fix). The landing zone
 /// (indicator + touchdown sensor) sits at the node's local origin and starts
 /// concealed; when the player descends through the approach window the scene
 /// re-anchors the origin with `realignOrigin(toX:)` — a counter-shifted jump
@@ -46,6 +50,18 @@ final class LandingZoneNode: SKNode {
     /// threshold.
     private static let leadInFraction: CGFloat = 0.3
 
+    /// The repeating slice of `runway_strip.png` (1344×240). Pixels 768–967
+    /// span exactly one centerline-dash period (dashes recur every ~199px
+    /// starting at x=174) taken from the strip's flat-shaded middle band, so
+    /// the tarmac brightness barely drifts across the seam. Cropping here
+    /// excludes both the plain approach lead-in (x<174) and the painted
+    /// runway-end threshold bars (x≈1184–1343) — only the dashed lane
+    /// markers tile. Normalized, origin bottom-left, full height.
+    private static let tileTextureRect = CGRect(
+        x: 768.0 / 1344.0, y: 0,
+        width: 199.0 / 1344.0, height: 1.0
+    )
+
     /// Fraction of the strip's height (from its top edge) where the
     /// centerline dashes sit in the runway art — measured rows 114–123 of
     /// 240. The road is drawn in gentle perspective, so the *visual*
@@ -78,16 +94,21 @@ final class LandingZoneNode: SKNode {
 
     private func buildStrip(sceneWidth: CGFloat) {
         let height = LandingZoneNode.runwayHeight
-        let texture = SkySprites.texture(named: SkySprites.runwayStrip)
+
+        // Crop the full strip to the one-dash-period repeating slice. Only
+        // this slice tiles, so the runway-end bars never repeat across screen.
+        let tileTexture = SkySprites.texture(named: SkySprites.runwayStrip)
+            .map { SKTexture(rect: LandingZoneNode.tileTextureRect, in: $0) }
+
         let tileSize: CGSize
-        if let texture = texture {
-            let aspect = texture.size().height > 0
-                ? texture.size().width / texture.size().height
-                : 5.6
+        if let tileTexture = tileTexture {
+            let px = tileTexture.size()
+            let aspect = px.height > 0 ? px.width / px.height : (199.0 / 240.0)
             tileSize = CGSize(width: height * aspect, height: height)
         } else {
-            // Asset missing — neutral tarmac blocks so the mode still plays.
-            tileSize = CGSize(width: sceneWidth * 1.6, height: height)
+            // Asset missing — a modest neutral tarmac tile so the mode still
+            // plays and still tiles/recycles like the real art.
+            tileSize = CGSize(width: sceneWidth * 0.5, height: height)
         }
         stripWidth = tileSize.width
         surfaceDrop = height * LandingZoneNode.surfaceFraction
@@ -101,8 +122,8 @@ final class LandingZoneNode: SKNode {
         let tileCount = max(2, Int(ceil(sceneWidth / stripWidth)) + 2)
         for _ in 0..<tileCount {
             let tile: SKSpriteNode
-            if let texture = texture {
-                tile = SKSpriteNode(texture: texture, size: tileSize)
+            if let tileTexture = tileTexture {
+                tile = SKSpriteNode(texture: tileTexture, size: tileSize)
             } else {
                 tile = SKSpriteNode(color: UIColor(hex: 0x55505E), size: tileSize)
             }

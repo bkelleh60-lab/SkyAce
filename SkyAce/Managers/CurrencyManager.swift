@@ -10,6 +10,10 @@ final class CurrencyManager {
     private enum Key {
         static let coinTotal = "skyace.currency.coinTotal"
         static let ringTotal = "skyace.currency.ringTotal"
+        // SKY-95 Landing Practice daily-reward bookkeeping. Keys are fixed by
+        // the ticket spec.
+        static let landingPracticeCoinsToday = "skyace.landingPracticeCoinsToday"
+        static let landingPracticeLastEarnDate = "skyace.landingPracticeLastEarnDate"
     }
 
     /// Posted whenever `coinTotal` changes. `userInfo["total"]` carries the
@@ -91,12 +95,65 @@ final class CurrencyManager {
         return true
     }
 
+    // MARK: - Landing Practice daily reward (SKY-95)
+
+    /// Coins granted per smooth landing in Landing Practice.
+    static let landingPracticeSmoothLandingReward = 50
+    /// Maximum coins earnable from Landing Practice in a single calendar day.
+    static let landingPracticeDailyCoinCap = 500
+
+    /// Coins already earned from Landing Practice today, or 0 if the stored
+    /// earn date isn't today (a new day, or none recorded yet). Reading this
+    /// also defines the "reset at midnight local time" behavior: the counter is
+    /// scoped to the local calendar day string, so the first earn after
+    /// midnight sees a non-matching date and starts fresh.
+    var landingPracticeCoinsEarnedToday: Int {
+        guard defaults.string(forKey: Key.landingPracticeLastEarnDate)
+                == Self.localDateString(for: Date()) else { return 0 }
+        return defaults.integer(forKey: Key.landingPracticeCoinsToday)
+    }
+
+    /// Grants the smooth-landing reward unless today's Landing Practice cap is
+    /// already reached, adding it to the coin balance via `addCoins`. Returns
+    /// the amount granted (0 when the cap blocks it, so callers can suppress the
+    /// reward indicator). Rough and crash landings never call this.
+    @discardableResult
+    func grantLandingPracticeSmoothLandingReward() -> Int {
+        let reward = Self.landingPracticeSmoothLandingReward
+        let earnedToday = landingPracticeCoinsEarnedToday
+        // All-or-nothing per landing: only grant if the full reward fits under
+        // the cap. The cap (500) is an exact multiple of the reward (50), so
+        // this never leaves an unreachable remainder.
+        guard earnedToday + reward <= Self.landingPracticeDailyCoinCap else { return 0 }
+
+        defaults.set(earnedToday + reward, forKey: Key.landingPracticeCoinsToday)
+        defaults.set(Self.localDateString(for: Date()), forKey: Key.landingPracticeLastEarnDate)
+        addCoins(reward)
+        return reward
+    }
+
+    /// Local-calendar date as an ISO `yyyy-MM-dd` string. Uses the current time
+    /// zone so the daily cap resets at local midnight, and a fixed POSIX
+    /// locale/Gregorian calendar so the format is stable regardless of device
+    /// locale settings.
+    private static func localDateString(for date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone.current
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter.string(from: date)
+    }
+
     #if DEBUG
-    /// Test-only helper. Wipes both totals from UserDefaults and restores the
-    /// default unlock provider so each test starts from a known state.
+    /// Test-only helper. Wipes both totals plus the Landing Practice daily
+    /// bookkeeping from UserDefaults and restores the default unlock provider so
+    /// each test starts from a known state.
     func resetForTesting() {
         defaults.removeObject(forKey: Key.coinTotal)
         defaults.removeObject(forKey: Key.ringTotal)
+        defaults.removeObject(forKey: Key.landingPracticeCoinsToday)
+        defaults.removeObject(forKey: Key.landingPracticeLastEarnDate)
         isContentUnlockedProvider = CurrencyManager.defaultUnlockProvider
     }
     #endif

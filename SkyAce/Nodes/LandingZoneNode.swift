@@ -1,12 +1,20 @@
 import SpriteKit
 
-/// Runway strip + touchdown target for Landing Practice (SKY-83).
+/// Runway strip + touchdown target for Landing Practice (SKY-83, approach
+/// redesign SKY-94).
 ///
-/// Owns both visuals as children — the finite tarmac strip and the landing
-/// zone indicator hovering above the touchdown point — and a single
-/// contact-only sensor sized to the touchdown window. The whole node scrolls
-/// in from the right as one unit and halts with the touchdown point aligned
-/// to the plane's fixed X lane.
+/// The tarmac is a row of identical strip tiles inside `tileContainer`,
+/// recycled left-to-right by `updateTiling(in:)` so the runway can keep
+/// scrolling for as long as the free-approach phase lasts. Each tile is one
+/// centerline-dash period cropped from the flat-shaded middle of the strip
+/// art (see `tileTextureRect`) — NOT the whole picture — so only the
+/// lane-marker tarmac repeats and the painted runway-end threshold bars
+/// never tile across the screen (SKY-94 playtest fix). The landing zone
+/// (indicator + touchdown sensor) sits at the node's local origin and starts
+/// concealed; when the player descends through the approach window the scene
+/// re-anchors the origin with `realignOrigin(toX:)` — a counter-shifted jump
+/// that leaves the tarmac visually untouched — and reveals the zone exactly
+/// where the deceleration will halt it.
 ///
 /// Physics follows the FinishLineNode pattern: detection only
 /// (`PhysicsCategory.landingZone`), no push-back — the scene reads the
@@ -19,8 +27,8 @@ import SpriteKit
 /// landed plane directly against `position.y`.
 final class LandingZoneNode: SKNode {
 
-    /// Rendered tarmac height. The strip art's width follows from its
-    /// aspect ratio so centerline dashes don't stretch.
+    /// Rendered tarmac height. Each tile's width follows from the strip
+    /// art's aspect ratio so centerline dashes don't stretch.
     static let runwayHeight: CGFloat = 110
 
     /// Rendered size of the landing zone indicator box.
@@ -31,14 +39,28 @@ final class LandingZoneNode: SKNode {
     /// (center − 13.5) crosses the band top, i.e. at plane center
     /// ≈ surface + 26.5 — which is exactly where the gear-down sprites'
     /// wheels graze the tarmac at the 2x Free Flight visual scale (wheel
-    /// bottoms sit 22–30pt below center across the four planes). Keeps the
-    /// velocity read and feedback at the moment of *visual* touchdown.
+    /// bottoms sit 22–30pt below the node center across the four planes).
+    /// Keeps the velocity read and feedback at the moment of *visual*
+    /// touchdown.
     static let sensorHeight: CGFloat = 13
 
-    /// Fraction of the strip's width (from its left end) where the
-    /// touchdown zone sits — short of halfway, like real touchdown
-    /// markers near the approach threshold.
-    private static let touchdownFraction: CGFloat = 0.3
+    /// Fraction of one strip tile that leads the node origin on the initial
+    /// scroll-in, so tarmac is already on screen ahead of the zone point —
+    /// short of halfway, like real touchdown markers near the approach
+    /// threshold.
+    private static let leadInFraction: CGFloat = 0.3
+
+    /// The repeating slice of `runway_strip.png` (1344×240). Pixels 768–967
+    /// span exactly one centerline-dash period (dashes recur every ~199px
+    /// starting at x=174) taken from the strip's flat-shaded middle band, so
+    /// the tarmac brightness barely drifts across the seam. Cropping here
+    /// excludes both the plain approach lead-in (x<174) and the painted
+    /// runway-end threshold bars (x≈1184–1343) — only the dashed lane
+    /// markers tile. Normalized, origin bottom-left, full height.
+    private static let tileTextureRect = CGRect(
+        x: 768.0 / 1344.0, y: 0,
+        width: 199.0 / 1344.0, height: 1.0
+    )
 
     /// Fraction of the strip's height (from its top edge) where the
     /// centerline dashes sit in the runway art — measured rows 114–123 of
@@ -47,13 +69,17 @@ final class LandingZoneNode: SKNode {
     /// belongs in the road with its wheels on the dashes.
     private static let surfaceFraction: CGFloat = 0.494
 
-    /// Total rendered width of the runway strip.
+    /// Rendered width of one runway strip tile.
     private(set) var stripWidth: CGFloat = 0
 
     /// How far below the node origin (the strip's top edge) the visual
     /// touchdown line sits. Scenes settle the plane's wheels here and the
     /// touchdown sensor rises from here.
     private(set) var surfaceDrop: CGFloat = 0
+
+    private let tileContainer = SKNode()
+    private var tiles: [SKSpriteNode] = []
+    private let zoneAssembly = SKNode()
 
     init(sceneWidth: CGFloat) {
         super.init()
@@ -68,33 +94,55 @@ final class LandingZoneNode: SKNode {
 
     private func buildStrip(sceneWidth: CGFloat) {
         let height = LandingZoneNode.runwayHeight
-        let strip: SKSpriteNode
-        if let texture = SkySprites.texture(named: SkySprites.runwayStrip) {
-            let aspect = texture.size().height > 0
-                ? texture.size().width / texture.size().height
-                : 5.6
-            strip = SKSpriteNode(
-                texture: texture,
-                size: CGSize(width: height * aspect, height: height)
-            )
+
+        // Crop the full strip to the one-dash-period repeating slice. Only
+        // this slice tiles, so the runway-end bars never repeat across screen.
+        let tileTexture = SkySprites.texture(named: SkySprites.runwayStrip)
+            .map { SKTexture(rect: LandingZoneNode.tileTextureRect, in: $0) }
+
+        let tileSize: CGSize
+        if let tileTexture = tileTexture {
+            let px = tileTexture.size()
+            let aspect = px.height > 0 ? px.width / px.height : (199.0 / 240.0)
+            tileSize = CGSize(width: height * aspect, height: height)
         } else {
-            // Asset missing — neutral tarmac block so the mode still plays.
-            strip = SKSpriteNode(
-                color: UIColor(hex: 0x55505E),
-                size: CGSize(width: sceneWidth * 1.6, height: height)
+            // Asset missing — a modest neutral tarmac tile so the mode still
+            // plays and still tiles/recycles like the real art.
+            tileSize = CGSize(width: sceneWidth * 0.5, height: height)
+        }
+        stripWidth = tileSize.width
+        surfaceDrop = height * LandingZoneNode.surfaceFraction
+
+        tileContainer.zPosition = 0
+        addChild(tileContainer)
+
+        // Enough tiles to span the widest screen plus spares, so a tile that
+        // exits left can always be recycled to the right end before a gap
+        // would scroll into view.
+        let tileCount = max(2, Int(ceil(sceneWidth / stripWidth)) + 2)
+        for _ in 0..<tileCount {
+            let tile: SKSpriteNode
+            if let tileTexture = tileTexture {
+                tile = SKSpriteNode(texture: tileTexture, size: tileSize)
+            } else {
+                tile = SKSpriteNode(color: UIColor(hex: 0x55505E), size: tileSize)
+            }
+            tile.anchorPoint = CGPoint(x: 0, y: 1.0)
+            tiles.append(tile)
+            tileContainer.addChild(tile)
+        }
+        layoutTiles()
+    }
+
+    /// Initial layout: the leading tarmac edge sits `leadInFraction` of a
+    /// tile left of the origin, the rest trailing contiguously to the right.
+    private func layoutTiles() {
+        for (index, tile) in tiles.enumerated() {
+            tile.position = CGPoint(
+                x: stripWidth * (CGFloat(index) - LandingZoneNode.leadInFraction),
+                y: 0
             )
         }
-        stripWidth = strip.size.width
-        surfaceDrop = strip.size.height * LandingZoneNode.surfaceFraction
-
-        // Origin sits at the strip's top edge over the touchdown point,
-        // with `touchdownFraction` of the strip extending left of the
-        // origin and the rest trailing off to the right. The visual
-        // touchdown line (centerline dashes) sits `surfaceDrop` below.
-        strip.anchorPoint = CGPoint(x: LandingZoneNode.touchdownFraction, y: 1.0)
-        strip.position = .zero
-        strip.zPosition = 0
-        addChild(strip)
     }
 
     private func buildZoneIndicator() {
@@ -109,12 +157,14 @@ final class LandingZoneNode: SKNode {
         // Anchored to the strip's top edge (not the touchdown line) so the
         // box never overlaps the road, including at the bottom of the bob.
         zone.position = CGPoint(x: 0, y: LandingZoneNode.zoneSize.height / 2 + 26)
-        zone.zPosition = 1
         zone.run(SKAction.repeatForever(SKAction.sequence([
             SKAction.moveBy(x: 0, y: 8, duration: 0.7),
             SKAction.moveBy(x: 0, y: -8, duration: 0.7)
         ])))
-        addChild(zone)
+        zoneAssembly.zPosition = 1
+        zoneAssembly.alpha = 0   // concealed until the approach window opens (SKY-94)
+        zoneAssembly.addChild(zone)
+        addChild(zoneAssembly)
     }
 
     private func configurePhysics() {
@@ -132,5 +182,73 @@ final class LandingZoneNode: SKNode {
         pb.contactTestBitMask = PhysicsCategory.plane
         pb.collisionBitMask = 0
         physicsBody = pb
+    }
+
+    // MARK: - Approach scroll support (SKY-94)
+
+    /// Node origin X that puts the tarmac's leading edge just past the right
+    /// screen edge, ready to cruise in.
+    func startOriginX(sceneWidth: CGFloat) -> CGFloat {
+        sceneWidth + stripWidth * LandingZoneNode.leadInFraction + 20
+    }
+
+    /// Scene X of the tarmac's leading (leftmost) edge. At or below zero
+    /// means the strip covers the screen from the left edge — tiling keeps
+    /// the right side covered, so the runway is fully established.
+    func leadingEdgeX(in scene: SKScene) -> CGFloat {
+        tiles
+            .map { tileContainer.convert($0.position, to: scene).x }
+            .min() ?? .greatestFiniteMagnitude
+    }
+
+    /// Recycles any tile that has fully scrolled past the scene's left edge
+    /// to the right end of the row, keeping the tarmac unbroken while the
+    /// node scrolls left. Call once per frame during the approach.
+    func updateTiling(in scene: SKScene) {
+        guard var rightmostX = tiles.map({ $0.position.x }).max() else { return }
+        for tile in tiles {
+            let trailingEdgeX = tileContainer.convert(
+                CGPoint(x: tile.position.x + stripWidth, y: 0), to: scene
+            ).x
+            if trailingEdgeX < 0 {
+                rightmostX += stripWidth
+                tile.position.x = rightmostX
+            }
+        }
+    }
+
+    /// Jumps the node origin — and with it the concealed zone indicator and
+    /// touchdown sensor — to `x` (in the parent's coordinates) while
+    /// counter-shifting the tile row so the tarmac doesn't move on screen.
+    /// Lets the scene anchor the zone exactly where the deceleration will
+    /// halt it, regardless of where the strip happens to be when the player
+    /// commits to the landing.
+    func realignOrigin(toX x: CGFloat) {
+        let delta = x - position.x
+        position.x = x
+        tileContainer.position.x -= delta
+    }
+
+    /// Shows or hides the landing zone indicator. Hidden during the free
+    /// approach phase; revealed when the approach window opens.
+    func setZoneRevealed(_ revealed: Bool, fade: TimeInterval = 0) {
+        zoneAssembly.removeAction(forKey: "zoneReveal")
+        if fade <= 0 {
+            zoneAssembly.alpha = revealed ? 1 : 0
+        } else {
+            zoneAssembly.run(
+                SKAction.fadeAlpha(to: revealed ? 1 : 0, duration: fade),
+                withKey: "zoneReveal"
+            )
+        }
+    }
+
+    /// Resets for a fresh approach: tiles back to the initial lead-in
+    /// layout, counter-shift cleared, zone concealed. The scene repositions
+    /// the node itself.
+    func prepareForApproach() {
+        tileContainer.position = .zero
+        layoutTiles()
+        setZoneRevealed(false)
     }
 }

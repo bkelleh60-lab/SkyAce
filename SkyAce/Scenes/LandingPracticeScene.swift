@@ -658,7 +658,8 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         }
     }
 
-    /// Smooth-tier feedback: touchdown chime, nose-up flare, win haptic, badge.
+    /// Smooth-tier feedback: touchdown chime, nose-up flare, win haptic, badge,
+    /// and — unless today's daily cap is reached — the +50 coin reward (SKY-95).
     private func handleSmoothLanding() {
         run(SKAction.sequence([
             AudioManager.shared.sfxAction(SkySFX.landingTouchdown, fileExtension: "caf"),
@@ -668,7 +669,31 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         plane.playTouchdownFlare()
         SkyHaptics.win()
         showCelebrationBadge()
+
+        // SKY-95: grant 50 coins per smooth landing, capped at 500/day. The
+        // daily-cap bookkeeping and coin grant live in CurrencyManager; it
+        // returns 0 once the cap is reached, in which case no pill is shown and
+        // the badge stands alone.
+        let reward = CurrencyManager.shared.grantLandingPracticeSmoothLandingReward()
+        if reward > 0 {
+            showCoinRewardPill(amount: reward)
+        }
+
         scheduleReset(after: Self.smoothResetDelay)
+    }
+
+    /// Pops the shared coin-reward pill in below the celebration badge, timed to
+    /// land just after the badge's scale-in so the two read in sequence.
+    private func showCoinRewardPill(amount: Int) {
+        let pill = CoinRewardPill(amount: amount)
+        pill.position = CGPoint(x: size.width / 2, y: size.height * 0.48)
+        pill.zPosition = 1
+        pill.alpha = 0
+        feedbackLayer.addChild(pill)
+        pill.run(SKAction.sequence([
+            SKAction.wait(forDuration: 0.45),
+            SKAction.run { [weak pill] in pill?.animateIn() }
+        ]))
     }
 
     /// Rough-tier feedback: impact sound, bounce, world shake, "Bumpy" text.

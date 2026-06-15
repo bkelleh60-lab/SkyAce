@@ -52,6 +52,7 @@
 		B10001000000000000000404 /* RingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000404 /* RingNode.swift */; };
 		B10001000000000000000405 /* FinishLineNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000405 /* FinishLineNode.swift */; };
 		B10001000000000000000406 /* LandingZoneNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000406 /* LandingZoneNode.swift */; };
+		B10001000000000000000407 /* CoinRewardPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000407 /* CoinRewardPill.swift */; };
 		B10001000000000000000501 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000501 /* GameScene.swift */; };
 		B10001000000000000000502 /* MenuScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000502 /* MenuScene.swift */; };
 		B10001000000000000000503 /* MapScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000503 /* MapScene.swift */; };
@@ -137,6 +138,7 @@
 		F10001000000000000000404 /* RingNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingNode.swift; sourceTree = "<group>"; };
 		F10001000000000000000405 /* FinishLineNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FinishLineNode.swift; sourceTree = "<group>"; };
 		F10001000000000000000406 /* LandingZoneNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingZoneNode.swift; sourceTree = "<group>"; };
+		F10001000000000000000407 /* CoinRewardPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinRewardPill.swift; sourceTree = "<group>"; };
 		F10001000000000000000501 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000502 /* MenuScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000503 /* MapScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapScene.swift; sourceTree = "<group>"; };
@@ -244,6 +246,7 @@
 				F10001000000000000000404 /* RingNode.swift */,
 				F10001000000000000000405 /* FinishLineNode.swift */,
 				F10001000000000000000406 /* LandingZoneNode.swift */,
+				F10001000000000000000407 /* CoinRewardPill.swift */,
 			);
 			path = Nodes;
 			sourceTree = "<group>";
@@ -479,6 +482,7 @@
 				B10001000000000000000404 /* RingNode.swift in Sources */,
 				B10001000000000000000405 /* FinishLineNode.swift in Sources */,
 				B10001000000000000000406 /* LandingZoneNode.swift in Sources */,
+				B10001000000000000000407 /* CoinRewardPill.swift in Sources */,
 				B10001000000000000000501 /* GameScene.swift in Sources */,
 				B10001000000000000000502 /* MenuScene.swift in Sources */,
 				B10001000000000000000503 /* MapScene.swift in Sources */,

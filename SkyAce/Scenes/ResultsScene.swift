@@ -113,25 +113,12 @@ final class ResultsScene: SKScene {
             star.run(SKAction.sequence([delay, up, down]))
         }
 
-        // Coin reward pill (gold) with count-up.
-        let pillSize = CGSize(width: 200, height: 48)
-        let pill = SKShapeNode(rectOf: pillSize, cornerRadius: 24)
-        pill.fillColor = SkyColors.skTertiaryContainer
-        pill.strokeColor = .clear
+        // Coin reward pill (gold) with count-up — shared CoinRewardPill so
+        // mission end and Landing Practice render the identical treatment.
+        let pill = CoinRewardPill(amount: 0)
         pill.position = CGPoint(x: size.width / 2, y: size.height * 0.44)
         addChild(pill)
-
-        let coinLabel = CoinAmountNode(
-            prefix: "+ ",
-            amount: "0",
-            fontName: SkyFonts.headlineName,
-            fontSize: 20,
-            color: SkyColors.skOnTertiaryContainer
-        )
-        coinLabel.position = pill.position
-        addChild(coinLabel)
-
-        animateCoinCountUp(node: coinLabel, target: challenge.reward)
+        pill.animateCountUp(to: challenge.reward)
 
         // Buttons
         let next = SkyPillButton(title: "NEXT LEVEL", style: .primary, size: CGSize(width: 240, height: 52)) { [weak self] in
@@ -164,20 +151,6 @@ final class ResultsScene: SKScene {
         addChild(mapLink)
 
         run(AudioManager.shared.sfxAction(SkySFX.win))
-    }
-
-    private func animateCoinCountUp(node: CoinAmountNode, target: Int) {
-        let steps = 30
-        let stepDuration = 0.030
-        var actions: [SKAction] = []
-        for i in 0...steps {
-            let value = Int(round(Double(target) * Double(i) / Double(steps)))
-            actions.append(SKAction.run { [weak node] in
-                node?.setAmount("\(value)")
-            })
-            actions.append(SKAction.wait(forDuration: stepDuration))
-        }
-        node.run(SKAction.sequence(actions))
     }
 
     private func buildConfetti() {

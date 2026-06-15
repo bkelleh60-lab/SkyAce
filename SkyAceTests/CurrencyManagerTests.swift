@@ -101,6 +101,68 @@ final class CurrencyManagerTests: XCTestCase {
         XCTAssertEqual(manager.coinTotal, 100, "Balance must not change on a rejected deduct.")
     }
 
+    // MARK: - Landing Practice daily reward (SKY-95)
+
+    func testLandingPracticeReward_grantsFiftyCoins() {
+        manager.isContentUnlockedProvider = { true }
+        let granted = manager.grantLandingPracticeSmoothLandingReward()
+        XCTAssertEqual(granted, 50)
+        XCTAssertEqual(manager.coinTotal, 50, "Reward must land in the coin balance.")
+        XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 50)
+    }
+
+    func testLandingPracticeReward_accumulatesAcrossLandings() {
+        manager.isContentUnlockedProvider = { true }
+        manager.grantLandingPracticeSmoothLandingReward()
+        manager.grantLandingPracticeSmoothLandingReward()
+        manager.grantLandingPracticeSmoothLandingReward()
+        XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 150)
+        XCTAssertEqual(manager.coinTotal, 150)
+    }
+
+    func testLandingPracticeReward_enforcesDailyCap() {
+        manager.isContentUnlockedProvider = { true }
+        // 10 smooth landings = 500 coins = the daily cap.
+        for _ in 0..<10 {
+            XCTAssertEqual(manager.grantLandingPracticeSmoothLandingReward(), 50)
+        }
+        XCTAssertEqual(manager.landingPracticeCoinsEarnedToday,
+                       CurrencyManager.landingPracticeDailyCoinCap)
+
+        // The 11th smooth landing grants nothing and adds no coins.
+        XCTAssertEqual(manager.grantLandingPracticeSmoothLandingReward(), 0,
+                       "No reward once the daily cap is reached.")
+        XCTAssertEqual(manager.coinTotal, 500,
+                       "Coin balance must not move once capped.")
+    }
+
+    func testLandingPracticeReward_resetsOnNewDay() {
+        manager.isContentUnlockedProvider = { true }
+        // Simulate yesterday's session having hit the cap by writing the stored
+        // keys directly with a stale date.
+        let defaults = UserDefaults.standard
+        defaults.set(500, forKey: "skyace.landingPracticeCoinsToday")
+        defaults.set("2000-01-01", forKey: "skyace.landingPracticeLastEarnDate")
+
+        // A stale date reads as zero earned today, so a fresh grant succeeds and
+        // restarts the counter at the reward amount.
+        XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 0,
+                       "A non-today stored date must read as zero earned today.")
+        XCTAssertEqual(manager.grantLandingPracticeSmoothLandingReward(), 50)
+        XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 50)
+    }
+
+    func testLandingPracticeReward_freeUserAtCoinCap_grantsZeroAndDoesNotConsumeDailyQuota() {
+        manager.isContentUnlockedProvider = { false }
+        manager.addCoins(CurrencyManager.freeCoinCap)
+
+        // At the free wallet cap the reward can't land, so it's all-or-nothing:
+        // no coins, no pill, and the daily quota is left untouched.
+        XCTAssertEqual(manager.grantLandingPracticeSmoothLandingReward(), 0)
+        XCTAssertEqual(manager.coinTotal, CurrencyManager.freeCoinCap)
+        XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 0)
+    }
+
     // MARK: - Notifications
 
     func testAddCoinsPostsNotification() {

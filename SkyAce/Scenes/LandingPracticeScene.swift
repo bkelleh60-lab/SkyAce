@@ -91,6 +91,8 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// anything faster is a Crash Landing.
     static let roughLandingMaxDescent: CGFloat = -340
 
+    /// Seconds each landing result is held on screen before the approach
+    /// auto-resets, per tier.
     static let smoothResetDelay: TimeInterval = 2.5
     static let roughResetDelay: TimeInterval = 2.5
     static let crashResetDelay: TimeInterval = 1.5
@@ -122,7 +124,9 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private var touchdownSurfaceY: CGFloat { groundY - (runway?.surfaceDrop ?? 0) }
     /// Plane lane — same fraction as the Free Flight scenes.
     private var laneX: CGFloat { size.width * 0.28 }
+    /// Plane spawn altitude at the start of each approach.
     private var planeStartY: CGFloat { size.height * 0.55 }
+    /// Ceiling the plane is clamped below so it never leaves the top of screen.
     private var planeMaxY: CGFloat { size.height - 50 }
     /// Floor during the free approach phase — set to the approach window
     /// itself so the plane commits from a consistent altitude. The descent
@@ -149,16 +153,23 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - State
 
+    /// The approach lifecycle: free approach → committed final approach →
+    /// halted runway → landed → resetting back into a fresh approach.
     private enum Phase { case freeApproach, finalApproach, halted, landed, resetting }
 
+    /// Current approach phase.
     private var phase: Phase = .freeApproach
+    /// Container for everything that scrolls and shakes (the HUD sits outside it).
     private let worldNode = SKNode()
+    /// Overlay above the world for landing badges and result text.
     private let feedbackLayer = SKNode()
     // Implicitly unwrapped: both are built in layoutScene() (didMove /
     // didChangeSize rebuild) before any touch or update path can run, and
     // update() additionally guards plane against the teardown window.
     private var plane: PlaneNode!
     private var runway: LandingZoneNode!
+    /// True while a finger is down — drives climb in free approach and the
+    /// hold detection on final approach.
     private var isTouching = false
     /// Wall-clock time the current committed-descent touch began, for
     /// distinguishing a correction tap from a held go-around. Nil unless a
@@ -170,11 +181,14 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// commit check is suppressed (so it doesn't immediately re-commit from
     /// below the window).
     private var isGoingAround = false
+    /// Timestamp of the previous `update(_:)`, for manual delta-time integration.
     private var lastUpdateTime: TimeInterval = 0
     private weak var instructionPrompt: SKLabelNode?
 
     // MARK: - Lifecycle
 
+    /// Sets gravity and the contact delegate, builds the scene, and starts the
+    /// per-plane engine loop.
     override func didMove(to view: SKView) {
         physicsWorld.gravity = CGVector(dx: 0, dy: PlaneNode.gravity)
         physicsWorld.contactDelegate = self
@@ -186,6 +200,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         )
     }
 
+    /// Stops the engine loop as the scene is torn down.
     override func willMove(from view: SKView) {
         super.willMove(from: view)
         AudioManager.shared.stopEngineLoop()
@@ -215,6 +230,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         layoutScene()
     }
 
+    /// Builds the sky, runway, plane, and HUD, then opens the first approach.
     private func layoutScene() {
         addChild(worldNode)
         buildSky()
@@ -229,6 +245,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Sky
 
+    /// Adds the golden-hour gradient backdrop behind the world.
     private func buildSky() {
         let bg = SKSpriteNode(texture: Self.goldenHourTexture(size: size), size: size)
         bg.anchorPoint = .zero
@@ -269,6 +286,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Runway
 
+    /// Creates the runway/landing-zone node off-screen right, ready to cruise in.
     private func buildRunway() {
         runway = LandingZoneNode(sceneWidth: size.width)
         runway.position = CGPoint(x: offscreenRunwayX, y: groundY)
@@ -360,6 +378,8 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Plane
 
+    /// Spawns the player's plane at the lane start with the landing sensor as
+    /// its only contact interest (nothing else collects or crashes here).
     private func buildPlane() {
         plane = PlaneNode(planeID: ProgressManager.shared.selectedPlaneID, visualScale: 2.0)
         plane.position = CGPoint(x: laneX, y: planeStartY)
@@ -374,6 +394,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Top bar
 
+    /// Lays out the EXIT button and mode title in the top safe-area bar.
     private func buildTopBar() {
         let topSafeInset = view?.safeAreaInsets.top ?? 0
         let barCenterY = size.height - topSafeInset - 20
@@ -400,6 +421,8 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - First-time instruction prompt
 
+    /// Shows the one-time "Hold to climb. Release to descend." prompt on the
+    /// player's first-ever Landing Practice session.
     private func showInstructionPromptIfFirstLaunch() {
         guard !ProgressManager.shared.landingPracticeInstructionShown else { return }
         ProgressManager.shared.landingPracticeInstructionShown = true
@@ -435,6 +458,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// two never overlap — e.g. "Tap to correct!" still fading when a held
     /// go-around fires "Go around!".
     private weak var approachCue: SKLabelNode?
+    /// Fades `text` into the cue slot, holds it for `hold` seconds, then fades out.
     private func presentApproachCue(_ text: String, hold: TimeInterval) {
         instructionPrompt?.removeAllActions()
         instructionPrompt?.removeFromParent()
@@ -498,6 +522,9 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Update
 
+    /// Per-frame driver: scrolls the runway, applies climb/tap input, detects
+    /// the commit and go-around moments, clamps the committed descent, and holds
+    /// the plane to its phase floor.
     override func update(_ currentTime: TimeInterval) {
         // The cruise scroll is integrated manually so it can run for an
         // unbounded free approach; clamp dt so a frame hitch can't
@@ -580,12 +607,16 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Touchdown
 
+    /// Physics contact entry point — routes a plane↔landing-zone touch to the
+    /// touchdown handler.
     func didBegin(_ contact: SKPhysicsContact) {
         let categories = contact.bodyA.categoryBitMask | contact.bodyB.categoryBitMask
         guard categories == PhysicsCategory.plane | PhysicsCategory.landingZone else { return }
         handleLandingZoneContact()
     }
 
+    /// Resolves a touchdown: freezes and settles the plane onto the tarmac, then
+    /// dispatches to the smooth/rough/crash tier by its descent rate.
     private func handleLandingZoneContact() {
         // Accept the touchdown across the whole committed descent, not just at
         // full halt. The sensor rides with the runway, so a contact can only
@@ -627,6 +658,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         }
     }
 
+    /// Smooth-tier feedback: touchdown chime, nose-up flare, win haptic, badge.
     private func handleSmoothLanding() {
         run(SKAction.sequence([
             AudioManager.shared.sfxAction(SkySFX.landingTouchdown, fileExtension: "caf"),
@@ -639,6 +671,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         scheduleReset(after: Self.smoothResetDelay)
     }
 
+    /// Rough-tier feedback: impact sound, bounce, world shake, "Bumpy" text.
     private func handleRoughLanding() {
         run(AudioManager.shared.sfxAction(SkySFX.landingRough, fileExtension: "caf"))
         SkyHaptics.hit()
@@ -655,6 +688,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         scheduleReset(after: Self.roughResetDelay)
     }
 
+    /// Crash-tier feedback: impact sound, hard shake, dust burst, retry text.
     private func handleCrashLanding() {
         run(AudioManager.shared.sfxAction(SkySFX.landingCrash, fileExtension: "caf"))
         SkyHaptics.fail()
@@ -666,6 +700,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Feedback visuals
 
+    /// Pops the smooth-landing badge (or a gold fallback) into the feedback layer.
     private func showCelebrationBadge() {
         let width = min(size.width - 90, 300)
         let badgeSize: CGSize
@@ -694,6 +729,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         badge.run(pop)
     }
 
+    /// Fades a single line of result text into the feedback layer.
     private func showFeedbackText(
         _ text: String,
         color: UIColor = .white,
@@ -723,6 +759,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         worldNode.run(SKAction.sequence(actions))
     }
 
+    /// Emits a short-lived dust burst at the crash touchdown point.
     private func burstDustCloud(at point: CGPoint) {
         guard let texture = SkySprites.texture(named: SkySprites.dustCloud) else { return }
         let emitter = SKEmitterNode()
@@ -753,6 +790,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Reset
 
+    /// Schedules `resetForNextApproach()` to run after `delay` seconds.
     private func scheduleReset(after delay: TimeInterval) {
         run(SKAction.sequence([
             SKAction.wait(forDuration: delay),
@@ -807,6 +845,8 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Touch
 
+    /// Routes touches: HUD buttons first, then phase-specific input — hold to
+    /// climb in free approach, tap-to-correct / hold-to-go-around once committed.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
@@ -831,10 +871,12 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             break
         }
     }
+    /// Clears the touch/hold state when the finger lifts.
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         isTouching = false
         committedTouchStartTime = nil
     }
+    /// Clears the touch/hold state if the touch is cancelled.
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
         isTouching = false
         committedTouchStartTime = nil

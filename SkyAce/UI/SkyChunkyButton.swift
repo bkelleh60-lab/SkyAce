@@ -17,9 +17,48 @@ import UIKit
 ///     └─────────────────┘
 ///     ╚═════════════════╝   ← rim (darker primary-dim slab)
 ///
-/// Use via `init(title:iconName:size:handler:)`; call `handleTap()` from the
-/// parent scene's touch handler (same pattern as SkyPillButton).
+/// Use via `init(title:icon:size:style:…:handler:)`; call `handleTap()` from
+/// the parent scene's touch handler (same pattern as SkyPillButton).
 final class SkyChunkyButton: SKNode {
+
+    /// Colour recipe for the body→rim gradient. Three steps: `bodyTop` (bright)
+    /// fades to `mid` across the body, and `mid` fades to `rimBottom` across the
+    /// darker rim slab below it — giving the tactile "convex pill on a dim
+    /// slab" look. `.primary` reproduces the original blue PLAY treatment.
+    struct Style {
+        let bodyTop: UIColor
+        let mid: UIColor          // body bottom + rim top (shared mid tone)
+        let rimBottom: UIColor    // darkest tone at the bottom of the rim
+
+        /// Deep blue primary action (PLAY).
+        static let primary = Style(
+            bodyTop: SkyColors.primaryContainer,
+            mid: SkyColors.primary,
+            rimBottom: UIColor(hex: 0x003F57)   // primary-dim
+        )
+
+        /// Warm orange/peach exploration action (FREE FLIGHT).
+        static let secondary = Style(
+            bodyTop: SkyColors.secondaryContainer,
+            mid: SkyColors.secondaryContainerMid,
+            rimBottom: SkyColors.secondaryContainerDim
+        )
+
+        /// Gold economy action (UPGRADE).
+        static let tertiary = Style(
+            bodyTop: SkyColors.tertiaryContainer,
+            mid: SkyColors.tertiaryContainerMid,
+            rimBottom: SkyColors.tertiaryContainerDim
+        )
+    }
+
+    /// How the icon and label are arranged inside the body. PLAY uses
+    /// `.horizontal` (icon left of label); the narrower two-column buttons use
+    /// `.vertical` (icon stacked above label) so the text isn't clipped.
+    enum ContentLayout {
+        case horizontal
+        case vertical
+    }
 
     let buttonSize: CGSize
     private let rim: SKSpriteNode
@@ -31,32 +70,45 @@ final class SkyChunkyButton: SKNode {
     /// How far the body sits above the rim at rest. Collapses to 0 on press.
     private let rimLift: CGFloat = 8
 
+    /// Designated initialiser.
+    ///
+    /// - Parameters:
+    ///   - icon: pre-built glyph node (sprite/label) drawn centered on `.zero`.
+    ///     Pass `nil` for a text-only button.
+    ///   - style: colour recipe (defaults to the blue `.primary` PLAY look).
+    ///   - cornerRadius: pill radius; defaults to `min(height/2, 36)`.
+    ///   - labelFontSize: title size; PLAY uses 30, the compact buttons 11.
+    ///   - contentLayout: icon/label arrangement (see `ContentLayout`).
     init(title: String,
-         iconName: String? = nil,
+         icon: SKNode? = nil,
          size: CGSize = CGSize(width: 280, height: 88),
+         style: Style = .primary,
+         cornerRadius: CGFloat? = nil,
+         labelFontSize: CGFloat = 30,
+         contentLayout: ContentLayout = .horizontal,
          handler: @escaping () -> Void) {
         self.buttonSize = size
         self.handler = handler
 
-        let radius = min(size.height / 2, 36)
+        let radius = cornerRadius ?? min(size.height / 2, 36)
 
-        // Rim: same width as body, same height, primary-dim, sitting slightly
-        // below the body so only a thin slab of it peeks out.
+        // Rim: same width as body, same height, sitting slightly below the body
+        // so only a thin slab of it peeks out. Steps mid → rimBottom.
         let rimTexture = SkyUIEffects.gradientTexture(
             size: size,
             cornerRadius: radius,
-            top: SkyColors.primary,
-            bottom: UIColor(hex: 0x003F57)   // primary-dim (between primary and onPrimaryContainer)
+            top: style.mid,
+            bottom: style.rimBottom
         )
         self.rim = SKSpriteNode(texture: rimTexture, size: size)
         self.rim.position = CGPoint(x: 0, y: 0)
 
-        // Body: primaryContainer→primary vertical gradient.
+        // Body: bodyTop → mid vertical gradient (the "convex" face).
         let bodyTexture = SkyUIEffects.gradientTexture(
             size: size,
             cornerRadius: radius,
-            top: SkyColors.primaryContainer,
-            bottom: SkyColors.primary
+            top: style.bodyTop,
+            bottom: style.mid
         )
         self.body = SKSpriteNode(texture: bodyTexture, size: size)
         self.body.position = CGPoint(x: 0, y: rimLift)
@@ -64,22 +116,12 @@ final class SkyChunkyButton: SKNode {
         // Label
         self.label = SKLabelNode(text: title)
         self.label.fontName = SkyFonts.headlineItalicName
-        self.label.fontSize = 30
+        self.label.fontSize = labelFontSize
         self.label.fontColor = SkyColors.onPrimary
         self.label.verticalAlignmentMode = .center
         self.label.horizontalAlignmentMode = .center
 
-        // Optional icon (white filled glyph)
-        if let iconName = iconName {
-            self.iconSprite = SkySprites.iconNode(
-                named: iconName,
-                fallbackEmoji: "▶",
-                size: 36,
-                color: SkyColors.onPrimary
-            )
-        } else {
-            self.iconSprite = nil
-        }
+        self.iconSprite = icon
 
         super.init()
 
@@ -92,17 +134,35 @@ final class SkyChunkyButton: SKNode {
         addChild(rim)
         addChild(body)
 
-        // Layout label and optional icon horizontally inside the body.
+        // Layout label and optional icon inside the body.
         if let icon = iconSprite {
-            icon.position = CGPoint(x: -60, y: 0)
+            switch contentLayout {
+            case .horizontal:
+                icon.position = CGPoint(x: -60, y: 0)
+                label.position = CGPoint(x: 18, y: 0)
+            case .vertical:
+                icon.position = CGPoint(x: 0, y: 13)
+                label.position = CGPoint(x: 0, y: -19)
+            }
             body.addChild(icon)
-            label.position = CGPoint(x: 18, y: 0)
         } else {
             label.position = .zero
         }
         body.addChild(label)
 
         isUserInteractionEnabled = false
+    }
+
+    /// Convenience initialiser matching the original PLAY call site: builds the
+    /// icon from an asset name (white glyph) using the default primary style.
+    convenience init(title: String,
+                     iconName: String?,
+                     size: CGSize = CGSize(width: 280, height: 88),
+                     handler: @escaping () -> Void) {
+        let icon = iconName.map {
+            SkySprites.iconNode(named: $0, fallbackEmoji: "▶", size: 36, color: SkyColors.onPrimary)
+        }
+        self.init(title: title, icon: icon, size: size, handler: handler)
     }
 
     required init?(coder aDecoder: NSCoder) { fatalError() }

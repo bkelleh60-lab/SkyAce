@@ -48,6 +48,15 @@ enum SkyColors {
     static let secondaryContainer      = UIColor(hex: 0xFFC69A)
     static let onSecondaryContainer    = UIColor(hex: 0x6F3A00)
 
+    // Depth tones for SkyChunkyButton's peach (FREE FLIGHT) and gold (UPGRADE)
+    // styles. Each gives the body→rim gradient three steps: container (bright
+    // top) → mid (body bottom / rim top) → dim (rim bottom), mirroring how the
+    // primary blue button steps primaryContainer → primary → primary-dim.
+    static let secondaryContainerMid   = UIColor(hex: 0xED9A55)  // darkened peach
+    static let secondaryContainerDim   = UIColor(hex: 0xC06A28)  // rim-dim peach
+    static let tertiaryContainerMid    = UIColor(hex: 0xE5B800)  // darkened gold
+    static let tertiaryContainerDim    = UIColor(hex: 0xB08800)  // rim-dim gold
+
     // Outline variant — ghost borders only (accessibility), 15% alpha
     static let outlineVariant          = UIColor(hex: 0x8FB1D2)
 

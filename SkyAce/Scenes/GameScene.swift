@@ -381,7 +381,15 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// be zero on the first HUD build.
     private func pauseButtonY() -> CGFloat {
         let safeTop = max(topSafeInset, view?.safeAreaInsets.top ?? 0)
-        return size.height / 2 - safeTop - 17 - 8
+        // The centered pause button must clear two things: the Dynamic Island
+        // (the top safe-area inset) and the top HUD card row. The mission /
+        // progress card (top-right) reaches ~71pt below the top edge and
+        // extends toward the center, so a pause button only tucked under the
+        // island still collides with it (and overlaps outright on narrow
+        // devices). Drop it below whichever is lower.
+        let topRowBottom: CGFloat = 71  // mission card center (44) + half-height (27)
+        let pauseHalfHeight: CGFloat = 17
+        return size.height / 2 - max(safeTop, topRowBottom) - pauseHalfHeight - 8
     }
 
     /// Called by `GameViewController.viewSafeAreaInsetsDidChange` so the pause

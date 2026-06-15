@@ -109,6 +109,10 @@ final class GameViewController: UIViewController {
                 $0.setTopInset(insets.top)
                 $0.setHorizontalInsets(left: insets.left, right: insets.right)
             }
+
+        // GameScene's HUD pause button is centered, so it must clear the
+        // Dynamic Island; hand it the top inset once layout settles.
+        (scene as? GameScene)?.applyTopSafeInset(insets.top)
     }
 
     /// Presents the parental gate modally before running a successful closure.

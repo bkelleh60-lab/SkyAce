@@ -314,37 +314,46 @@ final class MenuScene: SKScene {
         let tileSize = CGSize(width: tileWidth, height: 150)
         let slotX = tileWidth + tileGap
 
-        // City tile — free.
-        let city = worldTile(
-            title: "CITY",
-            subtitle: "Dawn skyline.",
-            iconAsset: SkySprites.iconWorldCity,
-            iconFallback: "🏙",
-            locked: false,
-            tileColor: UIColor(hex: 0xFF9A6C),
-            tileSize: tileSize
+        // City tile — free (SKY-91 baked card art).
+        let city = bakedWorldTile(
+            cardAsset: SkySprites.cityCard,
+            tileSize: tileSize,
+            fallbackTitle: "CITY",
+            fallbackSubtitle: "Dawn skyline.",
+            fallbackIconAsset: SkySprites.iconWorldCity,
+            fallbackEmoji: "🏙",
+            fallbackColor: UIColor(hex: 0xFF9A6C)
         )
         city.position = CGPoint(x: -slotX, y: -20)
         city.name = "worldSelectCity"
         card.addChild(city)
 
-        // Mountain tile — requires full unlock.
+        // Mountain tile — requires full unlock (SKY-91 baked card art).
         let unlocked = IAPManager.shared.isContentUnlocked
-        let mountain = worldTile(
-            title: "MOUNTAIN",
-            subtitle: unlocked ? "Alpine peaks." : "Locked",
-            iconAsset: SkySprites.iconWorldMountain,
-            iconFallback: "🏔",
+        let mountain = bakedWorldTile(
+            cardAsset: SkySprites.mountainCard,
+            tileSize: tileSize,
             locked: !unlocked,
-            tileColor: SkyColors.primary,
-            tileSize: tileSize
+            fallbackTitle: "MOUNTAIN",
+            fallbackSubtitle: "Alpine peaks.",
+            fallbackIconAsset: SkySprites.iconWorldMountain,
+            fallbackEmoji: "🏔",
+            fallbackColor: SkyColors.primary
         )
         mountain.position = CGPoint(x: 0, y: -20)
         mountain.name = "worldSelectMountain"
         card.addChild(mountain)
 
-        // Landing Practice tile — free, no unlock (SKY-83).
-        let landing = landingPracticeTile(tileSize: tileSize)
+        // Landing Practice tile — free, no unlock (SKY-83 / SKY-91 baked card art).
+        let landing = bakedWorldTile(
+            cardAsset: SkySprites.landingPracticeCard,
+            tileSize: tileSize,
+            fallbackTitle: "LANDING",
+            fallbackSubtitle: "Clear for landing.",
+            fallbackIconAsset: SkySprites.landingPracticeCard,
+            fallbackEmoji: "🛬",
+            fallbackColor: UIColor(hex: 0xF3B100)
+        )
         landing.position = CGPoint(x: slotX, y: -20)
         landing.name = "worldSelectLanding"
         card.addChild(landing)
@@ -388,35 +397,8 @@ final class MenuScene: SKScene {
         }
 
         if locked {
-            let overlay = SKShapeNode(rectOf: size, cornerRadius: 20)
-            overlay.fillColor = UIColor.black.withAlphaComponent(0.5)
-            overlay.strokeColor = .clear
-            container.addChild(overlay)
-
             // World-select locked tile has a saturated colored background.
-            let lock = SkySprites.iconNode(
-                named: SkySprites.iconLockWhite,
-                fallbackEmoji: "🔒",
-                size: 34,
-                color: SkyColors.onPrimary
-            )
-            lock.position = CGPoint(x: 0, y: 16)
-            container.addChild(lock)
-
-            let badgeWidth = min(90, size.width - 12)
-            let unlockBadge = SKShapeNode(rectOf: CGSize(width: badgeWidth, height: 26), cornerRadius: 13)
-            unlockBadge.fillColor = SkyColors.tertiaryContainer
-            unlockBadge.strokeColor = .clear
-            unlockBadge.position = CGPoint(x: 0, y: -30)
-            container.addChild(unlockBadge)
-
-            let unlockLabel = SKLabelNode(text: "UNLOCK")
-            unlockLabel.fontName = SkyFonts.headlineName
-            unlockLabel.fontSize = 12
-            unlockLabel.fontColor = SkyColors.skOnTertiaryContainer
-            unlockLabel.verticalAlignmentMode = .center
-            unlockLabel.position = CGPoint(x: 0, y: -30)
-            container.addChild(unlockLabel)
+            addLockOverlay(to: container, size: size)
         }
 
         let titleLabel = SKLabelNode(text: title)
@@ -438,27 +420,72 @@ final class MenuScene: SKScene {
         return container
     }
 
-    /// Landing Practice world tile (SKY-83). The Stitch card art bakes in
-    /// the golden background, "LANDING" label, airfield illustration, and
-    /// "Clear for landing." descriptor, so the tile is a single sprite
-    /// stretched to the shared slot size of its programmatic peers.
-    private func landingPracticeTile(tileSize: CGSize) -> SKNode {
-        if let texture = SkySprites.texture(named: SkySprites.landingPracticeCard) {
-            let container = SKNode()
-            let sprite = SKSpriteNode(texture: texture, size: tileSize)
-            container.addChild(sprite)
-            return container
+    /// Baked world card tile (SKY-91). City, Mountain, and Landing Practice all
+    /// use Stitch card art that bakes in the background color, label,
+    /// illustration, and descriptor, so each tile is a single sprite stretched
+    /// to the shared slot size. Locked worlds (Mountain before unlock) keep the
+    /// lock + UNLOCK badge overlay on top of the card art so the unlock
+    /// affordance stays the focal point. If the art is missing, a programmatic
+    /// peer tile is built from the fallback values so the mode stays reachable.
+    private func bakedWorldTile(cardAsset: String,
+                                tileSize: CGSize,
+                                locked: Bool = false,
+                                fallbackTitle: String,
+                                fallbackSubtitle: String,
+                                fallbackIconAsset: String,
+                                fallbackEmoji: String,
+                                fallbackColor: UIColor) -> SKNode {
+        guard let texture = SkySprites.texture(named: cardAsset) else {
+            return worldTile(
+                title: fallbackTitle,
+                subtitle: locked ? "Locked" : fallbackSubtitle,
+                iconAsset: fallbackIconAsset,
+                iconFallback: fallbackEmoji,
+                locked: locked,
+                tileColor: fallbackColor,
+                tileSize: tileSize
+            )
         }
-        // Asset missing — programmatic peer tile so the mode stays reachable.
-        return worldTile(
-            title: "LANDING",
-            subtitle: "Clear for landing.",
-            iconAsset: SkySprites.landingPracticeCard,
-            iconFallback: "🛬",
-            locked: false,
-            tileColor: UIColor(hex: 0xF3B100),
-            tileSize: tileSize
+        let container = SKNode()
+        let sprite = SKSpriteNode(texture: texture, size: tileSize)
+        container.addChild(sprite)
+        if locked {
+            addLockOverlay(to: container, size: tileSize)
+        }
+        return container
+    }
+
+    /// Lock + UNLOCK badge overlay shared by the programmatic and baked-card
+    /// tile paths so a locked world reads the same regardless of art source.
+    private func addLockOverlay(to container: SKNode, size: CGSize) {
+        let overlay = SKShapeNode(rectOf: size, cornerRadius: 20)
+        overlay.fillColor = UIColor.black.withAlphaComponent(0.5)
+        overlay.strokeColor = .clear
+        container.addChild(overlay)
+
+        let lock = SkySprites.iconNode(
+            named: SkySprites.iconLockWhite,
+            fallbackEmoji: "🔒",
+            size: 34,
+            color: SkyColors.onPrimary
         )
+        lock.position = CGPoint(x: 0, y: 16)
+        container.addChild(lock)
+
+        let badgeWidth = min(90, size.width - 12)
+        let unlockBadge = SKShapeNode(rectOf: CGSize(width: badgeWidth, height: 26), cornerRadius: 13)
+        unlockBadge.fillColor = SkyColors.tertiaryContainer
+        unlockBadge.strokeColor = .clear
+        unlockBadge.position = CGPoint(x: 0, y: -30)
+        container.addChild(unlockBadge)
+
+        let unlockLabel = SKLabelNode(text: "UNLOCK")
+        unlockLabel.fontName = SkyFonts.headlineName
+        unlockLabel.fontSize = 12
+        unlockLabel.fontColor = SkyColors.skOnTertiaryContainer
+        unlockLabel.verticalAlignmentMode = .center
+        unlockLabel.position = CGPoint(x: 0, y: -30)
+        container.addChild(unlockLabel)
     }
 
     private func dismissWorldSelect() {

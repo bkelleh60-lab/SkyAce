@@ -974,12 +974,20 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
 
     private func pauseGame() {
         state.setPaused(true)
+        // Suspend the physics simulation itself. `worldNode.isPaused` only
+        // freezes SKActions in that subtree — the scene's physicsWorld keeps
+        // integrating gravity/momentum, so without this the plane keeps
+        // falling and crashes while "paused". Setting speed to 0 halts
+        // simulation while preserving each body's velocity, so the plane
+        // holds its exact position and resumes with no velocity spike.
+        physicsWorld.speed = 0
         worldNode.isPaused = true
         showPauseOverlay()
     }
 
     private func resumeGame() {
         state.setPaused(false)
+        physicsWorld.speed = 1
         worldNode.isPaused = false
         pauseOverlay?.removeFromParent()
         pauseOverlay = nil

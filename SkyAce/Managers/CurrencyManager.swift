@@ -125,6 +125,13 @@ final class CurrencyManager {
         // the cap. The cap (500) is an exact multiple of the reward (50), so
         // this never leaves an unreachable remainder.
         guard earnedToday + reward <= Self.landingPracticeDailyCoinCap else { return 0 }
+        // A free player's wallet is itself capped at `freeCoinCap`; `addCoins`
+        // would silently clamp a reward that overflows it. Keep this grant
+        // all-or-nothing so the returned amount (and the "+50" pill) never
+        // overstates what actually landed in the balance, and so a clamped
+        // reward doesn't burn the daily quota — at the wallet cap the smooth
+        // landing simply shows the badge alone.
+        if !isContentUnlockedProvider(), coinTotal + reward > Self.freeCoinCap { return 0 }
 
         defaults.set(earnedToday + reward, forKey: Key.landingPracticeCoinsToday)
         defaults.set(Self.localDateString(for: Date()), forKey: Key.landingPracticeLastEarnDate)

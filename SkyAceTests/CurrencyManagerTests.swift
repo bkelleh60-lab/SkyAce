@@ -152,6 +152,17 @@ final class CurrencyManagerTests: XCTestCase {
         XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 50)
     }
 
+    func testLandingPracticeReward_freeUserAtCoinCap_grantsZeroAndDoesNotConsumeDailyQuota() {
+        manager.isContentUnlockedProvider = { false }
+        manager.addCoins(CurrencyManager.freeCoinCap)
+
+        // At the free wallet cap the reward can't land, so it's all-or-nothing:
+        // no coins, no pill, and the daily quota is left untouched.
+        XCTAssertEqual(manager.grantLandingPracticeSmoothLandingReward(), 0)
+        XCTAssertEqual(manager.coinTotal, CurrencyManager.freeCoinCap)
+        XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 0)
+    }
+
     // MARK: - Notifications
 
     func testAddCoinsPostsNotification() {

@@ -288,6 +288,12 @@ enum SkySprites {
     static let dustCloud            = "dust_cloud"
     static let landingPracticeCard  = "free_flight_landing_practice_card"
 
+    // World selector card art (SKY-91). City and Mountain now use the same
+    // baked Stitch card style as Landing Practice — background color, label,
+    // illustration, and descriptor are all baked into a single sprite.
+    static let cityCard             = "free_flight_city_card"
+    static let mountainCard         = "free_flight_mountain_card"
+
     // Free Flight Mountain scenery (Resources/Sprites/). Three parallax
     // background strips, a pine tree foreground strip, and ambient props.
     static let mountainBgFar       = "mountain_bg_far"

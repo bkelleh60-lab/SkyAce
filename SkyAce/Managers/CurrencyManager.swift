@@ -10,9 +10,11 @@ final class CurrencyManager {
     private enum Key {
         static let coinTotal = "skyace.currency.coinTotal"
         static let ringTotal = "skyace.currency.ringTotal"
-        // SKY-95 Landing Practice daily-reward bookkeeping. Keys are fixed by
-        // the ticket spec.
+        /// Coins earned from Landing Practice on `landingPracticeLastEarnDate`
+        /// (SKY-95). Key string is fixed by the ticket spec.
         static let landingPracticeCoinsToday = "skyace.landingPracticeCoinsToday"
+        /// Local calendar day (`yyyy-MM-dd`) the `landingPracticeCoinsToday`
+        /// counter belongs to (SKY-95). Key string is fixed by the ticket spec.
         static let landingPracticeLastEarnDate = "skyace.landingPracticeLastEarnDate"
     }
 

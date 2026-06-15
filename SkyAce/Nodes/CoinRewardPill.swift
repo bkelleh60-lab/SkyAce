@@ -13,7 +13,9 @@ import SpriteKit
 ///   pops it onto the feedback layer after the smooth-landing badge.
 final class CoinRewardPill: SKNode {
 
+    /// The rounded-rect gold background.
     private let pill: SKShapeNode
+    /// The "+ <amount>" coin glyph + number drawn centered on the pill.
     private let coinLabel: CoinAmountNode
 
     /// Builds the pill at its resting scale showing `amount`.
@@ -44,6 +46,7 @@ final class CoinRewardPill: SKNode {
         addChild(coinLabel)
     }
 
+    /// Not supported — this node is only ever built in code.
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
     /// Replaces the displayed amount (re-lays out the icon/number).

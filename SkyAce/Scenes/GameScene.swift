@@ -60,6 +60,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private var pauseButton:     SKNode!
     private var armorBadge: SKLabelNode?
 
+    /// Top safe-area inset (Dynamic Island / notch) pushed in by
+    /// `GameViewController` once layout settles; keeps the centered pause
+    /// button clear of the island. See `pauseButtonY()`.
+    private var topSafeInset: CGFloat = 0
+
     // Pause overlay state
     private var pauseOverlay: SKNode?
 
@@ -344,11 +349,14 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         progressLabel.zPosition = 101
         hudNode.addChild(progressLabel)
 
-        // Pause button (top center)
+        // Pause button (top center). It sits below the top safe-area inset so
+        // it clears the Dynamic Island / notch on iPhone; on iPad (no island)
+        // the inset is small and it stays near the top edge.
+        let pauseCenter = CGPoint(x: 0, y: pauseButtonY())
         let pauseBG = SKShapeNode(rectOf: CGSize(width: 46, height: 34), cornerRadius: 17)
         pauseBG.fillColor = SkyColors.skSurfaceContainerLowest.withAlphaComponent(0.92)
         pauseBG.strokeColor = .clear
-        pauseBG.position = CGPoint(x: 0, y: size.height / 2 - 34)
+        pauseBG.position = pauseCenter
         pauseBG.zPosition = 100
         pauseBG.name = "pauseButton"
         hudNode.addChild(pauseBG)
@@ -359,11 +367,41 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         pauseLabel.fontColor = SkyColors.skOnSurface
         pauseLabel.verticalAlignmentMode = .center
         pauseLabel.horizontalAlignmentMode = .center
-        pauseLabel.position = pauseBG.position
+        pauseLabel.position = pauseCenter
         pauseLabel.zPosition = 101
         pauseLabel.name = "pauseButton"
         hudNode.addChild(pauseLabel)
         self.pauseButton = pauseBG
+    }
+
+    /// Vertical center for the pause button, dropped below the top safe-area
+    /// inset so the Dynamic Island / notch never covers it. The inset comes
+    /// from the live view, or from the value `GameViewController` pushes once
+    /// layout settles (whichever is larger), since `safeAreaInsets` can still
+    /// be zero on the first HUD build.
+    private func pauseButtonY() -> CGFloat {
+        let safeTop = max(topSafeInset, view?.safeAreaInsets.top ?? 0)
+        // The centered pause button must clear two things: the Dynamic Island
+        // (the top safe-area inset) and the top HUD card row. The mission /
+        // progress card (top-right) reaches ~71pt below the top edge and
+        // extends toward the center, so a pause button only tucked under the
+        // island still collides with it (and overlaps outright on narrow
+        // devices). Drop it below whichever is lower.
+        let topRowBottom: CGFloat = 71  // mission card center (44) + half-height (27)
+        let pauseHalfHeight: CGFloat = 17
+        return size.height / 2 - max(safeTop, topRowBottom) - pauseHalfHeight - 8
+    }
+
+    /// Called by `GameViewController.viewSafeAreaInsetsDidChange` so the pause
+    /// button settles below the Dynamic Island even when the first HUD build
+    /// happened before the safe-area insets were known.
+    func applyTopSafeInset(_ inset: CGFloat) {
+        guard inset != topSafeInset else { return }
+        topSafeInset = inset
+        let y = pauseButtonY()
+        hudNode.children
+            .filter { $0.name == "pauseButton" }
+            .forEach { $0.position.y = y }
     }
 
     private func buildStartHint() {
@@ -974,12 +1012,20 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
 
     private func pauseGame() {
         state.setPaused(true)
+        // Suspend the physics simulation itself. `worldNode.isPaused` only
+        // freezes SKActions in that subtree — the scene's physicsWorld keeps
+        // integrating gravity/momentum, so without this the plane keeps
+        // falling and crashes while "paused". Setting speed to 0 halts
+        // simulation while preserving each body's velocity, so the plane
+        // holds its exact position and resumes with no velocity spike.
+        physicsWorld.speed = 0
         worldNode.isPaused = true
         showPauseOverlay()
     }
 
     private func resumeGame() {
         state.setPaused(false)
+        physicsWorld.speed = 1
         worldNode.isPaused = false
         pauseOverlay?.removeFromParent()
         pauseOverlay = nil

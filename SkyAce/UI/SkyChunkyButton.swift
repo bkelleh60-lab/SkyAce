@@ -178,6 +178,9 @@ final class SkyChunkyButton: SKNode {
 
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
+    /// Plays the tap SFX + haptic, runs the press-down/pop-up rim animation,
+    /// then invokes the handler. Call this from the parent scene's touch
+    /// handler when a tap lands on the button.
     func handleTap() {
         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
         SkyHaptics.uiTap()

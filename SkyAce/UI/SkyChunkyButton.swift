@@ -26,10 +26,14 @@ final class SkyChunkyButton: SKNode {
     /// darker rim slab below it — giving the tactile "convex pill on a dim
     /// slab" look. `.primary` reproduces the original blue PLAY treatment.
     struct Style {
+        /// Bright tone at the top of the body's vertical gradient.
         let bodyTop: UIColor
-        let mid: UIColor          // body bottom + rim top (shared mid tone)
-        let rimBottom: UIColor    // darkest tone at the bottom of the rim
-        let label: UIColor        // label/icon colour for legible contrast
+        /// Shared mid tone: bottom of the body gradient and top of the rim.
+        let mid: UIColor
+        /// Darkest tone at the bottom of the rim slab.
+        let rimBottom: UIColor
+        /// Label and icon colour, chosen for legible contrast on the body.
+        let label: UIColor
 
         /// Deep blue primary action (PLAY). White label reads on deep blue.
         static let primary = Style(
@@ -61,7 +65,9 @@ final class SkyChunkyButton: SKNode {
     /// `.horizontal` (icon left of label); the narrower two-column buttons use
     /// `.vertical` (icon stacked above label) so the text isn't clipped.
     enum ContentLayout {
+        /// Icon to the left of the label (the wide PLAY button).
         case horizontal
+        /// Icon stacked above the label (the narrow two-column buttons).
         case vertical
     }
 

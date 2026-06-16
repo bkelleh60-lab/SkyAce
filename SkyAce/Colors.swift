@@ -52,10 +52,15 @@ enum SkyColors {
     // styles. Each gives the body→rim gradient three steps: container (bright
     // top) → mid (body bottom / rim top) → dim (rim bottom), mirroring how the
     // primary blue button steps primaryContainer → primary → primary-dim.
-    static let secondaryContainerMid   = UIColor(hex: 0xED9A55)  // darkened peach
-    static let secondaryContainerDim   = UIColor(hex: 0xC06A28)  // rim-dim peach
-    static let tertiaryContainerMid    = UIColor(hex: 0xE5B800)  // darkened gold
-    static let tertiaryContainerDim    = UIColor(hex: 0xB08800)  // rim-dim gold
+
+    /// Darkened peach — body bottom / rim top for the FREE FLIGHT button.
+    static let secondaryContainerMid   = UIColor(hex: 0xED9A55)
+    /// Deepest peach — rim bottom for the FREE FLIGHT button.
+    static let secondaryContainerDim   = UIColor(hex: 0xC06A28)
+    /// Darkened gold — body bottom / rim top for the UPGRADE button.
+    static let tertiaryContainerMid    = UIColor(hex: 0xE5B800)
+    /// Deepest gold — rim bottom for the UPGRADE button.
+    static let tertiaryContainerDim    = UIColor(hex: 0xB08800)
 
     // Outline variant — ghost borders only (accessibility), 15% alpha
     static let outlineVariant          = UIColor(hex: 0x8FB1D2)

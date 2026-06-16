@@ -224,13 +224,15 @@ final class MenuScene: SKScene {
         SkyNavigator.shared.showMap()
     }
 
+    /// Opens the shop. Invoked by the UPGRADE button's handler; the button's
+    /// `handleTap` already plays the SFX + haptic, so this doesn't repeat them.
     private func tapShop() {
-        // SkyChunkyButton.handleTap already plays SFX + haptic.
         SkyNavigator.shared.showShop()
     }
 
+    /// Opens the world-select overlay. Invoked by the FREE FLIGHT button's
+    /// handler, which already plays the SFX + haptic via `handleTap`.
     private func tapFreeFlight() {
-        // SkyChunkyButton.handleTap already plays SFX + haptic.
         showWorldSelect()
     }
 
@@ -438,6 +440,10 @@ final class MenuScene: SKScene {
 
     // MARK: - Touches
 
+    /// Routes a tap to the world-select overlay (when shown), the chunky PLAY /
+    /// FREE FLIGHT / UPGRADE buttons, the settings gear, or the nav bar — in
+    /// that priority order, walking up the node tree so taps on a label or icon
+    /// still resolve to their button.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)

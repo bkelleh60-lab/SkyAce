@@ -151,87 +151,58 @@ final class MenuScene: SKScene {
 
     // MARK: - Bento row (FREE FLIGHT + UPGRADE)
 
+    /// FREE FLIGHT (peach) and UPGRADE (gold) share the PLAY button's chunky
+    /// pill treatment via `SkyChunkyButton`, just smaller and in their own
+    /// colour styles, so the three buttons read as one cohesive set (SKY-92).
     private func buildBentoRow() {
         let tileSize = CGSize(width: 138, height: 86)
         let rowY = size.height * 0.22
         let gap: CGFloat = 16
         let totalWidth = tileSize.width * 2 + gap
 
-        let freeFlight = buildBentoTile(
-            title: "FREE FLIGHT",
-            iconSpriteName: SkySprites.tabHangar,
-            iconFallback: "✈",
-            sfSymbolName: "airplane",
-            fillColor: SkyColors.secondaryContainer,
-            textColor: SkyColors.onSecondaryContainer,
-            name: "bentoFreeFlight"
+        // Navy plane glyph — matches the navy label for legible contrast on
+        // the light peach face.
+        let planeIcon = SkySprites.sfSymbolNode(
+            systemName: "airplane", size: 28, color: SkyColors.onSurface
         )
+        let freeFlight = SkyChunkyButton(
+            title: "FREE FLIGHT",
+            icon: planeIcon,
+            size: tileSize,
+            style: .secondary,
+            cornerRadius: 28,
+            labelFontSize: 11,
+            contentLayout: .vertical
+        ) { [weak self] in self?.tapFreeFlight() }
         freeFlight.position = CGPoint(
             x: size.width / 2 - totalWidth / 2 + tileSize.width / 2,
             y: rowY
         )
         freeFlight.zPosition = 15
+        freeFlight.name = "bentoFreeFlight"
         addChild(freeFlight)
 
-        let upgrade = buildBentoTile(
-            title: "UPGRADE",
-            iconSpriteName: SkySprites.tabShop,
-            iconFallback: "🛒",
-            fillColor: SkyColors.tertiaryContainer,
-            textColor: SkyColors.onTertiaryContainer,
-            name: "bentoUpgrade"
+        // Navy shopping-bag glyph — the standard (navy) asset matches the navy
+        // label for legible contrast on the gold face.
+        let bagIcon = SkySprites.iconNode(
+            named: SkySprites.tabShop, fallbackEmoji: "🛒", size: 28, color: SkyColors.onSurface
         )
+        let upgrade = SkyChunkyButton(
+            title: "UPGRADE",
+            icon: bagIcon,
+            size: tileSize,
+            style: .tertiary,
+            cornerRadius: 28,
+            labelFontSize: 11,
+            contentLayout: .vertical
+        ) { [weak self] in self?.tapShop() }
         upgrade.position = CGPoint(
             x: size.width / 2 + totalWidth / 2 - tileSize.width / 2,
             y: rowY
         )
         upgrade.zPosition = 15
+        upgrade.name = "bentoUpgrade"
         addChild(upgrade)
-    }
-
-    private func buildBentoTile(title: String,
-                                iconSpriteName: String,
-                                iconFallback: String,
-                                sfSymbolName: String? = nil,
-                                fillColor: UIColor,
-                                textColor: UIColor,
-                                name: String) -> SKNode {
-        let container = SKNode()
-        container.name = name
-
-        let size = CGSize(width: 138, height: 86)
-        let radius: CGFloat = 28
-
-        let shadow = SkyUIEffects.shadowSprite(size: size, cornerRadius: radius, blur: 18, spread: -2)
-        shadow.position = CGPoint(x: 0, y: -2)
-        shadow.zPosition = -1
-        container.addChild(shadow)
-
-        let tileTexture = SkyUIEffects.gradientTexture(
-            size: size, cornerRadius: radius, top: fillColor, bottom: fillColor
-        )
-        let tile = SKSpriteNode(texture: tileTexture, size: size)
-        container.addChild(tile)
-
-        let icon: SKNode
-        if let symbolName = sfSymbolName {
-            icon = SkySprites.sfSymbolNode(systemName: symbolName, size: 28, color: textColor)
-        } else {
-            icon = SkySprites.iconNode(named: iconSpriteName, fallbackEmoji: iconFallback, size: 28, color: textColor)
-        }
-        icon.position = CGPoint(x: 0, y: 12)
-        container.addChild(icon)
-
-        let label = SKLabelNode(text: title)
-        label.fontName = SkyFonts.headlineName
-        label.fontSize = 11
-        label.fontColor = textColor
-        label.verticalAlignmentMode = .center
-        label.horizontalAlignmentMode = .center
-        label.position = CGPoint(x: 0, y: -22)
-        container.addChild(label)
-
-        return container
     }
 
     // MARK: - Bottom nav bar
@@ -253,15 +224,15 @@ final class MenuScene: SKScene {
         SkyNavigator.shared.showMap()
     }
 
+    /// Opens the shop. Invoked by the UPGRADE button's handler; the button's
+    /// `handleTap` already plays the SFX + haptic, so this doesn't repeat them.
     private func tapShop() {
-        AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-        SkyHaptics.uiTap()
         SkyNavigator.shared.showShop()
     }
 
+    /// Opens the world-select overlay. Invoked by the FREE FLIGHT button's
+    /// handler, which already plays the SFX + haptic via `handleTap`.
     private func tapFreeFlight() {
-        AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-        SkyHaptics.uiTap()
         showWorldSelect()
     }
 
@@ -496,6 +467,10 @@ final class MenuScene: SKScene {
 
     // MARK: - Touches
 
+    /// Routes a tap to the world-select overlay (when shown), the chunky PLAY /
+    /// FREE FLIGHT / UPGRADE buttons, the settings gear, or the nav bar — in
+    /// that priority order, walking up the node tree so taps on a label or icon
+    /// still resolve to their button.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
@@ -550,17 +525,12 @@ final class MenuScene: SKScene {
             }
         }
 
-        // Named nodes: bento tiles, settings gear, nav tabs.
+        // Named nodes: settings gear, nav tabs. (FREE FLIGHT / UPGRADE are now
+        // SkyChunkyButtons, handled by the chunky-button walk-up loop above.)
         for node in tapped {
             var n: SKNode? = node
             while let current = n {
                 switch current.name {
-                case "bentoFreeFlight":
-                    tapFreeFlight()
-                    return
-                case "bentoUpgrade":
-                    tapShop()
-                    return
                 case "settingsGear":
                     AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
                     SkyHaptics.uiTap()

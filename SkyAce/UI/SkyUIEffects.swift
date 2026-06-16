@@ -368,16 +368,23 @@ enum SkySprites {
     /// (e.g. nav-bar active/inactive states).
     static func sfSymbolNode(systemName: String, size: CGFloat, color: UIColor) -> SKSpriteNode {
         let config = UIImage.SymbolConfiguration(pointSize: size, weight: .medium)
-        let uiImage = UIImage(systemName: systemName, withConfiguration: config)?
-            .withTintColor(color, renderingMode: .alwaysOriginal)
-        let texture: SKTexture
-        if let img = uiImage {
-            texture = SKTexture(image: img)
-        } else {
-            let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
-            texture = SKTexture(image: renderer.image { _ in })
+        let canvas = CGSize(width: size, height: size)
+        // Rasterize the tinted symbol into an explicit RGBA bitmap. Handing a
+        // `.withTintColor` template image straight to `SKTexture(image:)` drops
+        // the tint and renders the glyph as flat black, so draw it ourselves.
+        let renderer = UIGraphicsImageRenderer(size: canvas)
+        let image = renderer.image { _ in
+            guard let symbol = UIImage(systemName: systemName, withConfiguration: config) else { return }
+            let tinted = symbol.withTintColor(color, renderingMode: .alwaysOriginal)
+            let rect = CGRect(
+                x: (canvas.width - symbol.size.width) / 2,
+                y: (canvas.height - symbol.size.height) / 2,
+                width: symbol.size.width,
+                height: symbol.size.height
+            )
+            tinted.draw(in: rect)
         }
-        return SKSpriteNode(texture: texture, size: CGSize(width: size, height: size))
+        return SKSpriteNode(texture: SKTexture(image: image), size: canvas)
     }
 }
 

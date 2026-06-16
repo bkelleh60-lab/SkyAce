@@ -160,9 +160,10 @@ final class MenuScene: SKScene {
         let gap: CGFloat = 16
         let totalWidth = tileSize.width * 2 + gap
 
-        // White plane glyph — same SF Symbol as before, retinted to white.
+        // Navy plane glyph — matches the navy label for legible contrast on
+        // the light peach face.
         let planeIcon = SkySprites.sfSymbolNode(
-            systemName: "airplane", size: 28, color: SkyColors.onPrimary
+            systemName: "airplane", size: 28, color: SkyColors.onSurface
         )
         let freeFlight = SkyChunkyButton(
             title: "FREE FLIGHT",
@@ -181,9 +182,10 @@ final class MenuScene: SKScene {
         freeFlight.name = "bentoFreeFlight"
         addChild(freeFlight)
 
-        // White shopping-bag glyph — the white variant of the existing asset.
+        // Navy shopping-bag glyph — the standard (navy) asset matches the navy
+        // label for legible contrast on the gold face.
         let bagIcon = SkySprites.iconNode(
-            named: SkySprites.tabShopWhite, fallbackEmoji: "🛒", size: 28, color: SkyColors.onPrimary
+            named: SkySprites.tabShop, fallbackEmoji: "🛒", size: 28, color: SkyColors.onSurface
         )
         let upgrade = SkyChunkyButton(
             title: "UPGRADE",

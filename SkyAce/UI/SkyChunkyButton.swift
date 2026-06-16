@@ -29,26 +29,31 @@ final class SkyChunkyButton: SKNode {
         let bodyTop: UIColor
         let mid: UIColor          // body bottom + rim top (shared mid tone)
         let rimBottom: UIColor    // darkest tone at the bottom of the rim
+        let label: UIColor        // label/icon colour for legible contrast
 
-        /// Deep blue primary action (PLAY).
+        /// Deep blue primary action (PLAY). White label reads on deep blue.
         static let primary = Style(
             bodyTop: SkyColors.primaryContainer,
             mid: SkyColors.primary,
-            rimBottom: UIColor(hex: 0x003F57)   // primary-dim
+            rimBottom: UIColor(hex: 0x003F57),   // primary-dim
+            label: SkyColors.onPrimary
         )
 
-        /// Warm orange/peach exploration action (FREE FLIGHT).
+        /// Warm orange/peach exploration action (FREE FLIGHT). Navy label —
+        /// white is hard to read on the light peach face.
         static let secondary = Style(
             bodyTop: SkyColors.secondaryContainer,
             mid: SkyColors.secondaryContainerMid,
-            rimBottom: SkyColors.secondaryContainerDim
+            rimBottom: SkyColors.secondaryContainerDim,
+            label: SkyColors.onSurface
         )
 
-        /// Gold economy action (UPGRADE).
+        /// Gold economy action (UPGRADE). Navy label for the same reason.
         static let tertiary = Style(
             bodyTop: SkyColors.tertiaryContainer,
             mid: SkyColors.tertiaryContainerMid,
-            rimBottom: SkyColors.tertiaryContainerDim
+            rimBottom: SkyColors.tertiaryContainerDim,
+            label: SkyColors.onSurface
         )
     }
 
@@ -117,7 +122,7 @@ final class SkyChunkyButton: SKNode {
         self.label = SKLabelNode(text: title)
         self.label.fontName = SkyFonts.headlineItalicName
         self.label.fontSize = labelFontSize
-        self.label.fontColor = SkyColors.onPrimary
+        self.label.fontColor = style.label
         self.label.verticalAlignmentMode = .center
         self.label.horizontalAlignmentMode = .center
 

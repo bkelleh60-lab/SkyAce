@@ -91,11 +91,26 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// anything faster is a Crash Landing.
     static let roughLandingMaxDescent: CGFloat = -340
 
-    /// Seconds each landing result is held on screen before the approach
-    /// auto-resets, per tier.
-    static let smoothResetDelay: TimeInterval = 2.5
-    static let roughResetDelay: TimeInterval = 2.5
+    /// Seconds the crash result is held on screen before the approach
+    /// auto-resets (crash stops in place; smooth/rough taxi out — see below).
     static let crashResetDelay: TimeInterval = 1.5
+
+    // MARK: - Landing roll-out (SKY-93)
+    //
+    // On a smooth or rough landing the runway keeps scrolling (the plane stays
+    // in its lane, taxiing forward) and the runway's end — marked by the
+    // threshold bars — rides in from the right, decelerating so the plane halts
+    // just short of the bars before the approach resets: a beat of "you made it
+    // to the end" instead of stopping dead. A crash still stops in place.
+
+    /// Taxi scroll speed (pt/s); the roll's duration is derived from this and
+    /// the distance to the runway end so the feel is device-independent.
+    static let landingRollOutSpeed: CGFloat = 170
+    /// Beat held at the bars after stopping, before the approach resets.
+    static let landingRollOutHold: TimeInterval = 0.9
+    /// The plane halts this many points left of the threshold piece — "right
+    /// before them".
+    static let thresholdBarsStopGap: CGFloat = 50
 
     // MARK: - Derived approach geometry
 
@@ -145,6 +160,47 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// planes.
     private var landedPlaneY: CGFloat { touchdownSurfaceY + 26 }
 
+    // MARK: - Background layer layout (SKY-93)
+
+    /// Screen Y of the horizon line: where the distant hangars stand and where
+    /// the ground plane's top is aligned, so the field reads as one continuous
+    /// surface running from the hangars down past the runway.
+    private var horizonY: CGFloat { groundY + 25 }
+    /// Rendered height of one grass tile (aspect-preserved). Tuned so the
+    /// blade tops poke just above the runway strip's top edge and the body
+    /// falls behind the tarmac, grounding it.
+    private static let grassHeight: CGFloat = 150
+    /// Screen Y of each grass tile's vertical center.
+    private var grassCenterY: CGFloat { groundY - 10 }
+    /// Rendered height of one hangar tile (aspect-preserved). Small + distant.
+    private static let hangarHeight: CGFloat = 130
+    /// Screen Y of each hangar tile's vertical center — placed so the building
+    /// bases (≈0.369 of the tile height below center) land on `horizonY`.
+    private var hangarCenterY: CGFloat { horizonY + 48 }
+    /// Source-image row (top-down fraction) where the ground asset's painted
+    /// horizon sits; this row is aligned to `horizonY` on screen.
+    private static let groundHorizonFrac: CGFloat = 0.36
+    /// Below this image fraction the ground is fully opaque; above it the sky
+    /// band is feathered to transparent so it melts into the gradient at the
+    /// horizon (the asset itself is opaque, so the fade is applied in code).
+    private static let groundFeatherEndFrac: CGFloat = 0.37
+    /// z behind the hangars (so they stand on it) but in front of the sun glow
+    /// (so the ground occludes the sun's lower half at the horizon), and in
+    /// front of the sky gradient.
+    private static let groundZ: CGFloat = -96
+    /// Fraction of `approachScrollSpeed` the distant hangars creep at.
+    private static let hangarParallaxFactor: CGFloat = 0.08
+    /// Rendered height of one approach-light tile (the cropped pole period).
+    private static let approachLightHeight: CGFloat = 72
+    /// Screen Y of the bottom (pole base) of the approach-light row.
+    private var approachLightBaseY: CGFloat { touchdownSurfaceY }
+    /// Sun-glow rendered diameter and its screen-anchored center, sitting on
+    /// the right horizon (the direction the runway cruises in from). Centered
+    /// on `horizonY` so the ground occludes the lower half and the upper half
+    /// glows into the sky like a low setting sun.
+    private static let sunGlowDiameter: CGFloat = 320
+    private var sunGlowCenter: CGPoint { CGPoint(x: size.width * 0.82, y: horizonY) }
+
     /// Continuous hold (seconds) during the committed descent that triggers a
     /// go-around instead of a correction tap. Comfortably longer than a
     /// feathering tap (~0.1s) so trimming the descent can't abort by accident,
@@ -161,6 +217,28 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private var phase: Phase = .freeApproach
     /// Container for everything that scrolls and shakes (the HUD sits outside it).
     private let worldNode = SKNode()
+    /// SKY-93 background environmental layers (all children of `worldNode`,
+    /// behind the runway). Clouds drift on their own actions; the grass and
+    /// approach lights track the tarmac's on-screen motion; the hangars creep
+    /// left on a slow independent parallax.
+    private let cloudLayer = SKNode()
+    private let hangarLayer = SKNode()
+    private let grassLayer = SKNode()
+    private let approachLightLayer = SKNode()
+    /// Mirror-tiled ground plane (SKY-93). Unlike the other layers it scrolls
+    /// by moving its own position (the tiles are a fixed mirrored strip wrapped
+    /// by the pattern period), so the non-tileable painterly plate repeats with
+    /// no visible seam.
+    private let groundLayer = SKNode()
+    /// True only during the smooth/rough taxi roll-out, so the foreground
+    /// layers scroll with the runway then (the scene is `.landed`, which
+    /// otherwise freezes them).
+    private var isRollingOut = false
+    /// Tarmac leading-edge X from the previous frame, used to scroll the grass
+    /// and approach lights at exactly the runway's on-screen rate (so they
+    /// track the tarmac through cruise, deceleration, and the commit-time
+    /// origin realign alike). Sentinel = no live previous frame to diff against.
+    private var lastLeadingEdgeX: CGFloat = .greatestFiniteMagnitude
     /// Overlay above the world for landing badges and result text.
     private let feedbackLayer = SKNode()
     // Implicitly unwrapped: both are built in layoutScene() (didMove /
@@ -216,6 +294,18 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         worldNode.removeAllChildren()
         worldNode.removeAllActions()
         worldNode.removeFromParent()
+        // The background layer nodes are reused properties, so wipe their
+        // subtrees/userData (worldNode.removeAllChildren only detaches them)
+        // before layoutScene re-populates them for the new size (SKY-93).
+        for layer in [cloudLayer, hangarLayer, grassLayer, approachLightLayer, groundLayer] {
+            layer.removeAllChildren()
+            layer.removeAllActions()
+            layer.userData = nil
+            layer.position = .zero
+            layer.removeFromParent()
+        }
+        lastLeadingEdgeX = .greatestFiniteMagnitude
+        isRollingOut = false
         feedbackLayer.removeAllChildren()
         feedbackLayer.removeFromParent()
         plane = nil
@@ -234,6 +324,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private func layoutScene() {
         addChild(worldNode)
         buildSky()
+        buildBackgroundEnvironment()
         buildRunway()
         buildPlane()
         buildTopBar()
@@ -282,6 +373,283 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             )
         }
         return SKTexture(image: image)
+    }
+
+    // MARK: - Background environment (SKY-93)
+
+    /// Layers the five Stitch background assets behind the runway: sun glow,
+    /// drifting clouds, distant hangars, grass strip, and approach lights. All
+    /// sit inside `worldNode` (so they share the landing shake with the sky)
+    /// and behind the runway (z -10) so the tarmac reads as embedded in the
+    /// ground. Each falls back to nothing if its asset is missing — the mode
+    /// still plays on the bare golden-hour gradient.
+    private func buildBackgroundEnvironment() {
+        buildGround()
+        buildSunGlow()
+        buildClouds()
+        buildHangars()
+        buildGrass()
+        buildApproachLights()
+    }
+
+    /// Painterly ground plane filling from the horizon down to the bottom of
+    /// the screen, so the runway sits in a real field instead of floating on
+    /// the bare gradient. Scaled to cover the full width and the horizon-to-
+    /// bottom band (aspect-preserved, overflow runs off-screen), with the
+    /// asset's painted horizon row aligned to `horizonY`. Static — distant
+    /// ground barely moves, so the scrolling grass/runway read as parallax on
+    /// top of it. No-op if the asset is missing.
+    private func buildGround() {
+        guard let texture = featheredGroundTexture() else { return }
+        let px = texture.size()
+        guard px.width > 0, px.height > 0 else { return }
+
+        // Cover the full width AND the horizon→bottom band; take the larger
+        // scale so neither dimension leaves a gap (excess runs off-screen).
+        let groundBand = horizonY                                  // horizon down to y=0
+        let belowHorizonFrac = 1 - Self.groundHorizonFrac
+        let scale = max(size.width / px.width,
+                        groundBand / (belowHorizonFrac * px.height))
+        let rendered = CGSize(width: px.width * scale, height: px.height * scale)
+        // Horizon row sits (0.5 - frac) of the height above the tile center.
+        let horizonOffset = (0.5 - Self.groundHorizonFrac) * rendered.height
+        let centerY = horizonY - horizonOffset
+
+        groundLayer.zPosition = Self.groundZ
+        worldNode.addChild(groundLayer)
+
+        // Mirror-tiled so the non-tileable plate repeats seamlessly: every
+        // other tile is flipped, so each seam meets its own mirror image and is
+        // pixel-continuous. The strip is wrapped by the 2-tile mirror period in
+        // `scrollGround`, so an even tile count covering the screen across one
+        // full period is enough.
+        let tileW = rendered.width
+        var count = max(4, Int(ceil(size.width / tileW)) + 3)
+        if count % 2 != 0 { count += 1 }
+        for i in 0..<count {
+            let tile = SKSpriteNode(texture: texture, size: rendered)
+            tile.xScale = (i % 2 == 0) ? 1 : -1
+            tile.position = CGPoint(x: tileW * (CGFloat(i) + 0.5), y: centerY)
+            groundLayer.addChild(tile)
+        }
+        let userData = groundLayer.userData ?? NSMutableDictionary()
+        userData["period"] = tileW * 2
+        groundLayer.userData = userData
+    }
+
+    /// Loads the ground asset and feathers its top edge to transparent across
+    /// the sky band, so the opaque field below the horizon melts into the sky
+    /// gradient instead of showing a hard line. Falls back to the raw texture
+    /// (no feather) if the file can't be read as a UIImage for compositing.
+    private func featheredGroundTexture() -> SKTexture? {
+        guard let url = Bundle.main.url(
+                forResource: SkySprites.landingBgGround, withExtension: "png",
+                subdirectory: "Sprites"),
+              let image = UIImage(contentsOfFile: url.path) else {
+            return SkySprites.texture(named: SkySprites.landingBgGround)
+        }
+        let renderer = UIGraphicsImageRenderer(size: image.size)
+        let faded = renderer.image { ctx in
+            image.draw(at: .zero)
+            // destinationOut: drawn alpha = how much to erase. Erase fully at
+            // the very top (transparent sky band) ramping to keep at the
+            // feather end, just below the painted horizon. Untouched below.
+            ctx.cgContext.setBlendMode(.destinationOut)
+            let colors = [UIColor(white: 0, alpha: 1).cgColor,
+                          UIColor(white: 0, alpha: 0).cgColor] as CFArray
+            guard let gradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: colors, locations: [0, 1]
+            ) else { return }
+            ctx.cgContext.drawLinearGradient(
+                gradient,
+                start: CGPoint(x: 0, y: 0),
+                end: CGPoint(x: 0, y: image.size.height * Self.groundFeatherEndFrac),
+                options: []
+            )
+        }
+        return SKTexture(image: faded)
+    }
+
+    /// Soft radial sun bloom sitting on the right horizon, behind the ground
+    /// so its lower half is occluded and it reads as a low setting sun.
+    private func buildSunGlow() {
+        guard let texture = SkySprites.texture(named: SkySprites.landingBgSunGlow) else { return }
+        let glow = SKSpriteNode(
+            texture: texture,
+            size: CGSize(width: Self.sunGlowDiameter, height: Self.sunGlowDiameter)
+        )
+        glow.position = sunGlowCenter
+        // Behind the ground (groundZ -96) so the field occludes the sun's
+        // lower half instead of the glow washing over it.
+        glow.zPosition = -97
+        // Normal alpha blend: the asset is already a soft amber radial with
+        // transparent edges, so it melts into the gradient. (Additive blow it
+        // out to white over the pale horizon.)
+        glow.alpha = 0.85
+        worldNode.addChild(glow)
+    }
+
+    /// Two warm sunset cloud variants drifting slowly left across the upper
+    /// sky, each on its own loop so the pair never lines up repetitively.
+    private func buildClouds() {
+        cloudLayer.zPosition = -90
+        worldNode.addChild(cloudLayer)
+
+        // (assetName, height, centerY fraction, drift seconds across travel).
+        let specs: [(String, CGFloat, CGFloat, TimeInterval)] = [
+            (SkySprites.landingBgCloudsA, 150, 0.80, 46),
+            (SkySprites.landingBgCloudsB, 175, 0.66, 58),
+            (SkySprites.landingBgCloudsA, 110, 0.72, 70)
+        ]
+        for (index, spec) in specs.enumerated() {
+            let (name, height, yFraction, period) = spec
+            guard let texture = SkySprites.texture(named: name) else { continue }
+            let aspect = texture.size().height > 0
+                ? texture.size().width / texture.size().height
+                : 1.5
+            let width = height * aspect
+            let cloud = SKSpriteNode(texture: texture, size: CGSize(width: width, height: height))
+            cloud.alpha = 0.9
+            cloud.zPosition = CGFloat(index)
+            cloudLayer.addChild(cloud)
+            startCloudDrift(cloud, width: width, y: size.height * yFraction, period: period,
+                            phaseFraction: CGFloat(index) / CGFloat(specs.count))
+        }
+    }
+
+    /// Runs `cloud` on an endless right-to-left drift: it enters off the right
+    /// edge, crosses the screen, and wraps back. `phaseFraction` staggers the
+    /// initial position so the clouds don't march in lockstep.
+    private func startCloudDrift(_ cloud: SKSpriteNode, width: CGFloat, y: CGFloat,
+                                 period: TimeInterval, phaseFraction: CGFloat) {
+        let travel = size.width + width
+        let startX = size.width + width / 2
+        let endX = -width / 2
+        let drift = SKAction.moveBy(x: -travel, y: 0, duration: period)
+        let reset = SKAction.moveBy(x: travel, y: 0, duration: 0)
+        cloud.position = CGPoint(x: startX - travel * phaseFraction, y: y)
+        // Run the remainder of the first pass for the staggered start, then loop.
+        let firstLeg = TimeInterval((cloud.position.x - endX) / travel) * period
+        cloud.run(SKAction.sequence([
+            SKAction.moveTo(x: endX, duration: firstLeg),
+            reset,
+            SKAction.repeatForever(SKAction.sequence([drift, reset]))
+        ]))
+    }
+
+    /// Distant hangar silhouettes tiled along the horizon, creeping left on a
+    /// very slow parallax (`hangarParallaxFactor` of the runway speed).
+    private func buildHangars() {
+        hangarLayer.zPosition = -85
+        worldNode.addChild(hangarLayer)
+        buildScrollingTiles(
+            into: hangarLayer,
+            textureName: SkySprites.landingBgHangars,
+            tileHeight: Self.hangarHeight,
+            centerY: hangarCenterY
+        )
+    }
+
+    /// Full-width grass strip tiled beneath and around the runway so the
+    /// tarmac sits in the ground rather than floating. Scrolls with the tarmac.
+    private func buildGrass() {
+        grassLayer.zPosition = -60
+        worldNode.addChild(grassLayer)
+        buildScrollingTiles(
+            into: grassLayer,
+            textureName: SkySprites.landingBgGrass,
+            tileHeight: Self.grassHeight,
+            centerY: grassCenterY
+        )
+    }
+
+    /// Row of approach lights leading along the runway, tiled from a single
+    /// pole period (pixels 94–191 of the 500px source — one ~97px pole spacing)
+    /// so the dots stay evenly spaced across the seam. Scrolls with the tarmac.
+    private func buildApproachLights() {
+        approachLightLayer.zPosition = -55
+        worldNode.addChild(approachLightLayer)
+        // One pole period, cropped to the content band, normalized bottom-left.
+        let period = CGRect(x: 94.0 / 500.0, y: 182.0 / 500.0,
+                            width: 97.0 / 500.0, height: 127.0 / 500.0)
+        let tileTexture = SkySprites.texture(named: SkySprites.landingBgApproachLights)
+            .map { SKTexture(rect: period, in: $0) }
+        guard let tileTexture = tileTexture else { return }
+        let px = tileTexture.size()
+        let aspect = px.height > 0 ? px.width / px.height : (97.0 / 127.0)
+        let tileWidth = Self.approachLightHeight * aspect
+        let centerY = approachLightBaseY + Self.approachLightHeight / 2
+        layoutTileRow(into: approachLightLayer, texture: tileTexture,
+                      tileSize: CGSize(width: tileWidth, height: Self.approachLightHeight),
+                      centerY: centerY)
+    }
+
+    // MARK: - Background tiling helpers
+
+    /// Tiles `textureName` horizontally across `layer`, aspect-preserved to
+    /// `tileHeight`, enough copies to cover the widest screen plus a spare.
+    /// Stores the tile width in `layer.userData` so `scrollLayer` can recycle.
+    /// No-op (leaving the gradient bare) if the asset is missing.
+    private func buildScrollingTiles(into layer: SKNode, textureName: String,
+                                     tileHeight: CGFloat, centerY: CGFloat) {
+        guard let texture = SkySprites.texture(named: textureName) else { return }
+        let s = texture.size()
+        let aspect = s.height > 0 ? s.width / s.height : 1.75
+        layoutTileRow(into: layer, texture: texture,
+                      tileSize: CGSize(width: tileHeight * aspect, height: tileHeight),
+                      centerY: centerY)
+    }
+
+    /// Lays a contiguous row of identical tiles spanning the screen (plus one
+    /// spare for seamless recycling) and records the tile width on the layer.
+    private func layoutTileRow(into layer: SKNode, texture: SKTexture,
+                               tileSize: CGSize, centerY: CGFloat) {
+        let count = max(2, Int(ceil(size.width / tileSize.width)) + 1)
+        for i in 0..<count {
+            let tile = SKSpriteNode(texture: texture, size: tileSize)
+            tile.position = CGPoint(x: tileSize.width * (CGFloat(i) + 0.5), y: centerY)
+            layer.addChild(tile)
+        }
+        let userData = layer.userData ?? NSMutableDictionary()
+        userData["tileWidth"] = tileSize.width
+        layer.userData = userData
+    }
+
+    /// Scrolls the mirror-tiled ground by moving the whole layer and wrapping
+    /// its position by the mirror period, so it repeats seamlessly without
+    /// per-tile recycling (which would break the flipped-tile alternation).
+    private func scrollGround(by dx: CGFloat) {
+        guard dx != 0,
+              let period = groundLayer.userData?["period"] as? CGFloat, period > 0,
+              !groundLayer.children.isEmpty else { return }
+        groundLayer.position.x += dx
+        while groundLayer.position.x <= -period { groundLayer.position.x += period }
+        while groundLayer.position.x > 0 { groundLayer.position.x -= period }
+    }
+
+    /// Shifts a tiled layer by `dx` (negative = left) and recycles any tile
+    /// that has fully left the screen edge to the far end, keeping the row
+    /// unbroken in either scroll direction.
+    private func scrollLayer(_ layer: SKNode, by dx: CGFloat) {
+        guard dx != 0, let tileWidth = layer.userData?["tileWidth"] as? CGFloat,
+              !layer.children.isEmpty else { return }
+        for tile in layer.children { tile.position.x += dx }
+        if dx < 0 {
+            // Moving left: recycle tiles off the left edge to the right end.
+            while let leftmost = layer.children.min(by: { $0.position.x < $1.position.x }),
+                  leftmost.position.x + tileWidth / 2 < 0 {
+                let rightmostX = layer.children.map { $0.position.x }.max() ?? 0
+                leftmost.position.x = rightmostX + tileWidth
+            }
+        } else {
+            // Moving right (roll-out): recycle tiles off the right edge to the left.
+            while let rightmost = layer.children.max(by: { $0.position.x < $1.position.x }),
+                  rightmost.position.x - tileWidth / 2 > size.width {
+                let leftmostX = layer.children.map { $0.position.x }.min() ?? 0
+                rightmost.position.x = leftmostX - tileWidth
+            }
+        }
     }
 
     // MARK: - Runway
@@ -543,6 +911,27 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             runway.updateTiling(in: self)
         }
 
+        // SKY-93: scroll the grass, approach lights, and (slower) hangars at
+        // the tarmac's real on-screen rate by diffing its leading edge frame
+        // to frame. This tracks the runway through the cruise, the commit-time
+        // origin realign (which leaves the edge put), and the deceleration
+        // alike, with no per-layer speed bookkeeping. Clouds drift on their
+        // own actions and are intentionally left out. Frozen outside the live
+        // scroll phases so the reset roll-out can't drag the strips along.
+        if phase == .freeApproach || phase == .finalApproach || phase == .halted || isRollingOut {
+            let edge = runway.leadingEdgeX(in: self)
+            if lastLeadingEdgeX != .greatestFiniteMagnitude {
+                let dx = edge - lastLeadingEdgeX
+                scrollLayer(grassLayer, by: dx)
+                scrollLayer(approachLightLayer, by: dx)
+                scrollLayer(hangarLayer, by: dx * Self.hangarParallaxFactor)
+                scrollGround(by: dx)
+            }
+            lastLeadingEdgeX = edge
+        } else {
+            lastLeadingEdgeX = .greatestFiniteMagnitude
+        }
+
         if isTouching && phase == .freeApproach { plane.climb() }
         plane.update()
 
@@ -637,24 +1026,52 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         feedbackLayer.removeAllChildren()
         feedbackLayer.alpha = 1
 
-        // Freeze the plane and settle it onto the tarmac. Attitude is
-        // per-tier: clean landings flare nose-up; crashes keep the frozen
-        // nose-down descent tilt under the dust cloud (reset re-levels).
+        // Freeze the plane. Attitude is per-tier: clean landings flare
+        // nose-up; crashes keep the frozen nose-down descent tilt under the
+        // dust cloud (reset re-levels). Smooth/rough then taxi to the runway
+        // end (beginLandingRollout owns their settle); a crash settles dead in
+        // place here.
         plane.physicsBody?.velocity = .zero
         plane.physicsBody?.affectedByGravity = false
-        let settle = SKAction.move(
-            to: CGPoint(x: laneX, y: landedPlaneY),
-            duration: 0.15
-        )
-        settle.timingMode = .easeOut
-        plane.run(settle)
 
         if descentRate >= Self.smoothLandingMaxDescent {
             handleSmoothLanding()
         } else if descentRate >= Self.roughLandingMaxDescent {
             handleRoughLanding()
         } else {
+            let settle = SKAction.move(
+                to: CGPoint(x: laneX, y: landedPlaneY),
+                duration: 0.15
+            )
+            settle.timingMode = .easeOut
+            plane.run(settle)
             handleCrashLanding()
+        }
+    }
+
+    /// Smooth/rough ending (SKY-93): the plane settles in its lane, then the
+    /// runway keeps scrolling — the plane taxiing forward — and the runway's
+    /// end rides in from the right, decelerating so the plane halts just short
+    /// of the threshold bars before the approach resets. The touchdown chevron
+    /// is dismissed (its job is done). Crash landings never call this.
+    private func beginLandingRollout() {
+        isRollingOut = true   // let the foreground layers scroll with the taxi
+        runway.setZoneRevealed(false, fade: 0.3)
+
+        // Plane stays in its lane; just settle the wheels onto the tarmac.
+        let settle = SKAction.move(to: CGPoint(x: laneX, y: landedPlaneY), duration: 0.15)
+        settle.timingMode = .easeOut
+        plane.run(settle)
+
+        // Scroll the runway so its end taxis in from the right and stops with
+        // the bars just ahead of the plane, then hold and reset.
+        runway.rollOutToEnd(stopSceneX: laneX, gap: Self.thresholdBarsStopGap,
+                            speed: Self.landingRollOutSpeed) { [weak self] in
+            guard let self = self else { return }
+            self.run(SKAction.sequence([
+                SKAction.wait(forDuration: Self.landingRollOutHold),
+                SKAction.run { [weak self] in self?.resetForNextApproach() }
+            ]))
         }
     }
 
@@ -679,7 +1096,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             showCoinRewardPill(amount: reward)
         }
 
-        scheduleReset(after: Self.smoothResetDelay)
+        beginLandingRollout()
     }
 
     /// Pops the shared coin-reward pill in below the celebration badge, timed to
@@ -696,21 +1113,18 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         ]))
     }
 
-    /// Rough-tier feedback: impact sound, bounce, world shake, "Bumpy" text.
+    /// Rough-tier feedback: impact sound, world shake, "Bumpy" text, then the
+    /// taxi roll-out. No fanfare — the missing celebration is the feedback. The
+    /// old in-place bounce is dropped: a position bounce would fight the taxi
+    /// move, and the shake already sells the rough touchdown.
     private func handleRoughLanding() {
         run(AudioManager.shared.sfxAction(SkySFX.landingRough, fileExtension: "caf"))
         SkyHaptics.hit()
 
-        // Visual bounce off the tarmac, then a brief shake. No fanfare —
-        // the missing celebration is the feedback.
         plane.playTouchdownFlare()
-        plane.run(SKAction.sequence([
-            SKAction.moveBy(x: 0, y: 16, duration: 0.12),
-            SKAction.moveBy(x: 0, y: -16, duration: 0.14)
-        ]))
         shakeWorld(amplitude: 7)
         showFeedbackText("Bumpy Landing")
-        scheduleReset(after: Self.roughResetDelay)
+        beginLandingRollout()
     }
 
     /// Crash-tier feedback: impact sound, hard shake, dust burst, retry text.
@@ -829,6 +1243,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private func resetForNextApproach() {
         guard phase == .landed else { return }
         phase = .resetting
+        isRollingOut = false   // foreground layers freeze through the reset slide
 
         feedbackLayer.run(SKAction.sequence([
             SKAction.fadeOut(withDuration: 0.3),

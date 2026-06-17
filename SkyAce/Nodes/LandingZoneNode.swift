@@ -50,24 +50,25 @@ final class LandingZoneNode: SKNode {
     /// threshold.
     private static let leadInFraction: CGFloat = 0.3
 
-    /// The repeating slice of `runway_strip.png` (1344×240). Pixels 768–967
-    /// span exactly one centerline-dash period (dashes recur every ~199px
-    /// starting at x=174) taken from the strip's flat-shaded middle band, so
-    /// the tarmac brightness barely drifts across the seam. Cropping here
-    /// excludes both the plain approach lead-in (x<174) and the painted
-    /// runway-end threshold bars (x≈1184–1343) — only the dashed lane
-    /// markers tile. Normalized, origin bottom-left, full height.
+    /// The repeating slice of the dashes-only `runway_strip.png` (563×122).
+    /// Pixels x 158–256 span exactly one centerline-dash period (dashes recur
+    /// every ~98px, dash ≈48px / gap ≈49px) over the tarmac content band (rows
+    /// 0–116; the bottom 6px is transparent), so the tarmac brightness barely
+    /// drifts across the seam. The runway-end threshold is a separate asset
+    /// (`runway_threshold.png`), so the strip is pure repeating tarmac.
+    /// Normalized, origin bottom-left (rows map to 1−row/height): the content
+    /// band's lower edge (row 116) sits 6/122 from the bottom.
     private static let tileTextureRect = CGRect(
-        x: 768.0 / 1344.0, y: 0,
-        width: 199.0 / 1344.0, height: 1.0
+        x: 158.0 / 563.0, y: 6.0 / 122.0,
+        width: 98.0 / 563.0, height: 116.0 / 122.0
     )
 
-    /// Fraction of the strip's height (from its top edge) where the
-    /// centerline dashes sit in the runway art — measured rows 114–123 of
-    /// 240. The road is drawn in gentle perspective, so the *visual*
-    /// touchdown line is the dash row, not the strip's top edge: a plane
-    /// belongs in the road with its wheels on the dashes.
-    private static let surfaceFraction: CGFloat = 0.494
+    /// Fraction of the cropped tile's height (from its top edge) where the
+    /// centerline dashes sit in the runway art — dash row 56 within the 0–116
+    /// content band ⇒ 56/116 ≈ 0.483. The road is drawn in gentle perspective,
+    /// so the *visual* touchdown line is the dash row, not the strip's top
+    /// edge: a plane belongs in the road with its wheels on the dashes.
+    private static let surfaceFraction: CGFloat = 0.483
 
     /// Rendered width of one runway strip tile.
     private(set) var stripWidth: CGFloat = 0
@@ -77,14 +78,34 @@ final class LandingZoneNode: SKNode {
     /// touchdown sensor rises from here.
     private(set) var surfaceDrop: CGFloat = 0
 
+    /// Painted content band of `runway_threshold.png` (299×251): the runway
+    /// cross-section (borders + tarmac + "19" + bars) spans rows 3–245, so the
+    /// piece aligns with the tarmac tiles when anchored top-edge at the strip
+    /// top. Normalized, origin bottom-left (lower edge row 245 ⇒ 6/251).
+    private static let thresholdContentRect = CGRect(
+        x: 0, y: 6.0 / 251.0, width: 1.0, height: 242.0 / 251.0
+    )
+
+    /// Fraction of the threshold's width over which its left edge is feathered
+    /// to transparent, so its (slightly darker) surface blends into the strip
+    /// tarmac instead of meeting it with a hard seam. Kept inside the plain
+    /// left margin — the "19" begins at x≈18/299 ≈ 0.06 — so the digits aren't
+    /// touched.
+    private static let thresholdLeftFeatherFrac: CGFloat = 0.055
+
     private let tileContainer = SKNode()
     private var tiles: [SKSpriteNode] = []
     private let zoneAssembly = SKNode()
+    /// Runway-end threshold bars (SKY-93). Hidden during the approach; the
+    /// scene reveals them at the taxi stopping point on a smooth/rough landing
+    /// so the plane rolls out and halts just before the end of the runway.
+    private var thresholdBars: SKSpriteNode?
 
     init(sceneWidth: CGFloat) {
         super.init()
         buildStrip(sceneWidth: sceneWidth)
         buildZoneIndicator()
+        buildThresholdBars()
         configurePhysics()
     }
 
@@ -167,6 +188,104 @@ final class LandingZoneNode: SKNode {
         addChild(zoneAssembly)
     }
 
+    /// Builds the hidden runway-end threshold (SKY-93) from
+    /// `runway_threshold.png` — the painted end piece (navy surface, the "19"
+    /// designation, and the threshold bars). Cropped to its content band and
+    /// rendered at the runway height, anchored top-edge at the strip top so it
+    /// lines up with the tarmac tiles and reads as the runway's final segment.
+    private func buildThresholdBars() {
+        guard let texture = LandingZoneNode.featheredThresholdTexture() else { return }
+        let px = texture.size()
+        let aspect = px.height > 0 ? px.width / px.height : (299.0 / 242.0)
+        let h = LandingZoneNode.runwayHeight
+        let sprite = SKSpriteNode(texture: texture, size: CGSize(width: h * aspect, height: h))
+        sprite.anchorPoint = CGPoint(x: 0.5, y: 1.0)
+        sprite.position = .zero
+        sprite.zPosition = 0.5   // above the tarmac tiles (0), below the chevron (1)
+        sprite.alpha = 0
+        addChild(sprite)
+        thresholdBars = sprite
+    }
+
+    /// Loads `runway_threshold.png`, crops it to its content band, and feathers
+    /// the left edge to transparent so the threshold's surface blends into the
+    /// strip tarmac with no hard seam. Falls back to an unfeathered crop if the
+    /// file can't be read for compositing.
+    private static func featheredThresholdTexture() -> SKTexture? {
+        guard let url = Bundle.main.url(
+                forResource: SkySprites.runwayThreshold, withExtension: "png",
+                subdirectory: "Sprites"),
+              let image = UIImage(contentsOfFile: url.path),
+              let cg = image.cgImage,
+              let cropped = cg.cropping(to: CGRect(x: 0, y: 3, width: cg.width, height: cg.height - 9))
+        else {
+            return SkySprites.texture(named: SkySprites.runwayThreshold)
+                .map { SKTexture(rect: thresholdContentRect, in: $0) }
+        }
+        let w = cropped.width, h = cropped.height
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: w, height: h))
+        let faded = renderer.image { ctx in
+            UIImage(cgImage: cropped).draw(in: CGRect(x: 0, y: 0, width: w, height: h))
+            // destinationOut: erase fully at the left edge, ramping to keep by
+            // the feather end — a soft fade into the tarmac beneath.
+            ctx.cgContext.setBlendMode(.destinationOut)
+            let colors = [UIColor(white: 0, alpha: 1).cgColor,
+                          UIColor(white: 0, alpha: 0).cgColor] as CFArray
+            guard let gradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: colors, locations: [0, 1]
+            ) else { return }
+            ctx.cgContext.drawLinearGradient(
+                gradient,
+                start: CGPoint(x: 0, y: 0),
+                end: CGPoint(x: CGFloat(w) * thresholdLeftFeatherFrac, y: 0),
+                options: []
+            )
+        }
+        return SKTexture(image: faded)
+    }
+
+    /// Rolls the runway out to its end for a completed landing (SKY-93). The
+    /// plane stays fixed in its lane; instead the whole strip scrolls left so
+    /// the runway's end travels in from the right and halts with the threshold
+    /// bars `gap` points right of `stopSceneX` (the lane). The bars are parked
+    /// at the rightmost tile edge — the runway's actual end — and the tiles are
+    /// NOT recycled during the roll (the scene is `.landed`, so `update` does
+    /// not tile), so the tarmac runs out past the bars and they read as the
+    /// terminus. `completion` fires when the roll stops. No-op (immediate
+    /// completion) if the bars or scene are missing or the geometry degenerates.
+    func rollOutToEnd(stopSceneX: CGFloat, gap: CGFloat, speed: CGFloat,
+                      completion: @escaping () -> Void) {
+        guard let bars = thresholdBars, let scene = scene, !tiles.isEmpty else {
+            completion(); return
+        }
+        // Rightmost tarmac edge (the runway's end) in scene coordinates.
+        let rightEdgeScene = tiles
+            .map { tileContainer.convert(CGPoint(x: $0.position.x + stripWidth, y: 0), to: scene).x }
+            .max() ?? position.x
+        let barsW = bars.size.width
+        // Park the bars at the very end of the tarmac (off-screen right) and
+        // reveal them; they ride in as the strip scrolls.
+        bars.removeAction(forKey: "barsReveal")
+        bars.position.x = (rightEdgeScene - barsW / 2) - position.x
+        bars.alpha = 1
+
+        // Scroll left so the bars' left edge halts `gap` right of the lane.
+        let distance = (rightEdgeScene - barsW) - (stopSceneX + gap)
+        guard distance > 0 else { completion(); return }
+        let duration = max(0.9, min(2.0, TimeInterval(distance / speed)))
+        let roll = SKAction.moveBy(x: -distance, y: 0, duration: duration)
+        roll.timingMode = .easeOut
+        run(SKAction.sequence([roll, SKAction.run(completion)]), withKey: "rollOut")
+    }
+
+    /// Hides the threshold bars and cancels any roll (reset / next approach).
+    func hideThresholdBars() {
+        removeAction(forKey: "rollOut")
+        thresholdBars?.removeAction(forKey: "barsReveal")
+        thresholdBars?.alpha = 0
+    }
+
     private func configurePhysics() {
         // Sensor band rising from the touchdown line over the zone. The
         // plane's descending hitbox enters it right where the indicator
@@ -244,11 +363,12 @@ final class LandingZoneNode: SKNode {
     }
 
     /// Resets for a fresh approach: tiles back to the initial lead-in
-    /// layout, counter-shift cleared, zone concealed. The scene repositions
-    /// the node itself.
+    /// layout, counter-shift cleared, zone and end bars concealed. The scene
+    /// repositions the node itself.
     func prepareForApproach() {
         tileContainer.position = .zero
         layoutTiles()
         setZoneRevealed(false)
+        hideThresholdBars()
     }
 }

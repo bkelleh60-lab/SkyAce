@@ -283,10 +283,23 @@ enum SkySprites {
     // gear-down variants are looked up by PlaneNode as "<planeID>_gear_down"
     // and intentionally have no constants here.
     static let runwayStrip          = "runway_strip"
+    static let runwayThreshold      = "runway_threshold"
     static let landingZoneIndicator = "landing_zone_indicator"
     static let badgeSmoothLanding   = "badge_smooth_landing"
     static let dustCloud            = "dust_cloud"
     static let landingPracticeCard  = "free_flight_landing_practice_card"
+
+    // Landing Practice background environmental polish (SKY-93). Five Stitch
+    // PNGs layered behind the runway to make the airfield read as a real
+    // place at golden hour. Positioning, z-ordering, and scroll rates are all
+    // handled in LandingPracticeScene.
+    static let landingBgGround         = "landing_bg_ground"
+    static let landingBgGrass          = "landing_bg_grass"
+    static let landingBgCloudsA        = "landing_bg_clouds_a"
+    static let landingBgCloudsB        = "landing_bg_clouds_b"
+    static let landingBgSunGlow        = "landing_bg_sun_glow"
+    static let landingBgHangars        = "landing_bg_hangars"
+    static let landingBgApproachLights = "landing_bg_approach_lights"
 
     // World selector card art (SKY-91). City and Mountain now use the same
     // baked Stitch card style as Landing Practice — background color, label,

@@ -95,6 +95,12 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// auto-resets (crash stops in place; smooth/rough taxi out — see below).
     static let crashResetDelay: TimeInterval = 1.5
 
+    /// Duration (each direction) of the SKY-100 fade-to-black reset: the screen
+    /// fades to black over this, the scene resets silently while fully black,
+    /// then fades back in over this on a fresh approach. Replaces the old
+    /// visible scroll-rewind + plane fade so the player never watches the reset.
+    static let landingResetFadeDuration: TimeInterval = 0.4
+
     // MARK: - Landing roll-out (SKY-93)
     //
     // On a smooth or rough landing the runway keeps scrolling (the plane stays
@@ -241,6 +247,10 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private var lastLeadingEdgeX: CGFloat = .greatestFiniteMagnitude
     /// Overlay above the world for landing badges and result text.
     private let feedbackLayer = SKNode()
+    /// Full-screen black overlay driving the SKY-100 fade-to-black reset. Added
+    /// once per layout, above every other node (HUD included), alpha 0 at rest
+    /// so it sits ready and invisible until a reset animates its alpha.
+    private let resetFadeOverlay = SKSpriteNode()
     // Implicitly unwrapped: both are built in layoutScene() (didMove /
     // didChangeSize rebuild) before any touch or update path can run, and
     // update() additionally guards plane against the teardown window.
@@ -330,8 +340,24 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         buildTopBar()
         feedbackLayer.zPosition = 150
         addChild(feedbackLayer)
+        buildResetFadeOverlay()
         showInstructionPromptIfFirstLaunch()
         beginApproach()
+    }
+
+    /// Builds the persistent full-screen black overlay for the fade-to-black
+    /// reset (SKY-100). Sized to the scene, anchored bottom-left to match the
+    /// scene's origin, alpha 0 and above every other node so a reset can take
+    /// the whole screen — play area and HUD alike — to black and back.
+    private func buildResetFadeOverlay() {
+        resetFadeOverlay.removeAllActions()
+        resetFadeOverlay.color = .black
+        resetFadeOverlay.size = size
+        resetFadeOverlay.anchorPoint = .zero
+        resetFadeOverlay.position = .zero
+        resetFadeOverlay.alpha = 0
+        resetFadeOverlay.zPosition = 1000
+        addChild(resetFadeOverlay)
     }
 
     // MARK: - Sky
@@ -1237,50 +1263,49 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         ]))
     }
 
-    /// Fades the plane out where it stands and back in at the start
-    /// position while the runway scrolls back out, then begins a fresh
-    /// approach. One action sequence — no teleporting in view.
+    /// Fade-to-black reset (SKY-100): the screen fades to black, every scene
+    /// element snaps back to its approach-start state while fully black (nothing
+    /// the player can see reposition or scroll), then the screen fades back in
+    /// on a fresh approach already cruising in. Replaces the old visible
+    /// scroll-rewind + plane fade.
     private func resetForNextApproach() {
         guard phase == .landed else { return }
         phase = .resetting
-        isRollingOut = false   // foreground layers freeze through the reset slide
+        isRollingOut = false   // foreground layers freeze through the black reset
 
-        feedbackLayer.run(SKAction.sequence([
-            SKAction.fadeOut(withDuration: 0.3),
-            SKAction.run { [weak self] in
-                self?.feedbackLayer.removeAllChildren()
-                self?.feedbackLayer.alpha = 1
-            }
+        resetFadeOverlay.removeAllActions()
+        resetFadeOverlay.run(SKAction.sequence([
+            SKAction.fadeIn(withDuration: Self.landingResetFadeDuration),
+            SKAction.run { [weak self] in self?.performSilentReset() },
+            SKAction.fadeOut(withDuration: Self.landingResetFadeDuration)
         ]))
+    }
 
-        // Scroll the tarmac fully off the right edge, then rebuild the
-        // strip for the next pass. The fresh approach starts from the
-        // runway's own chain so the cruise scroll can never overlap a
-        // roll-out still in flight.
-        let clearDistance = size.width - runway.leadingEdgeX(in: self) + 40
-        let rollOut = SKAction.moveBy(x: clearDistance, y: 0, duration: 0.7)
-        rollOut.timingMode = .easeIn
-        runway.run(SKAction.sequence([
-            rollOut,
-            SKAction.run { [weak self] in
-                guard let self = self else { return }
-                self.runway.prepareForApproach()
-                self.runway.position.x = self.offscreenRunwayX
-                self.beginApproach()
-            }
-        ]))
+    /// The reset block run while the screen is fully black: snaps every element
+    /// to its approach-start state with no animation, then opens a fresh
+    /// approach so the runway is already cruising in as the screen fades back.
+    /// The approach lights and drifting clouds keep running underneath the
+    /// overlay throughout — nothing here stops them.
+    private func performSilentReset() {
+        // Clear any feedback (badge / result text / coin pill) instantly.
+        feedbackLayer.removeAllChildren()
+        feedbackLayer.alpha = 1
 
-        plane.run(SKAction.sequence([
-            SKAction.fadeOut(withDuration: 0.25),
-            SKAction.run { [weak self] in
-                guard let self = self else { return }
-                self.plane.position = CGPoint(x: self.laneX, y: self.planeStartY)
-                self.plane.setLandingGear(deployed: false)
-                self.plane.levelOut(duration: 0)
-                self.plane.physicsBody?.velocity = .zero
-            },
-            SKAction.fadeIn(withDuration: 0.25)
-        ]))
+        // Plane back to the start altitude and lane: gear stowed, levelled,
+        // velocity cleared.
+        plane.position = CGPoint(x: laneX, y: planeStartY)
+        plane.setLandingGear(deployed: false)
+        plane.levelOut(duration: 0)
+        plane.physicsBody?.velocity = .zero
+
+        // Runway off-screen right, tiles/zone/end-bars reset to the lead-in.
+        runway.prepareForApproach()
+        runway.position.x = offscreenRunwayX
+        // Drop the stale leading-edge so the foreground scroll diff restarts
+        // cleanly from the repositioned runway (no first-frame jump).
+        lastLeadingEdgeX = .greatestFiniteMagnitude
+
+        beginApproach()
     }
 
     // MARK: - Touch

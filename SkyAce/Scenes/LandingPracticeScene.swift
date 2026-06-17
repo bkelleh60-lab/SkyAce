@@ -190,31 +190,11 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private static let groundZ: CGFloat = -96
     /// Fraction of `approachScrollSpeed` the distant hangars creep at.
     private static let hangarParallaxFactor: CGFloat = 0.08
-    /// Rendered height of one approach-light pole (the cropped pole period).
-    private static let approachLightHeight: CGFloat = 72
-    /// Rendered diameter of the glow orb sitting at the top of each pole.
-    private static let approachLightGlowSize: CGFloat = 60
-    /// Horizontal inset from each screen edge for the first/last light, so the
-    /// row of `approachLightCount` lights spreads across the lower screen.
-    private static let approachLightSideInset: CGFloat = 34
     /// Screen Y of the bottom (pole base) of the approach-light row — just
-    /// above the grass layer, at the runway surface line. Tunable position of
-    /// the whole light bar (SKY-99 `approachLightY`).
+    /// above the grass layer, at the runway surface line. The wave node
+    /// (`ApproachLightWaveNode`, SKY-99) is positioned here; everything else
+    /// about the lights lives in that node.
     private var approachLightY: CGFloat { touchdownSurfaceY }
-
-    // MARK: - Approach-light wave (SKY-99)
-    //
-    // A finite, ordered row of screen-anchored lights that cycle white → red →
-    // green in a left-to-right wave, like sequenced ALSF approach lighting.
-    // Each light runs the same color sequence, started after a per-index delay
-    // so the color travels across the bar instead of all flashing at once.
-
-    /// Number of lights in the row (8–10 reads as a clear wave on every screen).
-    static let approachLightCount = 9
-    /// Seconds each color shows before transitioning to the next.
-    static let approachLightColorDuration: TimeInterval = 0.4
-    /// Delay between successive lights starting their cycle — the wave's "speed".
-    static let approachLightWaveDelta: TimeInterval = 0.12
     /// Sun-glow rendered diameter and its screen-anchored center, sitting on
     /// the right horizon (the direction the runway cruises in from). Centered
     /// on `horizonY` so the ground occludes the lower half and the upper half
@@ -242,7 +222,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// behind the runway). Clouds drift on their own actions; the grass tracks
     /// the tarmac's on-screen motion; the hangars creep left on a slow
     /// independent parallax. (The approach lights are screen-anchored and live
-    /// outside `worldNode` — see `buildApproachLightArray`, SKY-99.)
+    /// outside `worldNode` — see `ApproachLightWaveNode`, SKY-99.)
     private let cloudLayer = SKNode()
     private let hangarLayer = SKNode()
     private let grassLayer = SKNode()
@@ -345,8 +325,11 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     private func layoutScene() {
         addChild(worldNode)
         buildSky()
-        buildBackgroundEnvironment()
+        // Runway before the background: the approach-light row is positioned at
+        // `approachLightY`, which reads `runway.surfaceDrop`, so the runway must
+        // exist first or the lights fall back to the nil-runway Y (SKY-99).
         buildRunway()
+        buildBackgroundEnvironment()
         buildPlane()
         buildTopBar()
         feedbackLayer.zPosition = 150
@@ -411,7 +394,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         buildClouds()
         buildHangars()
         buildGrass()
-        buildApproachLightArray()
+        buildApproachLights()
     }
 
     /// Painterly ground plane filling from the horizon down to the bottom of
@@ -586,105 +569,15 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         )
     }
 
-    /// Builds the screen-anchored approach-light wave (SKY-99): a finite,
-    /// ordered row of `approachLightCount` lights spread across the lower
-    /// screen, each a cropped pole capped by a colored glow orb. The lights
-    /// don't scroll — like real threshold lighting they mark a fixed point —
-    /// so they're added directly to the scene rather than the scrolling
-    /// `worldNode`. Each glow runs the white→red→green color cycle on a
-    /// per-index delay so the color travels left-to-right as a wave, with a
-    /// gentle alpha pulse layered on top for a genuine glow. No-op (bare
-    /// gradient) if the pole or any glow asset is missing.
-    private func buildApproachLightArray() {
-        // One pole period cropped from the source strip (pixels 94–191 of the
-        // 500px image — one ~97px pole), normalized bottom-left.
-        let period = CGRect(x: 94.0 / 500.0, y: 182.0 / 500.0,
-                            width: 97.0 / 500.0, height: 127.0 / 500.0)
-        guard let poleTexture = SkySprites.texture(named: SkySprites.landingBgApproachLights)
-            .map({ SKTexture(rect: period, in: $0) }) else { return }
-        // All three glow colors must be present — the wave can't read with a
-        // missing color, so bail rather than show a partial cycle.
-        guard let whiteGlow = SkySprites.texture(named: SkySprites.approachLightGlowWhite),
-              let redGlow = SkySprites.texture(named: SkySprites.approachLightGlowRed),
-              let greenGlow = SkySprites.texture(named: SkySprites.approachLightGlowGreen)
-        else { return }
-        let glowTextures = [whiteGlow, redGlow, greenGlow]
-
-        let container = SKNode()
-        // Same layer as the old scrolling poles: behind the runway (z -10) so
-        // the glows poke above the tarmac top edge without the pole bleeding
-        // through.
-        container.zPosition = -55
-        addChild(container)
-
-        let poleAspect = poleTexture.size().height > 0
-            ? poleTexture.size().width / poleTexture.size().height
-            : (97.0 / 127.0)
-        let poleSize = CGSize(width: Self.approachLightHeight * poleAspect,
-                              height: Self.approachLightHeight)
-        let glowSize = CGSize(width: Self.approachLightGlowSize,
-                              height: Self.approachLightGlowSize)
-
-        // Even horizontal spread across the lower screen, inset from both edges.
-        let count = Self.approachLightCount
-        let firstX = Self.approachLightSideInset
-        let lastX = size.width - Self.approachLightSideInset
-        let span = lastX - firstX
-        let step = count > 1 ? span / CGFloat(count - 1) : 0
-
-        for i in 0..<count {
-            let light = SKNode()
-            light.position = CGPoint(x: firstX + step * CGFloat(i), y: approachLightY)
-            container.addChild(light)
-
-            // Pole anchored at its base so it stands up from `approachLightY`.
-            let pole = SKSpriteNode(texture: poleTexture, size: poleSize)
-            pole.anchorPoint = CGPoint(x: 0.5, y: 0.0)
-            pole.zPosition = 0
-            light.addChild(pole)
-
-            // Glow orb at the top center of the pole, starting white.
-            let glow = SKSpriteNode(texture: whiteGlow, size: glowSize)
-            glow.position = CGPoint(x: 0, y: poleSize.height)
-            glow.zPosition = 1
-            // Normal alpha blend (not additive): the orbs sit over the bright
-            // golden-hour sky, and additive blending washes the white and red
-            // phases into the warm background — only green survived. The assets
-            // are pre-baked blooms with opaque colored cores, so normal blending
-            // renders true white/red/green and the core still covers the pole
-            // underneath with no color bleed.
-            glow.blendMode = .alpha
-            light.addChild(glow)
-
-            runApproachLightWave(on: glow, textures: glowTextures, index: i)
-        }
-    }
-
-    /// Drives one glow orb's wave: the shared white→red→green color cycle,
-    /// started after `index × approachLightWaveDelta` so the color sweeps the
-    /// row left-to-right, plus the FinishLineNode alpha-pulse idiom layered on
-    /// top so the light genuinely glows rather than swapping flat colors.
-    private func runApproachLightWave(on glow: SKSpriteNode, textures: [SKTexture], index: Int) {
-        let hold = Self.approachLightColorDuration
-        // setTexture(_:) keeps the node's size, so the orb never resizes as it
-        // cycles. One step per color, each shown for `hold` seconds.
-        let cycle = SKAction.repeatForever(SKAction.sequence(
-            textures.map { texture in
-                SKAction.sequence([SKAction.setTexture(texture), SKAction.wait(forDuration: hold)])
-            }
-        ))
-        let startDelay = SKAction.wait(forDuration: Double(index) * Self.approachLightWaveDelta)
-        glow.run(SKAction.sequence([startDelay, cycle]))
-
-        // Independent alpha pulse (FinishLineNode.swift aura idiom), but with a
-        // higher floor than the finish-line aura: these orbs are the primary
-        // colored light, and over the bright golden-hour sky a dip to ~0.4
-        // washes the red and white phases out to amber. A subtle 0.7↔1.0 pulse
-        // keeps all three colors vivid and distinct while still glowing.
-        glow.run(SKAction.repeatForever(SKAction.sequence([
-            SKAction.fadeAlpha(to: 0.7, duration: 0.5),
-            SKAction.fadeAlpha(to: 1.0, duration: 0.5)
-        ])))
+    /// Spawns the screen-anchored approach-light wave (SKY-99). All the visuals
+    /// and the wave animation live in `ApproachLightWaveNode`; the scene only
+    /// positions it at the runway surface line, behind the runway (z -10) so the
+    /// glows poke above the tarmac top edge, and never scrolls it.
+    private func buildApproachLights() {
+        let lights = ApproachLightWaveNode(sceneWidth: size.width)
+        lights.position = CGPoint(x: 0, y: approachLightY)
+        lights.zPosition = -55
+        addChild(lights)
     }
 
     // MARK: - Background tiling helpers

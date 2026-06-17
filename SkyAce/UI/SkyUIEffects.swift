@@ -301,6 +301,14 @@ enum SkySprites {
     static let landingBgHangars        = "landing_bg_hangars"
     static let landingBgApproachLights = "landing_bg_approach_lights"
 
+    // Approach-light wave glow overlays (SKY-99). Three same-size additive
+    // glow orbs — white, red, green — swapped on each light to drive the
+    // left-to-right ALSF wave. Layered over the cropped pole from
+    // `landingBgApproachLights`.
+    static let approachLightGlowWhite  = "approach_light_glow_white"
+    static let approachLightGlowRed    = "approach_light_glow_red"
+    static let approachLightGlowGreen  = "approach_light_glow_green"
+
     // World selector card art (SKY-91). City and Mountain now use the same
     // baked Stitch card style as Landing Practice — background color, label,
     // illustration, and descriptor are all baked into a single sprite.

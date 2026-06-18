@@ -319,7 +319,7 @@ final class MenuScene: SKScene {
         let landing = bakedWorldTile(
             cardAsset: SkySprites.landingPracticeCard,
             tileSize: tileSize,
-            fallbackTitle: "LANDING",
+            fallbackTitle: "RUNWAY CHALLENGE",
             fallbackSubtitle: "Clear for landing.",
             fallbackIconAsset: SkySprites.landingPracticeCard,
             fallbackEmoji: "🛬",

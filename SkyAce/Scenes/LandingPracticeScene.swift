@@ -805,7 +805,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         exit.zPosition = 200
         addChild(exit)
 
-        let label = SKLabelNode(text: "LANDING PRACTICE")
+        let label = SKLabelNode(text: "RUNWAY CHALLENGE")
         label.fontName = SkyFonts.headlineName
         label.fontSize = 13
         label.fontColor = SkyColors.skOnPrimary

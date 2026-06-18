@@ -287,7 +287,7 @@ enum SkySprites {
     static let landingZoneIndicator = "landing_zone_indicator"
     static let badgeSmoothLanding   = "badge_smooth_landing"
     static let dustCloud            = "dust_cloud"
-    static let landingPracticeCard  = "free_flight_landing_practice_card"
+    static let landingPracticeCard  = "free_flight_runway_challenge_card"
 
     // Landing Practice background environmental polish (SKY-93). Five Stitch
     // PNGs layered behind the runway to make the airfield read as a real

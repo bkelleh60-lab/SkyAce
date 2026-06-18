@@ -1,45 +1,63 @@
 import SpriteKit
 
-/// Screen-anchored approach-light wave for Landing Practice (SKY-99).
+/// Approach-light wave for Landing Practice (SKY-99).
 ///
-/// A finite, ordered row of `lightCount` lights — each a cropped pole capped by
-/// a colored glow orb — that cycle white → red → green in a left-to-right wave,
-/// like sequenced ALSF approach lighting. Each glow runs the same color cycle
-/// started after a per-index delay so the color travels across the row, with a
-/// subtle alpha pulse layered on top for a genuine glow.
+/// An infinite, recycling row of glowing orbs that scroll in with the rest of
+/// the airfield (grass, runway) and cycle white → red → green in a wave that
+/// runs along them toward the threshold, like sequenced ALSF approach lighting.
 ///
-/// The node lays its lights out in its own coordinate space (origin = pole
-/// base; x spans the scene width, inset from both edges). The scene positions
-/// the whole node at the runway surface line and never scrolls it — like real
-/// threshold lighting it marks a fixed point. Builds nothing (leaving the mode
-/// on its bare gradient) if the pole or any glow asset is missing.
+/// The orbs scroll at the runway's on-screen rate (driven by the scene calling
+/// `scroll(by:)` each frame) and recycle off the left edge to the right so the
+/// row never runs out — the same trick the grass strip uses. Because a
+/// recycling row has no stable per-orb identity, the colour wave is driven by
+/// each orb's **world position** plus time (`updateWave(time:)`), not a fixed
+/// index: the recycle jump is a whole number of wave periods, so colours stay
+/// continuous across it. A subtle alpha pulse layered on top keeps the orbs
+/// genuinely glowing. Builds nothing if any glow asset is missing.
 final class ApproachLightWaveNode: SKNode {
 
     // MARK: - Tunables
 
-    /// Number of lights in the row (8–10 reads as a clear wave on every screen).
-    static let lightCount = 9
-    /// Seconds each color shows before transitioning to the next.
+    /// Seconds each colour shows before transitioning to the next; the full
+    /// white→red→green cycle therefore takes `colorDuration × 3`.
     static let colorDuration: TimeInterval = 0.4
-    /// Delay between successive lights starting their cycle — the wave's "speed".
-    static let waveDelta: TimeInterval = 0.12
+    /// Distance between adjacent orbs (points) — wider than the orb so the
+    /// lights read as a row of distinct points rather than a merged strip.
+    private static let spacing: CGFloat = 64
+    /// Rendered diameter of each glow orb.
+    private static let glowSize: CGFloat = 52
+    /// Orb-centre height above the row base (the node origin sits at the runway
+    /// surface line; the orbs hover just above the grass — no poles, SKY-99).
+    private static let glowCenterHeight: CGFloat = 52
+    /// Orbs per full colour cycle in world space — adjacent orbs are offset by
+    /// `1 / lightsPerCycle` of a cycle, giving the travelling-wave gradient.
+    private static let lightsPerCycle = 10
+    /// How far past a screen edge an orb travels before it recycles.
+    private static let recycleMargin: CGFloat = 80
 
-    /// Rendered height of one pole (the cropped pole period).
-    private static let poleHeight: CGFloat = 72
-    /// Rendered diameter of the glow orb sitting at the top of each pole.
-    private static let glowSize: CGFloat = 60
-    /// Horizontal inset from each screen edge for the first/last light, so the
-    /// row of `lightCount` lights spreads across the lower screen.
-    private static let sideInset: CGFloat = 34
-    /// One pole period cropped from the source strip (pixels 94–191 of the
-    /// 500px image — one ~97px pole), normalized bottom-left.
-    private static let poleCrop = CGRect(x: 94.0 / 500.0, y: 182.0 / 500.0,
-                                         width: 97.0 / 500.0, height: 127.0 / 500.0)
+    // MARK: - State
+
+    private var glowTextures: [SKTexture] = []
+    private var orbs: [SKSpriteNode] = []
+    /// World-space X of each orb (screen X = worldX − cameraX). Conserved as the
+    /// orb scrolls; bumped by a whole `trainWidth` (an integer number of wave
+    /// periods) on recycle so the colour wave stays continuous.
+    private var worldX: [CGFloat] = []
+    /// Accumulated leftward scroll — increases as the world slides left.
+    private var cameraX: CGFloat = 0
+    /// Total width of the orb train; also the recycle jump distance.
+    private var trainWidth: CGFloat = 0
+    private var sceneWidth: CGFloat = 0
+
+    /// Spatial period (world points) of one full white→red→green cycle.
+    private var spatialPeriod: CGFloat { Self.spacing * CGFloat(Self.lightsPerCycle) }
+    /// Seconds for the wave to advance one full cycle along the row.
+    private var cycleDuration: TimeInterval { Self.colorDuration * 3 }
 
     // MARK: - Init
 
-    /// Builds the row spanning `sceneWidth`, anchored at the node origin (the
-    /// pole base). Adds no children if the pole or any glow asset is missing.
+    /// Builds a row wide enough to cover `sceneWidth` plus a full recycling
+    /// train. Adds no orbs if any glow asset is missing.
     init(sceneWidth: CGFloat) {
         super.init()
         build(sceneWidth: sceneWidth)
@@ -50,78 +68,78 @@ final class ApproachLightWaveNode: SKNode {
     // MARK: - Build
 
     private func build(sceneWidth: CGFloat) {
-        guard let poleTexture = SkySprites.texture(named: SkySprites.landingBgApproachLights)
-                .map({ SKTexture(rect: Self.poleCrop, in: $0) }),
-              // All three glow colors must be present — the wave can't read with
-              // a missing color, so bail rather than show a partial cycle.
-              let whiteGlow = SkySprites.texture(named: SkySprites.approachLightGlowWhite),
-              let redGlow = SkySprites.texture(named: SkySprites.approachLightGlowRed),
-              let greenGlow = SkySprites.texture(named: SkySprites.approachLightGlowGreen)
+        guard let white = SkySprites.texture(named: SkySprites.approachLightGlowWhite),
+              let red = SkySprites.texture(named: SkySprites.approachLightGlowRed),
+              let green = SkySprites.texture(named: SkySprites.approachLightGlowGreen)
         else { return }
-        let glowTextures = [whiteGlow, redGlow, greenGlow]
+        glowTextures = [white, red, green]
+        self.sceneWidth = sceneWidth
 
-        let poleAspect = poleTexture.size().height > 0
-            ? poleTexture.size().width / poleTexture.size().height
-            : (97.0 / 127.0)
-        let poleSize = CGSize(width: Self.poleHeight * poleAspect, height: Self.poleHeight)
-        let glowSize = CGSize(width: Self.glowSize, height: Self.glowSize)
+        // Train length: enough to cover the screen plus both recycle margins,
+        // rounded up to a whole number of wave cycles so the recycle jump
+        // (`trainWidth`) is an integer number of spatial periods — that keeps
+        // the colour wave continuous when an orb wraps around.
+        let needed = (sceneWidth + 2 * Self.recycleMargin) / Self.spacing
+        let cycles = max(2, Int((needed / CGFloat(Self.lightsPerCycle)).rounded(.up)))
+        let count = cycles * Self.lightsPerCycle
+        trainWidth = CGFloat(count) * Self.spacing
 
-        // Even horizontal spread across the lower screen, inset from both edges.
-        let firstX = Self.sideInset
-        let lastX = sceneWidth - Self.sideInset
-        let step = Self.lightCount > 1 ? (lastX - firstX) / CGFloat(Self.lightCount - 1) : 0
+        let glow = CGSize(width: Self.glowSize, height: Self.glowSize)
+        for i in 0..<count {
+            let x = CGFloat(i) * Self.spacing
+            let orb = SKSpriteNode(texture: white, size: glow)
+            orb.position = CGPoint(x: x, y: Self.glowCenterHeight)
+            orb.zPosition = 1
+            // Normal alpha blend (not additive): over the bright golden-hour sky
+            // additive washes the white and red phases into the warm background.
+            // The assets carry their own alpha, so normal blending renders true
+            // white/red/green.
+            orb.blendMode = .alpha
+            addChild(orb)
+            orbs.append(orb)
+            worldX.append(x)
 
-        for i in 0..<Self.lightCount {
-            let light = SKNode()
-            light.position = CGPoint(x: firstX + step * CGFloat(i), y: 0)
-            addChild(light)
-
-            // Pole anchored at its base so it stands up from the node origin.
-            let pole = SKSpriteNode(texture: poleTexture, size: poleSize)
-            pole.anchorPoint = CGPoint(x: 0.5, y: 0.0)
-            pole.zPosition = 0
-            light.addChild(pole)
-
-            // Glow orb at the top center of the pole, starting white.
-            let glow = SKSpriteNode(texture: whiteGlow, size: glowSize)
-            glow.position = CGPoint(x: 0, y: poleSize.height)
-            glow.zPosition = 1
-            // Normal alpha blend (not additive): the orbs sit over the bright
-            // golden-hour sky, and additive blending washes the white and red
-            // phases into the warm background — only green survived. The assets
-            // are pre-baked blooms with their own alpha, so normal blending
-            // renders true white/red/green and the orb covers the pole top.
-            glow.blendMode = .alpha
-            light.addChild(glow)
-
-            runWave(on: glow, textures: glowTextures, index: i)
+            // Subtle independent alpha pulse so each orb genuinely glows.
+            orb.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.7, duration: 0.5),
+                .fadeAlpha(to: 1.0, duration: 0.5)
+            ])))
         }
     }
 
-    /// Drives one glow orb's wave: the shared white→red→green color cycle,
-    /// started after `index × waveDelta` so the color sweeps the row
-    /// left-to-right, plus an alpha pulse (FinishLineNode aura idiom) so the
-    /// light genuinely glows rather than swapping flat colors.
-    private func runWave(on glow: SKSpriteNode, textures: [SKTexture], index: Int) {
-        // setTexture(_:) keeps the node's size, so the orb never resizes as it
-        // cycles. One step per color, each shown for `colorDuration` seconds.
-        let cycle = SKAction.repeatForever(SKAction.sequence(
-            textures.map { texture in
-                SKAction.sequence([SKAction.setTexture(texture),
-                                   SKAction.wait(forDuration: Self.colorDuration)])
-            }
-        ))
-        let startDelay = SKAction.wait(forDuration: Double(index) * Self.waveDelta)
-        glow.run(SKAction.sequence([startDelay, cycle]))
+    // MARK: - Per-frame driving (called by the scene)
 
-        // Independent alpha pulse, but with a higher floor than the finish-line
-        // aura: these orbs are the primary colored light, and over the bright
-        // golden-hour sky a deep dip washes the red and white phases out to
-        // amber. A subtle 0.7↔1.0 pulse keeps all three colors vivid while
-        // still glowing.
-        glow.run(SKAction.repeatForever(SKAction.sequence([
-            SKAction.fadeAlpha(to: 0.7, duration: 0.5),
-            SKAction.fadeAlpha(to: 1.0, duration: 0.5)
-        ])))
+    /// Scrolls the row by `dx` (negative = left, with the runway) and recycles
+    /// any orb that has travelled a full margin past either screen edge, jumping
+    /// it a whole `trainWidth` to the far side so the row stays unbroken.
+    func scroll(by dx: CGFloat) {
+        guard !orbs.isEmpty, dx != 0 else { return }
+        cameraX -= dx
+        for i in orbs.indices {
+            var sx = worldX[i] - cameraX
+            if dx < 0 {
+                while sx < -Self.recycleMargin { worldX[i] += trainWidth; sx = worldX[i] - cameraX }
+            } else {
+                while sx > sceneWidth + Self.recycleMargin { worldX[i] -= trainWidth; sx = worldX[i] - cameraX }
+            }
+            orbs[i].position.x = sx
+        }
+    }
+
+    /// Advances the colour wave for the given scene time. Each orb's colour is a
+    /// function of its world position and `time`, so the wave runs smoothly
+    /// along the row (toward the threshold) and animates even while the scroll
+    /// is paused. Only swaps a texture when the colour actually changes.
+    func updateWave(time: TimeInterval) {
+        guard !orbs.isEmpty else { return }
+        let period = spatialPeriod
+        let phaseOverTime = time / cycleDuration
+        for i in orbs.indices {
+            let phase = Double(worldX[i] / period) - phaseOverTime
+            let frac = phase - floor(phase)            // [0, 1)
+            let index = min(2, Int(frac * 3))          // white | red | green
+            let texture = glowTextures[index]
+            if orbs[i].texture !== texture { orbs[i].texture = texture }
+        }
     }
 }

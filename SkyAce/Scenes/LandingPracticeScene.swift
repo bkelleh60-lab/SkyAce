@@ -219,13 +219,16 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// Container for everything that scrolls and shakes (the HUD sits outside it).
     private let worldNode = SKNode()
     /// SKY-93 background environmental layers (all children of `worldNode`,
-    /// behind the runway). Clouds drift on their own actions; the grass tracks
-    /// the tarmac's on-screen motion; the hangars creep left on a slow
-    /// independent parallax. (The approach lights are screen-anchored and live
-    /// outside `worldNode` — see `ApproachLightWaveNode`, SKY-99.)
+    /// behind the runway). Clouds drift on their own actions; the grass and the
+    /// approach lights track the tarmac's on-screen motion; the hangars creep
+    /// left on a slow independent parallax.
     private let cloudLayer = SKNode()
     private let hangarLayer = SKNode()
     private let grassLayer = SKNode()
+    /// Scrolling wave of approach lights (SKY-99) — a child of `worldNode` that
+    /// scrolls with the grass and recycles. Held so `update(_:)` can drive its
+    /// scroll and colour wave each frame; rebuilt with the scene.
+    private var approachLights: ApproachLightWaveNode?
     /// Mirror-tiled ground plane (SKY-93). Unlike the other layers it scrolls
     /// by moving its own position (the tiles are a fixed mirrored strip wrapped
     /// by the pattern period), so the non-tileable painterly plate repeats with
@@ -307,6 +310,9 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         }
         lastLeadingEdgeX = .greatestFiniteMagnitude
         isRollingOut = false
+        // The scrolling light node is a fresh instance each layout and is torn
+        // down with worldNode above; drop the stale reference before rebuild.
+        approachLights = nil
         feedbackLayer.removeAllChildren()
         feedbackLayer.removeFromParent()
         plane = nil
@@ -569,15 +575,17 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         )
     }
 
-    /// Spawns the screen-anchored approach-light wave (SKY-99). All the visuals
-    /// and the wave animation live in `ApproachLightWaveNode`; the scene only
-    /// positions it at the runway surface line, behind the runway (z -10) so the
-    /// glows poke above the tarmac top edge, and never scrolls it.
+    /// Spawns the approach-light wave (SKY-99). All the visuals and the wave
+    /// animation live in `ApproachLightWaveNode`; the scene positions it at the
+    /// runway surface line inside `worldNode` (behind the runway, z -10, so the
+    /// glows sit in the ground), then drives its scroll and colour wave from
+    /// `update(_:)` so the lights move in with the grass and runway.
     private func buildApproachLights() {
         let lights = ApproachLightWaveNode(sceneWidth: size.width)
         lights.position = CGPoint(x: 0, y: approachLightY)
         lights.zPosition = -55
-        addChild(lights)
+        worldNode.addChild(lights)
+        approachLights = lights
     }
 
     // MARK: - Background tiling helpers
@@ -906,14 +914,13 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             runway.updateTiling(in: self)
         }
 
-        // SKY-93: scroll the grass and (slower) hangars at the tarmac's real
-        // on-screen rate by diffing its leading edge frame to frame. This
-        // tracks the runway through the cruise, the commit-time origin realign
-        // (which leaves the edge put), and the deceleration alike, with no
-        // per-layer speed bookkeeping. Clouds drift on their own actions and
-        // are intentionally left out; the approach-light wave is screen-anchored
-        // (SKY-99) and never scrolls. Frozen outside the live scroll phases so
-        // the reset roll-out can't drag the strips along.
+        // SKY-93: scroll the grass, approach lights, and (slower) hangars at the
+        // tarmac's real on-screen rate by diffing its leading edge frame to
+        // frame. This tracks the runway through the cruise, the commit-time
+        // origin realign (which leaves the edge put), and the deceleration
+        // alike, with no per-layer speed bookkeeping. Clouds drift on their own
+        // actions and are intentionally left out. Frozen outside the live scroll
+        // phases so the reset roll-out can't drag the strips along.
         if phase == .freeApproach || phase == .finalApproach || phase == .halted || isRollingOut {
             let edge = runway.leadingEdgeX(in: self)
             if lastLeadingEdgeX != .greatestFiniteMagnitude {
@@ -921,11 +928,16 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
                 scrollLayer(grassLayer, by: dx)
                 scrollLayer(hangarLayer, by: dx * Self.hangarParallaxFactor)
                 scrollGround(by: dx)
+                approachLights?.scroll(by: dx)
             }
             lastLeadingEdgeX = edge
         } else {
             lastLeadingEdgeX = .greatestFiniteMagnitude
         }
+
+        // The colour wave runs on scene time so it keeps flowing toward the
+        // threshold even while the scroll is paused (halted / between approaches).
+        approachLights?.updateWave(time: currentTime)
 
         if isTouching && phase == .freeApproach { plane.climb() }
         plane.update()

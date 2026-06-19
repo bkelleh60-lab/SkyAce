@@ -270,12 +270,20 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     // MARK: - HUD
 
     private func buildHUD() {
+        // Drop the whole top HUD row below the top safe-area inset so the coin
+        // pill, armor badge, and mission card clear the Dynamic Island / notch
+        // (SKY-105). Mirrors `pauseButtonY()` and the `size.height - inset - …`
+        // convention used by the menu-style scenes (SKY-104). On devices with
+        // no inset (status bar is hidden, so iPhone SE / non-notched report 0)
+        // `safeTop` is 0 and the row keeps its original position — no regression.
+        let safeTop = max(topSafeInset, view?.safeAreaInsets.top ?? 0)
+
         // Coin pill (top-left)
         let coinPillSize = CGSize(width: 110, height: 34)
         let pill = SKShapeNode(rectOf: coinPillSize, cornerRadius: 17)
         pill.fillColor = SkyColors.skTertiaryContainer
         pill.strokeColor = .clear
-        pill.position = CGPoint(x: -size.width / 2 + coinPillSize.width / 2 + 14, y: size.height / 2 - 34)
+        pill.position = CGPoint(x: -size.width / 2 + coinPillSize.width / 2 + 14, y: size.height / 2 - safeTop - 34)
         pill.zPosition = 100
         hudNode.addChild(pill)
         coinPillBG = pill
@@ -309,7 +317,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         let missionCard = SKShapeNode(rectOf: missionCardSize, cornerRadius: 18)
         missionCard.fillColor = SkyColors.skSurfaceContainerLowest.withAlphaComponent(0.92)
         missionCard.strokeColor = .clear
-        missionCard.position = CGPoint(x: size.width / 2 - missionCardSize.width / 2 - 14, y: size.height / 2 - 44)
+        missionCard.position = CGPoint(x: size.width / 2 - missionCardSize.width / 2 - 14, y: size.height / 2 - safeTop - 44)
         missionCard.zPosition = 100
         hudNode.addChild(missionCard)
 
@@ -383,25 +391,29 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         let safeTop = max(topSafeInset, view?.safeAreaInsets.top ?? 0)
         // The centered pause button must clear two things: the Dynamic Island
         // (the top safe-area inset) and the top HUD card row. The mission /
-        // progress card (top-right) reaches ~71pt below the top edge and
-        // extends toward the center, so a pause button only tucked under the
-        // island still collides with it (and overlaps outright on narrow
-        // devices). Drop it below whichever is lower.
-        let topRowBottom: CGFloat = 71  // mission card center (44) + half-height (27)
+        // progress card (top-right) is itself dropped below the inset in
+        // `buildHUD()`, so its bottom edge sits `safeTop + 71` below the top
+        // (card center `safeTop + 44` + half-height 27). A pause button only
+        // tucked under the island would still collide with it, so drop it below
+        // the card bottom.
+        let topRowBottom = safeTop + 71  // lowered mission card center (safeTop + 44) + half-height (27)
         let pauseHalfHeight: CGFloat = 17
         return size.height / 2 - max(safeTop, topRowBottom) - pauseHalfHeight - 8
     }
 
-    /// Called by `GameViewController.viewSafeAreaInsetsDidChange` so the pause
-    /// button settles below the Dynamic Island even when the first HUD build
-    /// happened before the safe-area insets were known.
+    /// Called by `GameViewController.viewSafeAreaInsetsDidChange` so the whole
+    /// top HUD row settles below the Dynamic Island even when the first HUD
+    /// build happened before the safe-area insets were known. The coin pill,
+    /// armor badge, and mission card are all anchored off `safeTop` in
+    /// `buildHUD()`, so rebuild the HUD against the now-known inset rather than
+    /// nudging the pause button alone. `updateHUD()` restores the live progress
+    /// bar / coin count on the next frame, so the rebuild has no visible cost.
     func applyTopSafeInset(_ inset: CGFloat) {
         guard inset != topSafeInset else { return }
         topSafeInset = inset
-        let y = pauseButtonY()
-        hudNode.children
-            .filter { $0.name == "pauseButton" }
-            .forEach { $0.position.y = y }
+        hudNode.removeAllChildren()
+        armorBadge = nil
+        buildHUD()
     }
 
     private func buildStartHint() {

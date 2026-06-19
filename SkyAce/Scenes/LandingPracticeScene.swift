@@ -1052,6 +1052,12 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         isTouching = false
         committedTouchStartTime = nil
 
+        // SKY-103: kill the approach cue ("Tap to correct!") instantly at
+        // touchdown — don't let its fade-out run on behind the outcome feedback,
+        // where it reads as a bug overlapping the celebration badge.
+        approachCue?.removeAllActions()
+        approachCue?.alpha = 0
+
         // Clear any feedback still on screen from a prior approach so this
         // tier's visuals can never overlap (e.g. a lingering smooth badge
         // showing behind fresh "Bumpy" text).

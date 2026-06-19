@@ -207,13 +207,19 @@ final class HangarScene: SKScene {
     // MARK: - Top / tab bars
 
     private func buildTopBar() {
+        // Drop the bar below the top safe-area inset so the title clears the
+        // Dynamic Island / notch on all devices (SKY-104). Matches the
+        // convention used by the Free Flight and Landing Practice scenes.
+        let topSafeInset = view?.safeAreaInsets.top ?? 0
+        let barCenterY = size.height - topSafeInset - 20
+
         let back = SKLabelNode(text: "‹")
         back.fontName = SkyFonts.headlineName
         back.fontSize = 30
         back.fontColor = SkyColors.skOnSurface
         back.verticalAlignmentMode = .center
         back.horizontalAlignmentMode = .center
-        back.position = CGPoint(x: 24, y: size.height - 44)
+        back.position = CGPoint(x: 24, y: barCenterY)
         back.zPosition = 200
         back.name = "hangarBack"
         addChild(back)
@@ -222,12 +228,12 @@ final class HangarScene: SKScene {
         title.fontName = SkyFonts.headlineItalicName
         title.fontSize = 20
         title.fontColor = SkyColors.skOnSurface
-        title.position = CGPoint(x: size.width / 2, y: size.height - 44)
+        title.position = CGPoint(x: size.width / 2, y: barCenterY)
         title.zPosition = 200
         addChild(title)
 
         let pill = SkyCoinPill(coins: ProgressManager.shared.coins)
-        pill.position = CGPoint(x: size.width - 66, y: size.height - 44)
+        pill.position = CGPoint(x: size.width - 66, y: barCenterY)
         pill.zPosition = 200
         addChild(pill)
     }

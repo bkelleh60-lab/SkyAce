@@ -169,11 +169,14 @@ final class UnlockScene: SKScene {
     }
 
     private func buildDismiss() {
+        // Offset below the top safe-area inset so the close button never tucks
+        // under the Dynamic Island / notch on rounded-corner devices (SKY-104).
+        let topSafeInset = view?.safeAreaInsets.top ?? 0
         let x = SKLabelNode(text: "✕")
         x.fontName = SkyFonts.headlineName
         x.fontSize = 20
         x.fontColor = SkyColors.skOnPrimary
-        x.position = CGPoint(x: size.width - 28, y: size.height - 44)
+        x.position = CGPoint(x: size.width - 28, y: size.height - topSafeInset - 20)
         x.zPosition = 100
         x.name = "unlockClose"
         addChild(x)

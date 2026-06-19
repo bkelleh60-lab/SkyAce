@@ -406,14 +406,17 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// build happened before the safe-area insets were known. The coin pill,
     /// armor badge, and mission card are all anchored off `safeTop` in
     /// `buildHUD()`, so rebuild the HUD against the now-known inset rather than
-    /// nudging the pause button alone. `updateHUD()` restores the live progress
-    /// bar / coin count on the next frame, so the rebuild has no visible cost.
+    /// nudging the pause button alone. Rehydrate the live progress bar / coin
+    /// count immediately via `updateHUD()`: the per-frame `update()` is gated on
+    /// `!state.isPaused`, so a rebuild while the pause overlay is up would
+    /// otherwise leave the HUD showing build-time defaults until resume.
     func applyTopSafeInset(_ inset: CGFloat) {
         guard inset != topSafeInset else { return }
         topSafeInset = inset
         hudNode.removeAllChildren()
         armorBadge = nil
         buildHUD()
+        updateHUD()
     }
 
     private func buildStartHint() {

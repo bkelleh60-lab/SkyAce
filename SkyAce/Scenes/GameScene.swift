@@ -269,6 +269,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - HUD
 
+    /// Builds the camera-attached HUD: the top-left coin pill (+ optional armor
+    /// badge), the top-right mission / progress card, and the centered pause
+    /// button. The whole top row is anchored below the top safe-area inset so it
+    /// clears the Dynamic Island / notch. Called on first present and rebuilt by
+    /// `didChangeSize` (rotation) and `applyTopSafeInset` (late inset arrival).
     private func buildHUD() {
         // Drop the whole top HUD row below the top safe-area inset so the coin
         // pill, armor badge, and mission card clear the Dynamic Island / notch
@@ -802,6 +807,10 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - HUD updates
 
+    /// Refreshes the live HUD readouts (coin count, progress-bar fill width, and
+    /// progress label) from the current `state`. Driven each frame from
+    /// `update()` while the run is active, and called directly after a HUD
+    /// rebuild so the values are correct even when `update()` is paused.
     private func updateHUD() {
         coinLabel.setAmount("\(state.coinsCollected)")
 

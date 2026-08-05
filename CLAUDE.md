@@ -51,7 +51,7 @@ These are non-negotiable and must be respected in every change:
 - Reusable scene content lives in `SkyAce/Nodes/` (`SKNode`/`SKSpriteNode`
   subclasses such as `PlaneNode`, `RingNode`, `ObstacleNode`, `FinishLineNode`).
 - Cross-cutting state lives in `SkyAce/Managers/` (`ProgressManager`,
-  `IAPManager`, `AudioManager`, `DebugConfig`). Plain data types live in
+  `IAPManager`, `AudioManager`). Plain data types live in
   `SkyAce/Models/`.
 - IAP logic is handled via StoreKit in `Managers/IAPManager.swift`. The purchase
   trigger point must always present `ParentalGateViewController` modally and

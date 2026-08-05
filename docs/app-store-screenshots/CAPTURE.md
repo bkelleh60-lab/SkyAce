@@ -9,7 +9,6 @@ The current sequence is 6 stills per device, no preview videos. Notes on what wa
 ## Pre-capture checklist
 
 - [ ] Post-[SKY-62](https://linear.app/skyace/issue/SKY-62) obstacle art is in the build (verify the gameplay scene does not show red-striped pillars).
-- [ ] `DebugConfig.debugUnlockAllContent` is `false` in the build being captured.
 - [ ] Test progression state set up so captures reflect a real mid-progression save: levels 1–2 completed with stars, coins on hand.
 - [ ] Premium content unlocked via either StoreKit test purchase (preferred) or temporary debug flag (must be reverted before commit). Required for slot 5 shop capture.
 - [ ] iPad layout confirmed stable (see [SKY-49](https://linear.app/skyace/issue/SKY-49)) before any iPad capture.
@@ -40,7 +39,7 @@ The order matters — slot 1 must be the missions map, not the home screen. Slot
 
 **Slot 5 — Free Flight.** City scene. Clock tower landmark in the lower third, plane in the upper half. "SKYLINE TOUR" HUD label visible if possible.
 
-**Slot 6 — Shop.** Premium unlock required first — the paywall overlay in [ShopScene.swift](../../SkyAce/Scenes/ShopScene.swift) is non-dismissable until `IAPManager.shared.isContentUnlocked` is `true`. Either complete a StoreKit test purchase via the `SkyAce.storekit` config, or temporarily flip `debugUnlockAllContent` to `true` (and revert before commit). Once unlocked, scroll so Engine Boost and Armor Plating rows show with their upgrade levels and coin prices. Keep Fuel Tank "Coming Soon" out of frame if it can be scrolled away.
+**Slot 6 — Shop.** Premium unlock required first — the paywall overlay in [ShopScene.swift](../../SkyAce/Scenes/ShopScene.swift) is non-dismissable until `IAPManager.shared.isContentUnlocked` is `true`. Complete a StoreKit test purchase via the `SkyAce.storekit` config. Once unlocked, scroll so Engine Boost and Armor Plating rows show with their upgrade levels and coin prices. Keep Fuel Tank "Coming Soon" out of frame if it can be scrolled away.
 
 ## Composing a slot
 
@@ -75,5 +74,4 @@ Before declaring the screenshot pass complete:
 - [ ] Slot 1 is the missions map, not the home screen.
 - [ ] Slot 4 (coin chain) contains no wall-based obstacles.
 - [ ] Paywall modal does not appear in slot 6 shop.
-- [ ] `debugUnlockAllContent` is `false` in committed code.
 - [ ] All assets uploaded to App Store Connect.

@@ -46,7 +46,7 @@ SkyAce/
 ├── Colors.swift
 ├── Info.plist
 ├── PrivacyInfo.xcprivacy
-├── Managers/          ProgressManager, AudioManager, IAPManager, DebugConfig
+├── Managers/          ProgressManager, AudioManager, IAPManager
 ├── Models/            Player, Upgrade, Challenge, GameState
 ├── Nodes/             PlaneNode, CoinNode, ObstacleNode, RingNode, FinishLineNode
 ├── Scenes/            Menu, Map, Game, Shop, Hangar, Results,

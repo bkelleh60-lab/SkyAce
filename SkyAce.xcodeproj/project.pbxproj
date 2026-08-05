@@ -34,7 +34,6 @@
 		1A75BBBA2FAA00000000000A /* music_landing_practice.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1A75AAAA2FAA00000000000A /* music_landing_practice.m4a */; };
 		B10001000000000000000101 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000101 /* AppDelegate.swift */; };
 		B10001000000000000000102 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000102 /* GameViewController.swift */; };
-		B10001000000000000000103 /* ParentalGateViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000103 /* ParentalGateViewController.swift */; };
 		B10001000000000000000104 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000104 /* Colors.swift */; };
 		B10001000000000000000201 /* ProgressManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000201 /* ProgressManager.swift */; };
 		B10001000000000000000202 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000202 /* AudioManager.swift */; };
@@ -116,7 +115,6 @@
 		F10001000000000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10001000000000000000101 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		F10001000000000000000102 /* GameViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewController.swift; sourceTree = "<group>"; };
-		F10001000000000000000103 /* ParentalGateViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParentalGateViewController.swift; sourceTree = "<group>"; };
 		F10001000000000000000104 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		F10001000000000000000201 /* ProgressManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressManager.swift; sourceTree = "<group>"; };
 		F10001000000000000000202 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
@@ -190,7 +188,6 @@
 			children = (
 				F10001000000000000000101 /* AppDelegate.swift */,
 				F10001000000000000000102 /* GameViewController.swift */,
-				F10001000000000000000103 /* ParentalGateViewController.swift */,
 				F10001000000000000000104 /* Colors.swift */,
 				G10003000000000000000003 /* Managers */,
 				G10003000000000000000004 /* Models */,
@@ -453,7 +450,6 @@
 			files = (
 				B10001000000000000000101 /* AppDelegate.swift in Sources */,
 				B10001000000000000000102 /* GameViewController.swift in Sources */,
-				B10001000000000000000103 /* ParentalGateViewController.swift in Sources */,
 				B10001000000000000000104 /* Colors.swift in Sources */,
 				B10001000000000000000201 /* ProgressManager.swift in Sources */,
 				B10001000000000000000202 /* AudioManager.swift in Sources */,

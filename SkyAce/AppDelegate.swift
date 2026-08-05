@@ -12,13 +12,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         // CTFontManagerRegisterFontsForURL needed, and doing both causes
         // "file already registered" faults.
 
-        // Kick off entitlement verification against StoreKit on every launch.
-        // This is the authoritative source for the IAP flag; the UserDefaults
-        // cache is only used for the first frame before this completes.
-        Task { @MainActor in
-            await IAPManager.shared.bootstrap()
-        }
-
         window = UIWindow(frame: UIScreen.main.bounds)
         window?.rootViewController = GameViewController()
         window?.makeKeyAndVisible()

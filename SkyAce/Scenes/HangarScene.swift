@@ -24,18 +24,6 @@ final class HangarScene: SKScene {
         currentIndex = PlaneCatalog.all.firstIndex(where: { $0.id == ProgressManager.shared.selectedPlaneID }) ?? 0
 
         layoutScene()
-
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleEntitlementChange),
-            name: IAPManager.entitlementDidChange,
-            object: nil
-        )
-    }
-
-    override func willMove(from view: SKView) {
-        NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
-        super.willMove(from: view)
     }
 
     // SKY-55: see MenuScene.didChangeSize. Carousel index survives the rebuild
@@ -58,12 +46,6 @@ final class HangarScene: SKScene {
         buildActionButton()
         buildTopBar()
         buildTabBar()
-        refresh()
-    }
-
-    @objc private func handleEntitlementChange() {
-        // Drop paywall affordances on the carousel without tearing down the
-        // scene; refresh() recomputes button title/style for the current plane.
         refresh()
     }
 
@@ -264,13 +246,6 @@ final class HangarScene: SKScene {
         if owned {
             flyButton.setTitle(selected ? "FLY!" : "SELECT")
             flyButton.setStyle(.primary)
-        } else if plane.requiresFullUnlock && !IAPManager.shared.isContentUnlocked {
-            // Free players see the coin price (so the value is legible) but
-            // the CTA routes through the paywall instead of the coin economy.
-            coinPriceLabel.setAmount("\(plane.cost.formatted())")
-            coinPriceLabel.isHidden = false
-            flyButton.setTitle("UNLOCK SKY ACE")
-            flyButton.setStyle(.tertiary)
         } else if ProgressManager.shared.coins >= plane.cost {
             flyButton.setStyle(.tertiary)
             flyButton.setCoinAmountTitle(amount: "\(plane.cost.formatted()) COINS")
@@ -310,20 +285,6 @@ final class HangarScene: SKScene {
             SkyNavigator.shared.showMap()
             return
         }
-
-        if plane.requiresFullUnlock && !IAPManager.shared.isContentUnlocked {
-            SkyNavigator.shared.showUnlock()
-            return
-        }
-
-        #if DEBUG
-        if debugUnlockAllContent {
-            ProgressManager.shared.purchasePlane(plane.id)
-            ProgressManager.shared.selectedPlaneID = plane.id
-            refresh()
-            return
-        }
-        #endif
 
         if ProgressManager.shared.spendCoins(plane.cost) {
             ProgressManager.shared.purchasePlane(plane.id)

@@ -40,43 +40,7 @@ final class GameViewController: UIViewController {
         SkyNavigator.shared.attach(view: skView, presenter: self)
         SkyNavigator.shared.showMenu()
         AudioManager.shared.playMusic(SkyMusic.menu, fileExtension: "wav")
-        #if DEBUG
-        installDebugUnlockBanner()
-        #endif
     }
-
-    #if DEBUG
-    /// Persistent red badge shown on top of the SKView whenever the IAP
-    /// paywall is being bypassed via `debugUnlockAllContent` (DebugConfig.swift).
-    /// Stripped from Release builds — `#if DEBUG` excludes the entire helper
-    /// and its caller in `viewDidLoad`.
-    private func installDebugUnlockBanner() {
-        guard debugUnlockAllContent else { return }
-
-        let banner = UILabel()
-        banner.text = "DEBUG: All Unlocked"
-        banner.textColor = .white
-        banner.backgroundColor = UIColor.systemRed.withAlphaComponent(0.9)
-        banner.font = UIFont.systemFont(ofSize: 11, weight: .bold)
-        banner.textAlignment = .center
-        banner.layer.cornerRadius = 6
-        banner.layer.masksToBounds = true
-        banner.isUserInteractionEnabled = false
-        banner.accessibilityIdentifier = "DebugUnlockBanner"
-        banner.translatesAutoresizingMaskIntoConstraints = false
-
-        skView.addSubview(banner)
-        NSLayoutConstraint.activate([
-            banner.topAnchor.constraint(equalTo: skView.safeAreaLayoutGuide.topAnchor, constant: 6),
-            banner.trailingAnchor.constraint(equalTo: skView.safeAreaLayoutGuide.trailingAnchor, constant: -8),
-            banner.heightAnchor.constraint(equalToConstant: 20),
-            banner.widthAnchor.constraint(greaterThanOrEqualToConstant: 140)
-        ])
-        // UILabel has no horizontal padding by default — pad the text via
-        // a small inset on either side using attributed string spacing.
-        banner.text = "  DEBUG: All Unlocked  "
-    }
-    #endif
 
     override var prefersStatusBarHidden: Bool { true }
     override var prefersHomeIndicatorAutoHidden: Bool { true }
@@ -116,7 +80,8 @@ final class GameViewController: UIViewController {
     }
 
     /// Presents the parental gate modally before running a successful closure.
-    /// Used before every IAP purchase attempt.
+    /// Kept as the gating primitive for any flow that must clear a parental
+    /// gate before proceeding.
     func presentParentalGate(onSuccess: @escaping () -> Void) {
         let gate = ParentalGateViewController()
         gate.onGatePassedCompletion = onSuccess
@@ -130,7 +95,7 @@ final class GameViewController: UIViewController {
 
 /// Centralized scene transitions. Scenes call `SkyNavigator.shared.showX()`
 /// rather than constructing SKTransition calls themselves — keeps routing
-/// logic (paywall gating, music switching) in one place.
+/// logic (music switching) in one place.
 final class SkyNavigator {
 
     static let shared = SkyNavigator()
@@ -161,10 +126,6 @@ final class SkyNavigator {
 
     func showHangar() {
         present(HangarScene(size: sceneSize()), music: SkyMusic.menu)
-    }
-
-    func showUnlock() {
-        present(UnlockScene(size: sceneSize()), music: SkyMusic.menu)
     }
 
     func showGame(challenge: Challenge) {

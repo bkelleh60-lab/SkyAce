@@ -86,9 +86,6 @@ struct Challenge {
         case .coinChain:      return 35.0
         }
     }
-
-    /// Free tier covers the first 3 levels.
-    var requiresFullUnlock: Bool { return id > 3 }
 }
 
 enum ChallengeCatalog {

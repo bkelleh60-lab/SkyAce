@@ -1,8 +1,7 @@
 import SpriteKit
 
-/// Decorative/bonus ring. Currently used only by the UnlockScene hero
-/// animation (cosmetic). Kept contact-ready in case time-trial rings are
-/// added in a future challenge type.
+/// Decorative/bonus ring (cosmetic). Kept contact-ready in case time-trial
+/// rings are added in a future challenge type.
 final class RingNode: SKNode {
 
     static let radius: CGFloat = 42

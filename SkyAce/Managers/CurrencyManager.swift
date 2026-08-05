@@ -27,19 +27,6 @@ final class CurrencyManager {
 
     private let defaults = UserDefaults.standard
 
-    /// Indirection so unit tests can simulate free vs premium without
-    /// reaching into StoreKit. Production reads the synchronous entitlement
-    /// cache that IAPManager writes after StoreKit verification, honoring
-    /// the `debugUnlockAllContent` bypass so QA builds behave like premium.
-    var isContentUnlockedProvider: () -> Bool = CurrencyManager.defaultUnlockProvider
-
-    private static let defaultUnlockProvider: () -> Bool = {
-        #if DEBUG
-        if debugUnlockAllContent { return true }
-        #endif
-        return ProgressManager.shared.isFullUnlockCached
-    }
-
     private init() {}
 
     // MARK: - Read-only getters
@@ -49,17 +36,9 @@ final class CurrencyManager {
 
     // MARK: - Mutations
 
-    /// Maximum coins a free player can accumulate.
-    static let freeCoinCap = 1_000
-
     func addCoins(_ amount: Int) {
         guard amount > 0 else { return }
-        let new: Int
-        if isContentUnlockedProvider() {
-            new = coinTotal + amount
-        } else {
-            new = min(coinTotal + amount, CurrencyManager.freeCoinCap)
-        }
+        let new = coinTotal + amount
         defaults.set(new, forKey: Key.coinTotal)
         NotificationCenter.default.post(
             name: CurrencyManager.coinTotalDidChange,
@@ -127,13 +106,6 @@ final class CurrencyManager {
         // the cap. The cap (500) is an exact multiple of the reward (50), so
         // this never leaves an unreachable remainder.
         guard earnedToday + reward <= Self.landingPracticeDailyCoinCap else { return 0 }
-        // A free player's wallet is itself capped at `freeCoinCap`; `addCoins`
-        // would silently clamp a reward that overflows it. Keep this grant
-        // all-or-nothing so the returned amount (and the "+50" pill) never
-        // overstates what actually landed in the balance, and so a clamped
-        // reward doesn't burn the daily quota — at the wallet cap the smooth
-        // landing simply shows the badge alone.
-        if !isContentUnlockedProvider(), coinTotal + reward > Self.freeCoinCap { return 0 }
 
         defaults.set(earnedToday + reward, forKey: Key.landingPracticeCoinsToday)
         defaults.set(Self.localDateString(for: Date()), forKey: Key.landingPracticeLastEarnDate)
@@ -156,14 +128,12 @@ final class CurrencyManager {
 
     #if DEBUG
     /// Test-only helper. Wipes both totals plus the Landing Practice daily
-    /// bookkeeping from UserDefaults and restores the default unlock provider so
-    /// each test starts from a known state.
+    /// bookkeeping from UserDefaults so each test starts from a known state.
     func resetForTesting() {
         defaults.removeObject(forKey: Key.coinTotal)
         defaults.removeObject(forKey: Key.ringTotal)
         defaults.removeObject(forKey: Key.landingPracticeCoinsToday)
         defaults.removeObject(forKey: Key.landingPracticeLastEarnDate)
-        isContentUnlockedProvider = CurrencyManager.defaultUnlockProvider
     }
     #endif
 }

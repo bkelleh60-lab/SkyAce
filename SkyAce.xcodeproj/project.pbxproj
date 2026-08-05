@@ -38,8 +38,6 @@
 		B10001000000000000000104 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000104 /* Colors.swift */; };
 		B10001000000000000000201 /* ProgressManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000201 /* ProgressManager.swift */; };
 		B10001000000000000000202 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000202 /* AudioManager.swift */; };
-		B10001000000000000000203 /* IAPManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000203 /* IAPManager.swift */; };
-		B10001000000000000000204 /* DebugConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000204 /* DebugConfig.swift */; };
 		B10001000000000000000205 /* CurrencyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000205 /* CurrencyManager.swift */; };
 		B10001000000000000000301 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000301 /* Player.swift */; };
 		B10001000000000000000302 /* Upgrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000302 /* Upgrade.swift */; };
@@ -59,7 +57,6 @@
 		B10001000000000000000503 /* MapScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000503 /* MapScene.swift */; };
 		B10001000000000000000504 /* ShopScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000504 /* ShopScene.swift */; };
 		B10001000000000000000505 /* ResultsScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000505 /* ResultsScene.swift */; };
-		B10001000000000000000506 /* UnlockScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000506 /* UnlockScene.swift */; };
 		B10001000000000000000507 /* HangarScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000507 /* HangarScene.swift */; };
 		B10001000000000000000508 /* FreeFlightCityScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000508 /* FreeFlightCityScene.swift */; };
 		B10001000000000000000509 /* FreeFlightMountainScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000509 /* FreeFlightMountainScene.swift */; };
@@ -71,7 +68,6 @@
 		B10001000000000000000705 /* SkyMenuTopBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000705 /* SkyMenuTopBar.swift */; };
 		B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010001 /* CurrencyManagerTests.swift */; };
 		B10001000000000000010002 /* StarRatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010002 /* StarRatingTests.swift */; };
-		B10001000000000000010003 /* IAPManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010003 /* IAPManagerTests.swift */; };
 		B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */; };
 		B10002000000000000000601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000601 /* Assets.xcassets */; };
 		B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000602 /* PrivacyInfo.xcprivacy */; };
@@ -115,7 +111,6 @@
 		1A75AAA82FAA000000000008 /* sfx_landing_rough.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = sfx_landing_rough.caf; sourceTree = "<group>"; };
 		1A75AAA92FAA000000000009 /* sfx_landing_crash.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = sfx_landing_crash.caf; sourceTree = "<group>"; };
 		1A75AAAA2FAA00000000000A /* music_landing_practice.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = music_landing_practice.m4a; sourceTree = "<group>"; };
-		1AF4FD8B2FB3DBDD00A56686 /* SkyAce.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = SkyAce.storekit; sourceTree = "<group>"; };
 		F10000000000000000000001 /* SkyAce.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkyAce.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10000000000000000000002 /* SkyAceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkyAceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10001000000000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -125,8 +120,6 @@
 		F10001000000000000000104 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		F10001000000000000000201 /* ProgressManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressManager.swift; sourceTree = "<group>"; };
 		F10001000000000000000202 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
-		F10001000000000000000203 /* IAPManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IAPManager.swift; sourceTree = "<group>"; };
-		F10001000000000000000204 /* DebugConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugConfig.swift; sourceTree = "<group>"; };
 		F10001000000000000000205 /* CurrencyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyManager.swift; sourceTree = "<group>"; };
 		F10001000000000000000301 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		F10001000000000000000302 /* Upgrade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Upgrade.swift; sourceTree = "<group>"; };
@@ -146,7 +139,6 @@
 		F10001000000000000000503 /* MapScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000504 /* ShopScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShopScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000505 /* ResultsScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsScene.swift; sourceTree = "<group>"; };
-		F10001000000000000000506 /* UnlockScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnlockScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000507 /* HangarScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HangarScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000508 /* FreeFlightCityScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightCityScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000509 /* FreeFlightMountainScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightMountainScene.swift; sourceTree = "<group>"; };
@@ -158,7 +150,6 @@
 		F10001000000000000000705 /* SkyMenuTopBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkyMenuTopBar.swift; sourceTree = "<group>"; };
 		F10001000000000000010001 /* CurrencyManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyManagerTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010002 /* StarRatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarRatingTests.swift; sourceTree = "<group>"; };
-		F10001000000000000010003 /* IAPManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IAPManagerTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightCoinAccumulatorTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10002000000000000000601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -188,7 +179,6 @@
 		G10003000000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				1AF4FD8B2FB3DBDD00A56686 /* SkyAce.storekit */,
 				G10003000000000000000002 /* SkyAce */,
 				G10003000000000000000020 /* SkyAceTests */,
 				G10003000000000000000099 /* Products */,
@@ -220,8 +210,6 @@
 			children = (
 				F10001000000000000000201 /* ProgressManager.swift */,
 				F10001000000000000000202 /* AudioManager.swift */,
-				F10001000000000000000203 /* IAPManager.swift */,
-				F10001000000000000000204 /* DebugConfig.swift */,
 				F10001000000000000000205 /* CurrencyManager.swift */,
 			);
 			path = Managers;
@@ -262,7 +250,6 @@
 				F10001000000000000000503 /* MapScene.swift */,
 				F10001000000000000000504 /* ShopScene.swift */,
 				F10001000000000000000505 /* ResultsScene.swift */,
-				F10001000000000000000506 /* UnlockScene.swift */,
 				F10001000000000000000507 /* HangarScene.swift */,
 				F10001000000000000000508 /* FreeFlightCityScene.swift */,
 				F10001000000000000000509 /* FreeFlightMountainScene.swift */,
@@ -330,7 +317,6 @@
 			children = (
 				F10001000000000000010001 /* CurrencyManagerTests.swift */,
 				F10001000000000000010002 /* StarRatingTests.swift */,
-				F10001000000000000010003 /* IAPManagerTests.swift */,
 				F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */,
 				F10001000000000000010004 /* Info.plist */,
 			);
@@ -471,8 +457,6 @@
 				B10001000000000000000104 /* Colors.swift in Sources */,
 				B10001000000000000000201 /* ProgressManager.swift in Sources */,
 				B10001000000000000000202 /* AudioManager.swift in Sources */,
-				B10001000000000000000203 /* IAPManager.swift in Sources */,
-				B10001000000000000000204 /* DebugConfig.swift in Sources */,
 				B10001000000000000000205 /* CurrencyManager.swift in Sources */,
 				B10001000000000000000301 /* Player.swift in Sources */,
 				B10001000000000000000302 /* Upgrade.swift in Sources */,
@@ -492,7 +476,6 @@
 				B10001000000000000000503 /* MapScene.swift in Sources */,
 				B10001000000000000000504 /* ShopScene.swift in Sources */,
 				B10001000000000000000505 /* ResultsScene.swift in Sources */,
-				B10001000000000000000506 /* UnlockScene.swift in Sources */,
 				B10001000000000000000507 /* HangarScene.swift in Sources */,
 				B10001000000000000000508 /* FreeFlightCityScene.swift in Sources */,
 				B10001000000000000000509 /* FreeFlightMountainScene.swift in Sources */,
@@ -511,7 +494,6 @@
 			files = (
 				B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */,
 				B10001000000000000010002 /* StarRatingTests.swift in Sources */,
-				B10001000000000000010003 /* IAPManagerTests.swift in Sources */,
 				B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

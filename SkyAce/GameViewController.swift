@@ -78,17 +78,6 @@ final class GameViewController: UIViewController {
         // Dynamic Island; hand it the top inset once layout settles.
         (scene as? GameScene)?.applyTopSafeInset(insets.top)
     }
-
-    /// Presents the parental gate modally before running a successful closure.
-    /// Kept as the gating primitive for any flow that must clear a parental
-    /// gate before proceeding.
-    func presentParentalGate(onSuccess: @escaping () -> Void) {
-        let gate = ParentalGateViewController()
-        gate.onGatePassedCompletion = onSuccess
-        gate.modalPresentationStyle = .overFullScreen
-        gate.modalTransitionStyle = .crossDissolve
-        present(gate, animated: true)
-    }
 }
 
 // MARK: - Scene navigation
@@ -159,10 +148,6 @@ final class SkyNavigator {
             music: SkyMusic.landingPractice,
             musicExtension: "m4a"
         )
-    }
-
-    func presentParentalGate(onSuccess: @escaping () -> Void) {
-        presenter?.presentParentalGate(onSuccess: onSuccess)
     }
 
     // MARK: - Internals

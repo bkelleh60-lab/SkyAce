@@ -276,6 +276,10 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// Timestamp of the previous `update(_:)`, for manual delta-time integration.
     private var lastUpdateTime: TimeInterval = 0
     private weak var instructionPrompt: SKLabelNode?
+    /// Top-bar coin balance readout (SKY-106) — shows the player's spendable
+    /// `ProgressManager.coins` and pops up by the reward each smooth landing so
+    /// the credit is visible without leaving the scene. Rebuilt with the bar.
+    private var coinPill: SkyCoinPill?
 
     // MARK: - Lifecycle
 
@@ -325,6 +329,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         approachLights = nil
         feedbackLayer.removeAllChildren()
         feedbackLayer.removeFromParent()
+        coinPill = nil
         plane = nil
         runway = nil
         phase = .freeApproach
@@ -814,6 +819,30 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         label.position = CGPoint(x: 100, y: barCenterY)
         label.zPosition = 200
         addChild(label)
+
+        // Coin balance readout (SKY-106): the smooth-landing reward lands in
+        // the player's spendable balance; surface that balance here so the
+        // credit is visible in-scene without exiting. Right-anchored so it
+        // clears the EXIT button and title on the left.
+        let pill = SkyCoinPill(coins: ProgressManager.shared.coins)
+        pill.setScale(0.85)
+        pill.position = CGPoint(x: size.width - 66, y: barCenterY)
+        pill.zPosition = 200
+        addChild(pill)
+        coinPill = pill
+    }
+
+    /// Refreshes the top-bar coin readout to the current spendable balance and
+    /// gives it a brief pop so the smooth-landing credit is unmistakable
+    /// mid-session (SKY-106).
+    private func refreshCoinCounter() {
+        guard let pill = coinPill else { return }
+        pill.setCoins(ProgressManager.shared.coins)
+        pill.removeAllActions()
+        pill.run(SKAction.sequence([
+            SKAction.scale(to: 1.02, duration: 0.10),
+            SKAction.scale(to: 0.85, duration: 0.15)
+        ]))
     }
 
     // MARK: - First-time instruction prompt
@@ -1127,12 +1156,14 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         showCelebrationBadge()
 
         // SKY-95: grant 50 coins per smooth landing, capped at 500/day. The
-        // daily-cap bookkeeping and coin grant live in CurrencyManager; it
-        // returns 0 once the cap is reached, in which case no pill is shown and
-        // the badge stands alone.
+        // daily-cap bookkeeping lives in CurrencyManager, but the coins land in
+        // the player's spendable balance (ProgressManager.coins) — see SKY-106.
+        // It returns 0 once the cap is reached, in which case no pill is shown,
+        // the counter doesn't move, and the badge stands alone.
         let reward = CurrencyManager.shared.grantLandingPracticeSmoothLandingReward()
         if reward > 0 {
             showCoinRewardPill(amount: reward)
+            refreshCoinCounter()
         }
 
         beginLandingRollout()

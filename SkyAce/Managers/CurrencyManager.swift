@@ -95,9 +95,16 @@ final class CurrencyManager {
     }
 
     /// Grants the smooth-landing reward unless today's Landing Practice cap is
-    /// already reached, adding it to the coin balance via `addCoins`. Returns
-    /// the amount granted (0 when the cap blocks it, so callers can suppress the
-    /// reward indicator). Rough and crash landings never call this.
+    /// already reached, crediting it to the player's spendable coin balance.
+    /// Returns the amount granted (0 when the cap blocks it, so callers can
+    /// suppress the reward indicator). Rough and crash landings never call this.
+    ///
+    /// The reward lands in `ProgressManager.coins` — the persistent, spendable
+    /// balance the home top bar, Hangar, and Shop read from and spend against —
+    /// so a smooth landing actually enriches the player. (It deliberately does
+    /// *not* credit this manager's HUD-only `coinTotal`: no player-facing
+    /// balance screen reads that store, so crediting it left the reward pill
+    /// animating while the real balance never moved — SKY-106.)
     @discardableResult
     func grantLandingPracticeSmoothLandingReward() -> Int {
         let reward = Self.landingPracticeSmoothLandingReward
@@ -109,7 +116,7 @@ final class CurrencyManager {
 
         defaults.set(earnedToday + reward, forKey: Key.landingPracticeCoinsToday)
         defaults.set(Self.localDateString(for: Date()), forKey: Key.landingPracticeLastEarnDate)
-        addCoins(reward)
+        ProgressManager.shared.addCoins(reward)
         return reward
     }
 

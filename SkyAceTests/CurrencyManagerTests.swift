@@ -8,10 +8,14 @@ final class CurrencyManagerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         manager.resetForTesting()
+        // The Landing Practice reward credits the player's spendable balance
+        // (ProgressManager.coins), so clear that too for a known starting point.
+        ProgressManager.shared.resetAllProgress()
     }
 
     override func tearDown() {
         manager.resetForTesting()
+        ProgressManager.shared.resetAllProgress()
         super.tearDown()
     }
 
@@ -71,8 +75,21 @@ final class CurrencyManagerTests: XCTestCase {
     func testLandingPracticeReward_grantsFiftyCoins() {
         let granted = manager.grantLandingPracticeSmoothLandingReward()
         XCTAssertEqual(granted, 50)
-        XCTAssertEqual(manager.coinTotal, 50, "Reward must land in the coin balance.")
+        XCTAssertEqual(ProgressManager.shared.coins, 50,
+                       "Reward must land in the player's spendable balance.")
         XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 50)
+    }
+
+    // SKY-106 regression: the reward must credit the spendable balance
+    // (ProgressManager.coins) that the home bar / Hangar / Shop read, NOT the
+    // HUD-only CurrencyManager.coinTotal. Crediting the latter left the reward
+    // pill animating while the player's balance never moved.
+    func testLandingPracticeReward_creditsSpendableBalanceNotHudCounter() {
+        manager.grantLandingPracticeSmoothLandingReward()
+        XCTAssertEqual(ProgressManager.shared.coins, 50,
+                       "Reward must reach the spendable player balance.")
+        XCTAssertEqual(manager.coinTotal, 0,
+                       "Reward must not be diverted into the HUD-only coin counter.")
     }
 
     func testLandingPracticeReward_accumulatesAcrossLandings() {
@@ -80,7 +97,7 @@ final class CurrencyManagerTests: XCTestCase {
         manager.grantLandingPracticeSmoothLandingReward()
         manager.grantLandingPracticeSmoothLandingReward()
         XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 150)
-        XCTAssertEqual(manager.coinTotal, 150)
+        XCTAssertEqual(ProgressManager.shared.coins, 150)
     }
 
     func testLandingPracticeReward_enforcesDailyCap() {
@@ -94,7 +111,7 @@ final class CurrencyManagerTests: XCTestCase {
         // The 11th smooth landing grants nothing and adds no coins.
         XCTAssertEqual(manager.grantLandingPracticeSmoothLandingReward(), 0,
                        "No reward once the daily cap is reached.")
-        XCTAssertEqual(manager.coinTotal, 500,
+        XCTAssertEqual(ProgressManager.shared.coins, 500,
                        "Coin balance must not move once capped.")
     }
 

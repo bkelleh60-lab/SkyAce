@@ -10,7 +10,7 @@ The current sequence is 6 stills per device, no preview videos. Notes on what wa
 
 - [ ] Post-[SKY-62](https://linear.app/skyace/issue/SKY-62) obstacle art is in the build (verify the gameplay scene does not show red-striped pillars).
 - [ ] Test progression state set up so captures reflect a real mid-progression save: levels 1–2 completed with stars, coins on hand.
-- [ ] Premium content unlocked via either StoreKit test purchase (preferred) or temporary debug flag (must be reverted before commit). Required for slot 5 shop capture.
+- [ ] Premium content unlocked via StoreKit test purchase. Required for slot 5 shop capture.
 - [ ] iPad layout confirmed stable (see [SKY-49](https://linear.app/skyace/issue/SKY-49)) before any iPad capture.
 - [ ] Final targets: 1284 × 2778 iPhone (App Store Connect 6.5" slot) and 2064 × 2752 iPad. `_compose.py` will downscale from the simulator's native resolution.
 

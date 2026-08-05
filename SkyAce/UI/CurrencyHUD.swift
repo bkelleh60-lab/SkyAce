@@ -11,7 +11,6 @@ final class CurrencyHUD: SKNode {
 
     private let coinPill: CurrencyPill
     private let ringPill: CurrencyPill
-    private let maxLabel: SKLabelNode
 
     /// Vertical/horizontal gap between pills when stacked / side-by-side.
     private let pillGap: CGFloat = 8
@@ -37,23 +36,12 @@ final class CurrencyHUD: SKNode {
             textColor: SkyColors.skOnPrimary,
             initialValue: CurrencyManager.shared.ringTotal
         )
-        maxLabel = SKLabelNode(text: "MAX")
         super.init()
-
-        maxLabel.fontName = SkyFonts.headlineName
-        maxLabel.fontSize = 9
-        maxLabel.fontColor = SkyColors.onTertiaryContainer.withAlphaComponent(0.7)
-        maxLabel.verticalAlignmentMode = .top
-        maxLabel.horizontalAlignmentMode = .right
-        maxLabel.zPosition = 3
-        maxLabel.isHidden = true
-        addChild(maxLabel)
 
         addChild(coinPill)
         addChild(ringPill)
 
         observeUpdates()
-        refreshMaxIndicator(coinTotal: CurrencyManager.shared.coinTotal)
     }
 
     required init?(coder aDecoder: NSCoder) { fatalError() }
@@ -102,12 +90,6 @@ final class CurrencyHUD: SKNode {
             )
             contentSize = CGSize(width: widest, height: stackedHeight)
         }
-
-        // Anchor the MAX label to the bottom-right corner of the coin pill.
-        maxLabel.position = CGPoint(
-            x: coinPill.position.x + coinPill.pillSize.width / 2,
-            y: coinPill.position.y - coinPill.pillSize.height / 2
-        )
     }
 
     // MARK: - Notifications
@@ -125,32 +107,16 @@ final class CurrencyHUD: SKNode {
             name: CurrencyManager.ringTotalDidChange,
             object: nil
         )
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleEntitlementChange),
-            name: IAPManager.entitlementDidChange,
-            object: nil
-        )
     }
 
     @objc private func handleCoinUpdate(_ note: Notification) {
         let total = (note.userInfo?["total"] as? Int) ?? CurrencyManager.shared.coinTotal
         coinPill.setValue(total, animated: true)
-        refreshMaxIndicator(coinTotal: total)
     }
 
     @objc private func handleRingUpdate(_ note: Notification) {
         let total = (note.userInfo?["total"] as? Int) ?? CurrencyManager.shared.ringTotal
         ringPill.setValue(total, animated: true)
-    }
-
-    @objc private func handleEntitlementChange() {
-        refreshMaxIndicator(coinTotal: CurrencyManager.shared.coinTotal)
-    }
-
-    private func refreshMaxIndicator(coinTotal: Int) {
-        let atCap = coinTotal >= CurrencyManager.freeCoinCap && !IAPManager.shared.isContentUnlocked
-        maxLabel.isHidden = !atCap
     }
 }
 

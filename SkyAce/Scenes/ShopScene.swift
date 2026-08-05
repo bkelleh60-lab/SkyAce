@@ -1,8 +1,7 @@
 import SpriteKit
 
 /// Scrollable upgrade shop. Featured card for the first unlockable upgrade,
-/// smaller cards for the rest, a "current plane" stat card, and a paywall
-/// overlay for free users.
+/// smaller cards for the rest, and a "current plane" stat card.
 final class ShopScene: SKScene {
 
     private let contentNode = SKNode()
@@ -12,27 +11,13 @@ final class ShopScene: SKScene {
     private var scrollVelocity: CGFloat = 0
     private var lastUpdateTime: TimeInterval = 0
 
-    private var paywallOverlay: SKNode?
-
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skSurface
         layoutScene()
-
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleEntitlementChange),
-            name: IAPManager.entitlementDidChange,
-            object: nil
-        )
     }
 
-    override func willMove(from view: SKView) {
-        NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
-        super.willMove(from: view)
-    }
-
-    // SKY-55: see MenuScene.didChangeSize. Rebuilds the card list, bars, and
-    // any visible paywall overlay to fit the new dimensions.
+    // SKY-55: see MenuScene.didChangeSize. Rebuilds the card list and bars to
+    // fit the new dimensions.
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
         guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
@@ -41,7 +26,6 @@ final class ShopScene: SKScene {
         contentNode.removeFromParent()
         contentNode.position = .zero
         scrollVelocity = 0
-        paywallOverlay = nil
         removeAllChildren()
         removeAllActions()
         layoutScene()
@@ -53,23 +37,6 @@ final class ShopScene: SKScene {
         buildContent()
         buildTopBar()
         buildTabBar()
-
-        if !IAPManager.shared.isContentUnlocked {
-            presentPaywallOverlay()
-        }
-    }
-
-    @objc private func handleEntitlementChange() {
-        // Drop the paywall overlay the moment unlock lands so the player isn't
-        // stuck behind it. The card list itself was built unconditionally, so
-        // removing the overlay is enough to expose the shop.
-        if IAPManager.shared.isContentUnlocked, let overlay = paywallOverlay {
-            paywallOverlay = nil
-            overlay.run(SKAction.sequence([
-                SKAction.fadeOut(withDuration: 0.2),
-                SKAction.removeFromParent()
-            ]))
-        }
     }
 
     // MARK: - Background
@@ -494,71 +461,6 @@ final class ShopScene: SKScene {
         addChild(bar)
     }
 
-    // MARK: - Paywall overlay
-
-    private func presentPaywallOverlay() {
-        let overlay = SKNode()
-        overlay.zPosition = 300
-
-        let dim = SKSpriteNode(color: UIColor.black.withAlphaComponent(0.25), size: size)
-        dim.anchorPoint = .zero
-        dim.position = .zero
-        overlay.addChild(dim)
-
-        let card = SKShapeNode(rectOf: CGSize(width: size.width - 60, height: 260), cornerRadius: 28)
-        card.fillColor = SkyColors.skSurfaceContainerLowest.withAlphaComponent(0.98)
-        card.strokeColor = .clear
-        card.position = CGPoint(x: size.width / 2, y: size.height / 2)
-        overlay.addChild(card)
-
-        let title = SKLabelNode(text: "Unlock Sky Ace")
-        title.fontName = SkyFonts.headlineName
-        title.fontSize = 22
-        title.fontColor = SkyColors.skOnSurface
-        title.position = CGPoint(x: size.width / 2, y: size.height / 2 + 70)
-        overlay.addChild(title)
-
-        let body = SKLabelNode(text: "Get the upgrade shop, all 10 levels,")
-        body.fontName = SkyFonts.bodyName
-        body.fontSize = 13
-        body.fontColor = SkyColors.skOnSurfaceVariant
-        body.position = CGPoint(x: size.width / 2, y: size.height / 2 + 36)
-        overlay.addChild(body)
-
-        let body2 = SKLabelNode(text: "and every plane — one fair price.")
-        body2.fontName = SkyFonts.bodyName
-        body2.fontSize = 13
-        body2.fontColor = SkyColors.skOnSurfaceVariant
-        body2.position = CGPoint(x: size.width / 2, y: size.height / 2 + 18)
-        overlay.addChild(body2)
-
-        let unlock = SkyPillButton(
-            title: "UNLOCK  \(IAPManager.shared.displayPrice)",
-            style: .tertiary,
-            size: CGSize(width: 240, height: 54)
-        ) { [weak self] in
-            self?.handleUnlockTap()
-        }
-        unlock.position = CGPoint(x: size.width / 2, y: size.height / 2 - 24)
-        unlock.name = "paywallUnlock"
-        overlay.addChild(unlock)
-
-        let back = SKLabelNode(text: "Back to menu")
-        back.fontName = SkyFonts.bodyMediumName
-        back.fontSize = 13
-        back.fontColor = SkyColors.skOnSurfaceVariant
-        back.position = CGPoint(x: size.width / 2, y: size.height / 2 - 76)
-        back.name = "paywallBack"
-        overlay.addChild(back)
-
-        addChild(overlay)
-        paywallOverlay = overlay
-    }
-
-    private func handleUnlockTap() {
-        SkyNavigator.shared.showUnlock()
-    }
-
     // MARK: - Scroll
 
     override func update(_ currentTime: TimeInterval) {
@@ -580,10 +482,6 @@ final class ShopScene: SKScene {
 
     private func attemptBuy(upgrade: UpgradeState) {
         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-        if !IAPManager.shared.isContentUnlocked {
-            SkyNavigator.shared.showUnlock()
-            return
-        }
         guard let cost = upgrade.nextCost else { return }
         guard ProgressManager.shared.spendCoins(cost) else {
             // Not enough — shake toolbar, spec doesn't require a specific UI.
@@ -602,22 +500,6 @@ final class ShopScene: SKScene {
         lastPanY = touch.location(in: self).y
         scrollVelocity = 0
 
-        // Overlay taps take priority.
-        if let overlay = paywallOverlay {
-            for node in overlay.nodes(at: touch.location(in: overlay)) {
-                if let button = (node as? SkyPillButton) ?? (node.parent as? SkyPillButton) {
-                    button.handleTap()
-                    return
-                }
-                if node.name == "paywallBack" {
-                    AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-                    SkyNavigator.shared.showMenu()
-                    return
-                }
-            }
-            return
-        }
-
         let location = touch.location(in: self)
         for node in nodes(at: location) {
             if node.name == "shopBack" {
@@ -633,7 +515,7 @@ final class ShopScene: SKScene {
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard paywallOverlay == nil, let touch = touches.first else { return }
+        guard let touch = touches.first else { return }
         let y = touch.location(in: self).y
         let dy = y - lastPanY
         lastPanY = y
@@ -642,7 +524,7 @@ final class ShopScene: SKScene {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        guard paywallOverlay == nil, let touch = touches.first else { return }
+        guard let touch = touches.first else { return }
         guard abs(scrollVelocity) < 80 else { return }
         // Shop cards have button children — route taps to pill buttons.
         let p = touch.location(in: contentNode)

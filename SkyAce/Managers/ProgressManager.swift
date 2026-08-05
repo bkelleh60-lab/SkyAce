@@ -1,8 +1,6 @@
 import Foundation
 
-/// Persisted player progress. UserDefaults-backed. IAP entitlement is
-/// cached here for fast synchronous reads, but the source of truth is
-/// `IAPManager.verifyEntitlement()` (StoreKit 2 transaction check).
+/// Persisted player progress. UserDefaults-backed.
 final class ProgressManager {
 
     static let shared = ProgressManager()
@@ -15,7 +13,6 @@ final class ProgressManager {
         static let ownedPlanes         = "skyace.ownedPlanes"
         static let selectedPlane       = "skyace.selectedPlane"
         static let upgradeLevels       = "skyace.upgradeLevels"
-        static let fullUnlockCached    = "skyace.fullUnlockCached"
         static let musicEnabled        = "skyace.musicEnabled"
         static let sfxEnabled          = "skyace.sfxEnabled"
         static let landingPracticeInstructionShown = "skyace.landingPracticeInstructionShown"
@@ -35,7 +32,6 @@ final class ProgressManager {
             Key.ownedPlanes:      ["red_baron"],
             Key.selectedPlane:    "red_baron",
             Key.upgradeLevels:    [String: Int](),
-            Key.fullUnlockCached: false,
             Key.musicEnabled:     true,
             Key.sfxEnabled:       true,
             Key.landingPracticeInstructionShown: false
@@ -112,7 +108,7 @@ final class ProgressManager {
     }
 
     /// A level is progression-unlocked if it is level 1 OR the previous level
-    /// was completed. Paywall is enforced separately.
+    /// was completed.
     func isLevelProgressionUnlocked(_ id: Int) -> Bool {
         if id <= 1 { return true }
         return isLevelCompleted(id - 1)
@@ -153,15 +149,6 @@ final class ProgressManager {
         defaults.set(dict, forKey: Key.upgradeLevels)
     }
 
-    // MARK: - Full Unlock cache
-    // Written by IAPManager after StoreKit entitlement verification.
-    // Read by scenes for synchronous gating decisions.
-
-    var isFullUnlockCached: Bool {
-        get { defaults.bool(forKey: Key.fullUnlockCached) }
-        set { defaults.set(newValue, forKey: Key.fullUnlockCached) }
-    }
-
     // MARK: - Landing Practice (SKY-83)
 
     /// True once the one-time "Hold to climb. Release to land." prompt has
@@ -187,7 +174,7 @@ final class ProgressManager {
     #if DEBUG
     func resetAllProgress() {
         [Key.coins, Key.completedLevels, Key.starRatings, Key.ownedPlanes,
-         Key.selectedPlane, Key.upgradeLevels, Key.fullUnlockCached,
+         Key.selectedPlane, Key.upgradeLevels,
          Key.landingPracticeInstructionShown].forEach {
             defaults.removeObject(forKey: $0)
         }

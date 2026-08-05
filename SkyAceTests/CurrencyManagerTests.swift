@@ -8,9 +8,6 @@ final class CurrencyManagerTests: XCTestCase {
     override func setUp() {
         super.setUp()
         manager.resetForTesting()
-        // Default to "free user" for each test. Tests that need premium
-        // override the provider explicitly.
-        manager.isContentUnlockedProvider = { false }
     }
 
     override func tearDown() {
@@ -18,59 +15,29 @@ final class CurrencyManagerTests: XCTestCase {
         super.tearDown()
     }
 
-    // MARK: - Coin cap (free user)
+    // MARK: - Coins (no cap — Sky Ace is fully free)
 
-    func testAddCoins_freeUser_respectsCap() {
-        manager.addCoins(1100)
-        XCTAssertEqual(manager.coinTotal, CurrencyManager.freeCoinCap)
-    }
-
-    func testAddCoins_freeUser_doesNotExceedCapIncrementally() {
-        manager.addCoins(600)
-        manager.addCoins(600)
-        XCTAssertEqual(manager.coinTotal, CurrencyManager.freeCoinCap)
-    }
-
-    // MARK: - No cap (premium user)
-
-    func testAddCoins_premiumUser_noCap() {
-        manager.isContentUnlockedProvider = { true }
+    func testAddCoins_accumulatesWithoutCap() {
         manager.addCoins(1500)
         XCTAssertEqual(manager.coinTotal, 1500)
     }
 
-    // MARK: - Rings have no cap
+    func testAddCoins_accumulatesIncrementally() {
+        manager.addCoins(600)
+        manager.addCoins(600)
+        XCTAssertEqual(manager.coinTotal, 1200)
+    }
 
-    func testAddRings_noCapForAnyUser() {
+    // MARK: - Rings
+
+    func testAddRings_accumulates() {
         manager.addRings(2000)
         XCTAssertEqual(manager.ringTotal, 2000)
-    }
-
-    // MARK: - Premium-unlock transition
-
-    func testCoinsCarryOverOnPremiumUnlock() {
-        manager.addCoins(800)
-        XCTAssertEqual(manager.coinTotal, 800)
-
-        manager.isContentUnlockedProvider = { true }
-        XCTAssertEqual(manager.coinTotal, 800,
-                       "Existing coins must not reset when the player upgrades.")
-    }
-
-    func testCoinCapLiftsAfterPremiumUnlock() {
-        manager.addCoins(1000)
-        XCTAssertEqual(manager.coinTotal, CurrencyManager.freeCoinCap)
-
-        manager.isContentUnlockedProvider = { true }
-        manager.addCoins(200)
-        XCTAssertEqual(manager.coinTotal, 1200)
     }
 
     // MARK: - Persistence
 
     func testCurrencyPersistsAcrossReinit() {
-        // Premium so we can write 300 coins without bumping the cap.
-        manager.isContentUnlockedProvider = { true }
         manager.addCoins(300)
         manager.addRings(50)
 
@@ -84,7 +51,6 @@ final class CurrencyManagerTests: XCTestCase {
     // MARK: - Deduction
 
     func testDeductCoins_reducesBalance() {
-        manager.isContentUnlockedProvider = { true }
         manager.addCoins(600)
 
         let didDeduct = manager.deductCoins(600)
@@ -93,7 +59,6 @@ final class CurrencyManagerTests: XCTestCase {
     }
 
     func testDeductCoins_doesNotGoBelowZero() {
-        manager.isContentUnlockedProvider = { true }
         manager.addCoins(100)
 
         let didDeduct = manager.deductCoins(600)
@@ -104,7 +69,6 @@ final class CurrencyManagerTests: XCTestCase {
     // MARK: - Landing Practice daily reward (SKY-95)
 
     func testLandingPracticeReward_grantsFiftyCoins() {
-        manager.isContentUnlockedProvider = { true }
         let granted = manager.grantLandingPracticeSmoothLandingReward()
         XCTAssertEqual(granted, 50)
         XCTAssertEqual(manager.coinTotal, 50, "Reward must land in the coin balance.")
@@ -112,7 +76,6 @@ final class CurrencyManagerTests: XCTestCase {
     }
 
     func testLandingPracticeReward_accumulatesAcrossLandings() {
-        manager.isContentUnlockedProvider = { true }
         manager.grantLandingPracticeSmoothLandingReward()
         manager.grantLandingPracticeSmoothLandingReward()
         manager.grantLandingPracticeSmoothLandingReward()
@@ -121,7 +84,6 @@ final class CurrencyManagerTests: XCTestCase {
     }
 
     func testLandingPracticeReward_enforcesDailyCap() {
-        manager.isContentUnlockedProvider = { true }
         // 10 smooth landings = 500 coins = the daily cap.
         for _ in 0..<10 {
             XCTAssertEqual(manager.grantLandingPracticeSmoothLandingReward(), 50)
@@ -137,7 +99,6 @@ final class CurrencyManagerTests: XCTestCase {
     }
 
     func testLandingPracticeReward_resetsOnNewDay() {
-        manager.isContentUnlockedProvider = { true }
         // Simulate yesterday's session having hit the cap by writing the stored
         // keys directly with a stale date.
         let defaults = UserDefaults.standard
@@ -152,21 +113,9 @@ final class CurrencyManagerTests: XCTestCase {
         XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 50)
     }
 
-    func testLandingPracticeReward_freeUserAtCoinCap_grantsZeroAndDoesNotConsumeDailyQuota() {
-        manager.isContentUnlockedProvider = { false }
-        manager.addCoins(CurrencyManager.freeCoinCap)
-
-        // At the free wallet cap the reward can't land, so it's all-or-nothing:
-        // no coins, no pill, and the daily quota is left untouched.
-        XCTAssertEqual(manager.grantLandingPracticeSmoothLandingReward(), 0)
-        XCTAssertEqual(manager.coinTotal, CurrencyManager.freeCoinCap)
-        XCTAssertEqual(manager.landingPracticeCoinsEarnedToday, 0)
-    }
-
     // MARK: - Notifications
 
     func testAddCoinsPostsNotification() {
-        manager.isContentUnlockedProvider = { true }
         let exp = expectation(forNotification: CurrencyManager.coinTotalDidChange, object: manager) { note in
             return (note.userInfo?["total"] as? Int) == 250
         }

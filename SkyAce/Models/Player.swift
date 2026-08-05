@@ -7,7 +7,6 @@ struct Plane {
     let name: String
     let subtitle: String
     let cost: Int             // 0 for the starter plane
-    let requiresFullUnlock: Bool
     let spriteName: String    // Resources/Sprites/*.png; nil-safe via SkySprites.texture
     let bodyColor: UIColor    // programmatic-fallback fill when sprite is absent
     let accentColor: UIColor  // programmatic-fallback accent
@@ -22,7 +21,6 @@ enum PlaneCatalog {
         name: "Blue Sky Chaser",
         subtitle: "Standard Jet",
         cost: 600,
-        requiresFullUnlock: true,
         spriteName: SkySprites.planeJet,
         bodyColor: SkyColors.primaryContainer,
         accentColor: SkyColors.primary,
@@ -34,7 +32,6 @@ enum PlaneCatalog {
         name: "Red Baron MK-1",
         subtitle: "Standard Propeller Scout",
         cost: 500,
-        requiresFullUnlock: false,
         spriteName: SkySprites.planeFighter,
         bodyColor: UIColor(hex: 0xE8424A),
         accentColor: UIColor(hex: 0xFFD709),
@@ -46,7 +43,6 @@ enum PlaneCatalog {
         name: "Shadow Dart",
         subtitle: "Fast as Light",
         cost: 1200,
-        requiresFullUnlock: true,
         spriteName: SkySprites.planeShadowDart,
         bodyColor: UIColor(hex: 0x08314D),
         accentColor: UIColor(hex: 0x00BAFF),
@@ -58,7 +54,6 @@ enum PlaneCatalog {
         name: "Night Hawk",
         subtitle: "Supreme Bomber",
         cost: 2000,
-        requiresFullUnlock: true,
         spriteName: SkySprites.planeNightHawk,
         bodyColor: UIColor(hex: 0x08314D),
         accentColor: UIColor(hex: 0xFF8C00),

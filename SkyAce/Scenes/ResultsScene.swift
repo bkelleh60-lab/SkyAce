@@ -124,11 +124,8 @@ final class ResultsScene: SKScene {
         let next = SkyPillButton(title: "NEXT LEVEL", style: .primary, size: CGSize(width: 240, height: 52)) { [weak self] in
             guard let self = self else { return }
             let nextID = self.challenge.id + 1
-            if let nextChallenge = ChallengeCatalog.challenge(forID: nextID),
-               !nextChallenge.requiresFullUnlock || IAPManager.shared.isContentUnlocked {
+            if let nextChallenge = ChallengeCatalog.challenge(forID: nextID) {
                 SkyNavigator.shared.showGame(challenge: nextChallenge)
-            } else if nextID <= ChallengeCatalog.all.count {
-                SkyNavigator.shared.showUnlock()
             } else {
                 SkyNavigator.shared.showMap()
             }

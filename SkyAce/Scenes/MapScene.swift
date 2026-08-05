@@ -5,7 +5,6 @@ import SpriteKit
 ///   - completed (gold filled + checkmark badge)
 ///   - active    (large primary + info card + FLY NOW button + pulse ring)
 ///   - progression-locked (grayscale + lock badge)
-///   - paywall-locked     (grayscale + gold UNLOCK badge, taps → Unlock)
 final class MapScene: SKScene {
 
     private let contentNode = SKNode()
@@ -36,18 +35,6 @@ final class MapScene: SKScene {
         DispatchQueue.main.async { [weak self] in
             self?.scrollToActive()
         }
-
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleEntitlementChange),
-            name: IAPManager.entitlementDidChange,
-            object: nil
-        )
-    }
-
-    override func willMove(from view: SKView) {
-        NotificationCenter.default.removeObserver(self, name: IAPManager.entitlementDidChange, object: nil)
-        super.willMove(from: view)
     }
 
     // SKY-55: see MenuScene.didChangeSize. Rebuilds the level path, top/tab
@@ -88,16 +75,6 @@ final class MapScene: SKScene {
         buildLevelList()
         buildTopBar()
         buildTabBar()
-    }
-
-    @objc private func handleEntitlementChange() {
-        // Re-render the level list so paywall-locked nodes flip to active and
-        // the dashed path / info card pick up the new active level. The whole
-        // contentNode is the level list — clearing and rebuilding is simpler
-        // than per-node patching for a one-shot transition.
-        contentNode.removeAllChildren()
-        buildLevelList()
-        scrollToActive()
     }
 
     // MARK: - Background
@@ -173,15 +150,13 @@ final class MapScene: SKScene {
         contentHeight = bottomPadding + CGFloat(ChallengeCatalog.all.count) * nodeSpacing + topPadding
     }
 
-    enum LevelState { case completed, active, progressionLocked, paywallLocked }
+    enum LevelState { case completed, active, progressionLocked }
 
     private func levelState(for challenge: Challenge) -> LevelState {
         let completed = ProgressManager.shared.isLevelCompleted(challenge.id)
         let progression = ProgressManager.shared.isLevelProgressionUnlocked(challenge.id)
-        let paywallOK = !challenge.requiresFullUnlock || IAPManager.shared.isContentUnlocked
 
         if completed { return .completed }
-        if !paywallOK { return .paywallLocked }
         if !progression { return .progressionLocked }
         return .active
     }
@@ -271,31 +246,6 @@ final class MapScene: SKScene {
                 color: SkyColors.onSurfaceVariant
             )
             container.addChild(lock)
-
-        case .paywallLocked:
-            circle.fillColor = SkyColors.skSurfaceContainerHigh
-            let lock = SkySprites.iconNode(
-                named: SkySprites.iconLock,
-                fallbackEmoji: "🔒",
-                size: 16,
-                color: SkyColors.onSurfaceVariant
-            )
-            container.addChild(lock)
-
-            let badge = SKShapeNode(rectOf: CGSize(width: 90, height: 26), cornerRadius: 13)
-            badge.fillColor = SkyColors.skTertiaryContainer
-            badge.strokeColor = .clear
-            badge.position = CGPoint(x: 72, y: 0)
-            container.addChild(badge)
-
-            let unlock = SKLabelNode(text: "UNLOCK")
-            unlock.fontName = SkyFonts.headlineName
-            unlock.fontSize = 11
-            unlock.fontColor = SkyColors.skOnTertiaryContainer
-            unlock.verticalAlignmentMode = .center
-            unlock.horizontalAlignmentMode = .center
-            unlock.position = CGPoint(x: 72, y: 0)
-            container.addChild(unlock)
         }
 
         return container
@@ -477,8 +427,6 @@ final class MapScene: SKScene {
         switch state {
         case .active, .completed:
             SkyNavigator.shared.showGame(challenge: challenge)
-        case .paywallLocked:
-            SkyNavigator.shared.showUnlock()
         case .progressionLocked:
             // Shake ding — no navigation.
             break

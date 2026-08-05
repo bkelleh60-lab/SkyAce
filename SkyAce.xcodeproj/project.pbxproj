@@ -68,6 +68,7 @@
 		B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010001 /* CurrencyManagerTests.swift */; };
 		B10001000000000000010002 /* StarRatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010002 /* StarRatingTests.swift */; };
 		B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */; };
+		B10001000000000000010006 /* DocumentationConsistencyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010006 /* DocumentationConsistencyTests.swift */; };
 		B10002000000000000000601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000601 /* Assets.xcassets */; };
 		B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000602 /* PrivacyInfo.xcprivacy */; };
 		B10002000000000000000603 /* Sprites in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000603 /* Sprites */; };
@@ -149,6 +150,7 @@
 		F10001000000000000010001 /* CurrencyManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyManagerTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010002 /* StarRatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarRatingTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightCoinAccumulatorTests.swift; sourceTree = "<group>"; };
+		F10001000000000000010006 /* DocumentationConsistencyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentationConsistencyTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10002000000000000000601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10002000000000000000602 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -315,6 +317,7 @@
 				F10001000000000000010001 /* CurrencyManagerTests.swift */,
 				F10001000000000000010002 /* StarRatingTests.swift */,
 				F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */,
+				F10001000000000000010006 /* DocumentationConsistencyTests.swift */,
 				F10001000000000000010004 /* Info.plist */,
 			);
 			path = SkyAceTests;
@@ -491,6 +494,7 @@
 				B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */,
 				B10001000000000000010002 /* StarRatingTests.swift in Sources */,
 				B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */,
+				B10001000000000000010006 /* DocumentationConsistencyTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

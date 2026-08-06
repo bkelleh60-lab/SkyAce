@@ -18,6 +18,13 @@ final class ProgressManager {
         static let landingPracticeInstructionShown = "skyace.landingPracticeInstructionShown"
         static let hasSeenGameIntro          = "skyace.hasSeenGameIntro"
         static let hasSeenChapterTransition  = "skyace.hasSeenChapterTransition"
+        // SKY-68: monotonic lifetime tally of every coin ever *earned* (never
+        // decremented on spend), used to drive the Coin Collector / Rich Baron
+        // Game Center achievements. Distinct from `coins`, the spendable balance.
+        static let lifetimeCoinsEarned       = "skyace.lifetimeCoinsEarned"
+        // SKY-68: count of completed Free Flight sessions, for the Free Spirit
+        // achievement.
+        static let freeFlightSessionsCompleted = "skyace.freeFlightSessionsCompleted"
     }
 
     private let defaults = UserDefaults.standard
@@ -39,7 +46,9 @@ final class ProgressManager {
             Key.sfxEnabled:       true,
             Key.landingPracticeInstructionShown: false,
             Key.hasSeenGameIntro:          false,
-            Key.hasSeenChapterTransition:  false
+            Key.hasSeenChapterTransition:  false,
+            Key.lifetimeCoinsEarned:       0,
+            Key.freeFlightSessionsCompleted: 0
         ])
     }
 
@@ -52,6 +61,33 @@ final class ProgressManager {
 
     func addCoins(_ amount: Int) {
         coins = coins + amount
+        // Feed the monotonic lifetime tally that the coin achievements read.
+        // Only positive earnings count; spending goes through `spendCoins` and
+        // must never reduce lifetime totals (SKY-68).
+        if amount > 0 {
+            defaults.set(lifetimeCoinsEarned + amount, forKey: Key.lifetimeCoinsEarned)
+        }
+    }
+
+    /// Total coins ever earned across the lifetime of the install. Only ever
+    /// increases — spending does not reduce it — so it can back the monotonic
+    /// Coin Collector / Rich Baron Game Center achievements (SKY-68).
+    var lifetimeCoinsEarned: Int {
+        defaults.integer(forKey: Key.lifetimeCoinsEarned)
+    }
+
+    // MARK: - Free Flight sessions (SKY-68)
+
+    /// Number of Free Flight sessions the player has completed. Backs the
+    /// Free Spirit achievement.
+    var freeFlightSessionsCompleted: Int {
+        defaults.integer(forKey: Key.freeFlightSessionsCompleted)
+    }
+
+    /// Records one completed Free Flight session. Called when a Free Flight
+    /// scene is dismissed (City or Mountain).
+    func incrementFreeFlightSessions() {
+        defaults.set(freeFlightSessionsCompleted + 1, forKey: Key.freeFlightSessionsCompleted)
     }
 
     // MARK: - Free Flight credit
@@ -198,7 +234,8 @@ final class ProgressManager {
         [Key.coins, Key.completedLevels, Key.starRatings, Key.ownedPlanes,
          Key.selectedPlane, Key.upgradeLevels,
          Key.landingPracticeInstructionShown,
-         Key.hasSeenGameIntro, Key.hasSeenChapterTransition].forEach {
+         Key.hasSeenGameIntro, Key.hasSeenChapterTransition,
+         Key.lifetimeCoinsEarned, Key.freeFlightSessionsCompleted].forEach {
             defaults.removeObject(forKey: $0)
         }
         freeFlightCoinAccumulator = FreeFlight.CoinAccumulator()

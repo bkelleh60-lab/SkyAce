@@ -14,6 +14,12 @@ final class GameState {
     /// "available," which is the desired semantics.
     private(set) var totalCoinsSpawned: Int = 0
     private(set) var hitsTaken: Int = 0
+    /// True if the plane made contact with any obstacle this run, whether the
+    /// hit was fatal or absorbed by armor. Backs the "Untouchable" achievement
+    /// (SKY-68), which requires a clean run — armor saving you still counts as
+    /// taking a hit. Boundary crashes (flying off-screen) end the run as a
+    /// loss, so they never reach the win path this flag is evaluated on.
+    private(set) var tookAnyHit: Bool = false
     private(set) var timeRemaining: TimeInterval
     private(set) var elapsedTime: TimeInterval = 0
     private(set) var isGameOver: Bool = false
@@ -44,6 +50,7 @@ final class GameState {
 
     /// Returns true if the plane is dead (run should end).
     func registerHit() -> Bool {
+        tookAnyHit = true
         if hitsRemaining > 0 {
             hitsRemaining -= 1
             return false

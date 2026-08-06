@@ -376,27 +376,22 @@ final class MapScene: SKScene {
 
     // MARK: - Touch
 
-    /// Begins a pan, and — when the briefing overlay is up — routes START / Skip
-    /// and swallows every other touch; otherwise handles back / tab-bar taps.
+    /// Begins a pan, and — when the briefing overlay is up — routes the START
+    /// button and swallows every other touch; otherwise handles back / tab-bar taps.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
         lastPanY = location.y
         scrollVelocity = 0
 
-        // SKY-61: while the briefing overlay is up, route START / Skip and
-        // swallow everything else so the map can't scroll behind it.
-        if let overlay = briefingOverlay {
+        // SKY-61: while the briefing overlay is up, route START and swallow
+        // everything else so the map can't scroll behind it.
+        if briefingOverlay != nil {
             for node in nodes(at: location) {
                 var n: SKNode? = node
                 while let current = n {
                     if let button = current as? SkyPillButton, button.name == "briefStart" {
                         button.handleTap()
-                        return
-                    }
-                    if current.name == "briefSkip" {
-                        AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-                        overlay.skip()
                         return
                     }
                     n = current.parent

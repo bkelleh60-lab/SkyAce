@@ -3,18 +3,16 @@ import SpriteKit
 /// Slide-up mission briefing overlay shown after the player taps "Fly" and
 /// before the gameplay scene loads (SKY-61). It dims the scene behind it and
 /// slides a themed card up from the bottom carrying the commander portrait,
-/// mission tagline, and story context, plus a primary START button and a small
-/// Skip link. Both START and Skip proceed to gameplay; the only difference is
-/// intent, so both run the same slide-down dismissal and then call `onProceed`.
+/// mission tagline, and story context, plus a primary START button that
+/// dismisses the card and enters gameplay.
 ///
 /// The card art variant and portrait expression follow the brief's chapter:
 /// Clear Skies uses the bright card + neutral portrait, Storm Chaser uses the
 /// stormy card + serious portrait.
 ///
 /// This node is not itself interactive — the presenting scene (`MapScene`)
-/// finds the START button / Skip hit area by name and drives `handleTap()` /
-/// `skip()`, matching the overlay-routing pattern already used for the menu's
-/// world select.
+/// finds the START button by name and drives `handleTap()`, matching the
+/// overlay-routing pattern already used for the menu's world select.
 final class MissionBriefingCard: SKNode {
 
     private let brief: MissionBrief
@@ -31,9 +29,9 @@ final class MissionBriefingCard: SKNode {
 
     // MARK: - Init
 
-    /// Creates the overlay for `brief`. `onProceed` runs after START or Skip
-    /// slides the card away, to enter gameplay. `bottomInset` nudges the resting
-    /// position clear of the home indicator.
+    /// Creates the overlay for `brief`. `onProceed` runs after START slides the
+    /// card away, to enter gameplay. `bottomInset` nudges the resting position
+    /// clear of the home indicator.
     init(brief: MissionBrief,
          sceneSize: CGSize,
          bottomInset: CGFloat,
@@ -51,7 +49,7 @@ final class MissionBriefingCard: SKNode {
     // MARK: - Build
 
     /// Assembles the scrim, themed card art, portrait, tagline, story, and the
-    /// START / Skip controls, positioned off-screen ready for `animateIn()`.
+    /// START button, positioned off-screen ready for `animateIn()`.
     private func build() {
         scrim.anchorPoint = .zero
         scrim.position = .zero
@@ -120,7 +118,8 @@ final class MissionBriefingCard: SKNode {
         cardGroup.addChild(tagline)
         cardGroup.addChild(story)
 
-        // START button + Skip link sit below the card on the scrim.
+        // START button sits below the card on the scrim. It is the only control:
+        // it dismisses the briefing and enters gameplay.
         let buttonHeight: CGFloat = 52
         let button = SkyPillButton(
             title: "START",
@@ -133,42 +132,19 @@ final class MissionBriefingCard: SKNode {
         button.position = CGPoint(x: 0, y: buttonY)
         cardGroup.addChild(button)
 
-        // Skip: a bare label is only ~28×17pt — below Apple's 44pt minimum, and
-        // this is a kids' app. Wrap the label in an invisible 44pt-tall hit area
-        // that carries the routing name so MapScene's parent-walk resolves taps
-        // through the container.
-        let skipHitHeight: CGFloat = 44
-        let skipCenterY = buttonY - buttonHeight / 2 - 8 - skipHitHeight / 2
-
-        let skip = SKLabelNode(text: "Skip")
-        skip.fontName = SkyFonts.headlineName
-        skip.fontSize = 14
-        skip.fontColor = SkyColors.skOnPrimary.withAlphaComponent(0.9)
-        skip.horizontalAlignmentMode = .center
-        skip.verticalAlignmentMode = .center
-        skip.position = .zero
-        skip.zPosition = 1
-
-        let skipHitArea = SKSpriteNode(color: .clear, size: CGSize(width: 120, height: skipHitHeight))
-        skipHitArea.name = "briefSkip"
-        skipHitArea.zPosition = 2
-        skipHitArea.position = CGPoint(x: 0, y: skipCenterY)
-        skipHitArea.addChild(skip)
-        cardGroup.addChild(skipHitArea)
-
         // Rest position. Centering the *whole* block on the screen center (the
-        // original approach) let the START/Skip tail hang into the lower third,
-        // where the Skip link landed on top of the active level's info card that
-        // shows dimmed behind the scrim (SKY-112). Instead, pin the Skip link's
-        // baseline into the lower-middle so it clears the tab bar and info card,
-        // and let the card float above it. Clamp so a tall card on a shorter
-        // screen never pushes off the top. Offscreen start sits fully below the
-        // bottom edge for the slide-up.
-        let bottomExtent = -skipCenterY + skipHitHeight / 2 // origin → skip bottom
-        let topExtent = cardHeight / 2                       // origin → card top
-        let skipBottomTarget = max(sceneSize.height * 0.40, bottomInset + 160)
-        let maxRestY = sceneSize.height - topExtent - 24     // keep card top on-screen
-        restY = min(skipBottomTarget + bottomExtent, maxRestY)
+        // original approach) let the START button hang into the lower third,
+        // where it overlapped the active level's info card that shows dimmed
+        // behind the scrim (SKY-112). Instead, pin the START button's baseline
+        // into the lower-middle so it clears the tab bar and info card, and let
+        // the card float above it. Clamp so a tall card on a shorter screen never
+        // pushes off the top. Offscreen start sits fully below the bottom edge
+        // for the slide-up.
+        let bottomExtent = -buttonY + buttonHeight / 2  // origin → button bottom
+        let topExtent = cardHeight / 2                  // origin → card top
+        let buttonBottomTarget = max(sceneSize.height * 0.40, bottomInset + 160)
+        let maxRestY = sceneSize.height - topExtent - 24 // keep card top on-screen
+        restY = min(buttonBottomTarget + bottomExtent, maxRestY)
         offscreenY = -bottomExtent - 40
         cardGroup.position = CGPoint(x: sceneSize.width / 2, y: offscreenY)
         cardGroup.zPosition = 1
@@ -209,11 +185,6 @@ final class MissionBriefingCard: SKNode {
         scrim.alpha = 0
         scrim.run(.fadeIn(withDuration: 0.2))
         cardGroup.run(.moveTo(y: restY, duration: 0.32, timingMode: .easeOut))
-    }
-
-    /// Skip link tapped — same outcome as START.
-    func skip() {
-        proceed()
     }
 
     /// Slide the card down, fade the scrim out, remove the overlay, then hand

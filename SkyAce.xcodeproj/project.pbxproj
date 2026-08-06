@@ -33,6 +33,7 @@
 		1A75BBB92FAA000000000009 /* sfx_landing_crash.caf in Resources */ = {isa = PBXBuildFile; fileRef = 1A75AAA92FAA000000000009 /* sfx_landing_crash.caf */; };
 		1A75BBBA2FAA00000000000A /* music_landing_practice.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 1A75AAAA2FAA00000000000A /* music_landing_practice.m4a */; };
 		B10001000000000000000101 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000101 /* AppDelegate.swift */; };
+		B10001000000000000000103 /* SceneDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000103 /* SceneDelegate.swift */; };
 		B10001000000000000000102 /* GameViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000102 /* GameViewController.swift */; };
 		B10001000000000000000104 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000104 /* Colors.swift */; };
 		B10001000000000000000201 /* ProgressManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000201 /* ProgressManager.swift */; };
@@ -119,6 +120,7 @@
 		F10000000000000000000002 /* SkyAceTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SkyAceTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F10001000000000000000000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10001000000000000000101 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		F10001000000000000000103 /* SceneDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneDelegate.swift; sourceTree = "<group>"; };
 		F10001000000000000000102 /* GameViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameViewController.swift; sourceTree = "<group>"; };
 		F10001000000000000000104 /* Colors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Colors.swift; sourceTree = "<group>"; };
 		F10001000000000000000201 /* ProgressManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressManager.swift; sourceTree = "<group>"; };
@@ -197,6 +199,7 @@
 			isa = PBXGroup;
 			children = (
 				F10001000000000000000101 /* AppDelegate.swift */,
+				F10001000000000000000103 /* SceneDelegate.swift */,
 				F10001000000000000000102 /* GameViewController.swift */,
 				F10001000000000000000104 /* Colors.swift */,
 				G10003000000000000000003 /* Managers */,
@@ -464,6 +467,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				B10001000000000000000101 /* AppDelegate.swift in Sources */,
+				B10001000000000000000103 /* SceneDelegate.swift in Sources */,
 				B10001000000000000000102 /* GameViewController.swift in Sources */,
 				B10001000000000000000104 /* Colors.swift in Sources */,
 				B10001000000000000000201 /* ProgressManager.swift in Sources */,

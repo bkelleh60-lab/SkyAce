@@ -42,7 +42,7 @@ final class MissionBriefingCard: SKNode {
         self.sceneSize = sceneSize
         self.bottomInset = bottomInset
         self.onProceed = onProceed
-        self.scrim = SKSpriteNode(color: UIColor.black.withAlphaComponent(0.35), size: sceneSize)
+        self.scrim = SKSpriteNode(color: UIColor.black.withAlphaComponent(0.55), size: sceneSize)
         super.init()
         build()
     }
@@ -156,12 +156,19 @@ final class MissionBriefingCard: SKNode {
         skipHitArea.addChild(skip)
         cardGroup.addChild(skipHitArea)
 
-        // Rest position: center the whole block (card + button + skip) on the
-        // screen center. Offscreen start sits fully below the bottom edge for
-        // the slide-up.
+        // Rest position. Centering the *whole* block on the screen center (the
+        // original approach) let the START/Skip tail hang into the lower third,
+        // where the Skip link landed on top of the active level's info card that
+        // shows dimmed behind the scrim (SKY-112). Instead, pin the Skip link's
+        // baseline into the lower-middle so it clears the tab bar and info card,
+        // and let the card float above it. Clamp so a tall card on a shorter
+        // screen never pushes off the top. Offscreen start sits fully below the
+        // bottom edge for the slide-up.
         let bottomExtent = -skipCenterY + skipHitHeight / 2 // origin → skip bottom
         let topExtent = cardHeight / 2                       // origin → card top
-        restY = sceneSize.height / 2 + (bottomExtent - topExtent) / 2 + bottomInset * 0.2
+        let skipBottomTarget = max(sceneSize.height * 0.40, bottomInset + 160)
+        let maxRestY = sceneSize.height - topExtent - 24     // keep card top on-screen
+        restY = min(skipBottomTarget + bottomExtent, maxRestY)
         offscreenY = -bottomExtent - 40
         cardGroup.position = CGPoint(x: sceneSize.width / 2, y: offscreenY)
         cardGroup.zPosition = 1

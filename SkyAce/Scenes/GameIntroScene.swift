@@ -1,4 +1,5 @@
 import SpriteKit
+import CoreImage
 
 /// One-time game intro shown on first launch, before the menu / level select
 /// (SKY-61, restyled in SKY-113). Full-screen `intro_bg` illustration with the
@@ -88,10 +89,12 @@ final class GameIntroScene: SKScene {
         let buttonY = bottomInset + Layout.buttonBottomPadding + Layout.buttonHeight / 2
         buildStartButton(width: buttonWidth, centerY: buttonY)
 
-        // Intro copy sits above the button. White bold text with a soft dark
-        // drop shadow so it reads cleanly over the lower sky artwork.
-        let copy = shadowed { self.introLabel(maxWidth: self.size.width * 0.85) }
-        let textHeight = copy.calculateAccumulatedFrame().height
+        // Intro copy sits above the button. Deep-navy bold text with a soft
+        // white glow so it reads cleanly over the lower sky artwork. Height is
+        // measured from a plain label so the glow's blur doesn't perturb layout.
+        let bodyBuilder = { self.introLabel(maxWidth: self.size.width * 0.85) }
+        let copy = glowing(bodyBuilder)
+        let textHeight = bodyBuilder().calculateAccumulatedFrame().height
         let buttonTop = buttonY + Layout.buttonHeight / 2
         let textCenterY = buttonTop + Layout.buttonToTextGap + textHeight / 2
         copy.position = CGPoint(x: centerX, y: textCenterY)
@@ -100,8 +103,9 @@ final class GameIntroScene: SKScene {
         let textTop = textCenterY + textHeight / 2
 
         // "Captain Rio" name label directly under the portrait, above the copy.
-        let nameLabel = shadowed { self.rioNameLabel() }
-        let nameHeight = nameLabel.calculateAccumulatedFrame().height
+        let nameBuilder = { self.rioNameLabel() }
+        let nameLabel = glowing(nameBuilder)
+        let nameHeight = nameBuilder().calculateAccumulatedFrame().height
         let nameCenterY = textTop + Layout.nameToTextGap + nameHeight / 2
         nameLabel.position = CGPoint(x: centerX, y: nameCenterY)
         nameLabel.zPosition = 10
@@ -159,22 +163,31 @@ final class GameIntroScene: SKScene {
         return container
     }
 
-    /// Wraps a white label in a soft drop shadow (black @ 50%, 1pt below),
-    /// approximated by an offset dark duplicate since `SKLabelNode` has no
-    /// native shadow. `build` is called twice — once for the shadow, once for
-    /// the visible white copy — so both stay identical. Returns a container
-    /// centered on `.zero`.
-    private func shadowed(_ build: () -> SKLabelNode) -> SKNode {
+    /// Deep-navy text is 60% opaque.
+    private static let textColor = UIColor(hex: 0x08314D)
+
+    /// Wraps a deep-navy label in a soft, centered white glow — a white copy of
+    /// the same text run through a 6pt Gaussian blur (via `SKEffectNode`) at 60%
+    /// opacity, sitting directly behind the text with no offset. This lifts the
+    /// dark copy off the pale sky as a halo rather than a directional shadow.
+    /// `build` is called twice (glow + visible text) so both stay identical.
+    /// Returns a container centered on `.zero`.
+    private func glowing(_ build: () -> SKLabelNode) -> SKNode {
         let container = SKNode()
 
-        let shadow = build()
-        shadow.fontColor = UIColor.black.withAlphaComponent(0.5)
-        shadow.position = CGPoint(x: 0, y: -1)
-        shadow.zPosition = 0
-        container.addChild(shadow)
+        let glow = SKEffectNode()
+        glow.filter = CIFilter(name: "CIGaussianBlur", parameters: ["inputRadius": 6.0])
+        glow.shouldRasterize = true
+        glow.alpha = 0.6
+        glow.zPosition = 0
+        let glowLabel = build()
+        glowLabel.fontColor = .white
+        glowLabel.position = .zero
+        glow.addChild(glowLabel)
+        container.addChild(glow)
 
         let label = build()
-        label.fontColor = .white
+        label.fontColor = GameIntroScene.textColor
         label.position = .zero
         label.zPosition = 1
         container.addChild(label)

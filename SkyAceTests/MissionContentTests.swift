@@ -53,9 +53,9 @@ final class MissionContentTests: XCTestCase {
 
     func testGameIntroCopyPresent() {
         XCTAssertFalse(MissionContent.gameIntro.body.trimmingCharacters(in: .whitespaces).isEmpty)
-        // The intro is meant to set up both chapter names.
-        XCTAssertTrue(MissionContent.gameIntro.body.contains("Clear Skies"))
-        XCTAssertTrue(MissionContent.gameIntro.body.contains("Storm Chaser"))
+        // The intro welcomes the player to the academy and names their instructor.
+        XCTAssertTrue(MissionContent.gameIntro.body.contains("Skyview Flight Academy"))
+        XCTAssertTrue(MissionContent.gameIntro.body.contains("Captain Rio"))
     }
 
     func testChapterTransitionCopyPresent() {

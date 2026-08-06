@@ -19,8 +19,9 @@ final class GameIntroScene: SKScene {
     /// Layout constants shared across the lower stack.
     private enum Layout {
         static let portraitSide: CGFloat = 80
-        static let portraitGap: CGFloat = 18
-        static let buttonHeight: CGFloat = 56
+        static let portraitGap: CGFloat = 8
+        static let nameToTextGap: CGFloat = 14
+        static let buttonHeight: CGFloat = 67 // +20% over the original 56pt
         static let buttonBottomPadding: CGFloat = 24
         static let buttonToTextGap: CGFloat = 40
     }
@@ -74,34 +75,44 @@ final class GameIntroScene: SKScene {
 
     // MARK: - Lower stack
 
-    /// Lays Rio's portrait, the intro copy, and the primary button as one stack
-    /// anchored from the bottom edge up. No card behind the text — the copy
-    /// floats over the sky gradient with a soft drop shadow for legibility
-    /// (SKY-113).
+    /// Lays Rio's portrait, her name label, the intro copy, and the primary
+    /// button as one stack anchored from the bottom edge up. No card behind the
+    /// text — the copy floats over the sky gradient with a soft drop shadow for
+    /// legibility (SKY-113).
     private func buildLowerStack() {
         let bottomInset = view?.safeAreaInsets.bottom ?? 0
+        let centerX = size.width / 2
 
         // Button pinned to the bottom, full-width with side padding.
         let buttonWidth = min(size.width - 48, 420)
         let buttonY = bottomInset + Layout.buttonBottomPadding + Layout.buttonHeight / 2
         buildStartButton(width: buttonWidth, centerY: buttonY)
 
-        // Intro copy sits above the button. Near-white bold text with a soft
-        // dark drop shadow so it reads cleanly over the pale lower artwork.
-        let copy = shadowedIntroLabel(maxWidth: size.width * 0.85)
+        // Intro copy sits above the button. White bold text with a soft dark
+        // drop shadow so it reads cleanly over the lower sky artwork.
+        let copy = shadowed { self.introLabel(maxWidth: self.size.width * 0.85) }
         let textHeight = copy.calculateAccumulatedFrame().height
         let buttonTop = buttonY + Layout.buttonHeight / 2
         let textCenterY = buttonTop + Layout.buttonToTextGap + textHeight / 2
-        copy.position = CGPoint(x: size.width / 2, y: textCenterY)
+        copy.position = CGPoint(x: centerX, y: textCenterY)
         copy.zPosition = 10
         addChild(copy)
-
-        // Rio's portrait above the copy.
         let textTop = textCenterY + textHeight / 2
+
+        // "Captain Rio" name label directly under the portrait, above the copy.
+        let nameLabel = shadowed { self.rioNameLabel() }
+        let nameHeight = nameLabel.calculateAccumulatedFrame().height
+        let nameCenterY = textTop + Layout.nameToTextGap + nameHeight / 2
+        nameLabel.position = CGPoint(x: centerX, y: nameCenterY)
+        nameLabel.zPosition = 10
+        addChild(nameLabel)
+        let nameTop = nameCenterY + nameHeight / 2
+
+        // Rio's portrait above the name label.
         let portrait = buildPortrait(side: Layout.portraitSide)
         portrait.position = CGPoint(
-            x: size.width / 2,
-            y: textTop + Layout.portraitGap + Layout.portraitSide / 2
+            x: centerX,
+            y: nameTop + Layout.portraitGap + Layout.portraitSide / 2
         )
         portrait.zPosition = 10
         addChild(portrait)
@@ -148,22 +159,22 @@ final class GameIntroScene: SKScene {
         return container
     }
 
-    /// The intro paragraph as a dark-navy centered label lifted off the pale sky
-    /// by a soft white halo (approximated by an offset light copy, since
-    /// `SKLabelNode` has no native shadow). Dark text is the game's convention
-    /// for the light lower band and reads far more cleanly than white here.
-    /// Returns a container centered on `.zero`.
-    private func shadowedIntroLabel(maxWidth: CGFloat) -> SKNode {
+    /// Wraps a white label in a soft drop shadow (black @ 50%, 1pt below),
+    /// approximated by an offset dark duplicate since `SKLabelNode` has no
+    /// native shadow. `build` is called twice — once for the shadow, once for
+    /// the visible white copy — so both stay identical. Returns a container
+    /// centered on `.zero`.
+    private func shadowed(_ build: () -> SKLabelNode) -> SKNode {
         let container = SKNode()
 
-        let halo = introLabel(maxWidth: maxWidth)
-        halo.fontColor = UIColor.white.withAlphaComponent(0.6)
-        halo.position = CGPoint(x: 0, y: -1)
-        halo.zPosition = 0
-        container.addChild(halo)
+        let shadow = build()
+        shadow.fontColor = UIColor.black.withAlphaComponent(0.5)
+        shadow.position = CGPoint(x: 0, y: -1)
+        shadow.zPosition = 0
+        container.addChild(shadow)
 
-        let label = introLabel(maxWidth: maxWidth)
-        label.fontColor = SkyColors.skOnPrimaryContainer
+        let label = build()
+        label.fontColor = .white
         label.position = .zero
         label.zPosition = 1
         container.addChild(label)
@@ -171,15 +182,26 @@ final class GameIntroScene: SKScene {
         return container
     }
 
-    /// A configured intro paragraph label (bold, centered, wrapped). Shared by
-    /// the visible copy and its drop-shadow duplicate so both stay identical.
+    /// A configured intro paragraph label (bold, centered, wrapped). Color is
+    /// applied by `shadowed(_:)`.
     private func introLabel(maxWidth: CGFloat) -> SKLabelNode {
         let label = SKLabelNode(text: MissionContent.gameIntro.body)
         label.fontName = SkyFonts.boldName
-        label.fontSize = 19
+        label.fontSize = 22
         label.numberOfLines = 0
         label.lineBreakMode = .byWordWrapping
         label.preferredMaxLayoutWidth = maxWidth
+        label.horizontalAlignmentMode = .center
+        label.verticalAlignmentMode = .center
+        return label
+    }
+
+    /// The small "Captain Rio" name label shown under the portrait. Color is
+    /// applied by `shadowed(_:)`.
+    private func rioNameLabel() -> SKLabelNode {
+        let label = SKLabelNode(text: "Captain Rio")
+        label.fontName = SkyFonts.boldName
+        label.fontSize = 13
         label.horizontalAlignmentMode = .center
         label.verticalAlignmentMode = .center
         return label

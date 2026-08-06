@@ -40,7 +40,7 @@ enum MissionContent {
     // MARK: - Game intro
 
     static let gameIntro = GameIntro(
-        body: "You just got your wings. Well, almost. Skyview Flight Academy takes new pilots and turns them into aces, and today that's you. Captain Rio runs the flight line, and she doesn't waste words: fly clean, fly smart, and the sky is yours. First stop, Clear Skies. After that, Storm Chaser."
+        body: "Welcome to Skyview Flight Academy. Captain Rio is your instructor, and she thinks you've got what it takes."
     )
 
     // MARK: - Chapter transition

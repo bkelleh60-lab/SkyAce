@@ -72,6 +72,9 @@ final class ResultsScene: SKScene {
 
     // MARK: - Win UI
 
+    /// Lays out the win screen — confetti, stars, coin count-up, and the
+    /// NEXT LEVEL / UPGRADE SHOP / BACK TO MAP actions (the first and last
+    /// route through the chapter transition after an L5 win).
     private func buildWin() {
         buildConfetti()
 
@@ -234,6 +237,7 @@ final class ResultsScene: SKScene {
 
     // MARK: - Touch
 
+    /// Routes taps to the pill buttons and the BACK TO MAP link.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)

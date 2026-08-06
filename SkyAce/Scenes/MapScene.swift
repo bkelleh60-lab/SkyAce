@@ -42,10 +42,10 @@ final class MapScene: SKScene {
         }
     }
 
-    // SKY-55: see MenuScene.didChangeSize. Rebuilds the level path, top/tab
-    // bars, and background to fill the new dimensions, then scrolls back to
-    // the active level (preserving the user's prior scroll position has no
-    // value once the layout's geometry has changed).
+    /// Rebuilds the level path, top/tab bars, and background to fill the new
+    /// dimensions on iPad rotation, then scrolls back to the active level
+    /// (SKY-55). Preserving the prior scroll position has no value once the
+    /// layout geometry has changed.
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
         guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
@@ -260,6 +260,8 @@ final class MapScene: SKScene {
         return container
     }
 
+    /// Builds the expanded info card under the active level node: chapter
+    /// label, name, reward, and the FLY NOW button that opens the briefing.
     private func addActiveInfoCard(challenge: Challenge, to parent: SKNode) {
         let cardSize = CGSize(width: 260, height: 130)
         let card = SKShapeNode(rectOf: cardSize, cornerRadius: 24)
@@ -374,6 +376,8 @@ final class MapScene: SKScene {
 
     // MARK: - Touch
 
+    /// Begins a pan, and — when the briefing overlay is up — routes START / Skip
+    /// and swallows every other touch; otherwise handles back / tab-bar taps.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
@@ -414,6 +418,7 @@ final class MapScene: SKScene {
         }
     }
 
+    /// Drives pan-scrolling, unless the briefing overlay is up (which locks it).
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard briefingOverlay == nil else { return }
         guard let touch = touches.first else { return }
@@ -424,6 +429,7 @@ final class MapScene: SKScene {
         scrollVelocity = dy * 60
     }
 
+    /// On a tap (not a scroll), routes FLY NOW / level-node taps to the briefing.
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard briefingOverlay == nil else { return }
         guard let touch = touches.first else { return }
@@ -453,6 +459,8 @@ final class MapScene: SKScene {
         }
     }
 
+    /// Routes a tapped level node: active/completed open the briefing, locked
+    /// levels do nothing.
     private func routeLevelTap(_ challenge: Challenge) {
         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
         let state = levelState(for: challenge)

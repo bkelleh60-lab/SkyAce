@@ -35,6 +35,8 @@ final class GameViewController: UIViewController {
         self.view = view
     }
 
+    /// Attaches the navigator and presents the first scene — the one-time game
+    /// intro on a fresh install, otherwise the menu — then starts menu music.
     override func viewDidLoad() {
         super.viewDidLoad()
         SkyNavigator.shared.attach(view: skView, presenter: self)

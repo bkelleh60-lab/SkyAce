@@ -26,6 +26,7 @@ final class ProgressManager {
         registerDefaults()
     }
 
+    /// Registers the initial UserDefaults values for a fresh install.
     private func registerDefaults() {
         defaults.register(defaults: [
             Key.coins:            0,
@@ -192,6 +193,7 @@ final class ProgressManager {
 
     // MARK: - Reset (debug only)
     #if DEBUG
+    /// Clears all persisted progress and re-registers defaults. Debug builds only.
     func resetAllProgress() {
         [Key.coins, Key.completedLevels, Key.starRatings, Key.ownedPlanes,
          Key.selectedPlane, Key.upgradeLevels,

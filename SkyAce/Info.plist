@@ -28,14 +28,19 @@
 	<array>
 		<string>arm64</string>
 	</array>
-	<key>UIRequiresFullScreen</key>
-	<true/>
 	<key>UIStatusBarHidden</key>
 	<true/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 	</array>
+	<!-- iPad supports all four orientations (SKY-98). Apple now emits a
+	     "Support for all orientations will soon be required" runtime issue for
+	     iPad apps that don't, so restricting orientations to opt out of Split
+	     View / Slide Over would just trade the removed UIRequiresFullScreen
+	     fault for a new one. The game handles multitasking window sizes: scenes
+	     use .resizeFill, the SKView autoresizes with the window, and HUD chrome
+	     re-lays out in viewSafeAreaInsetsDidChange. -->
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
@@ -55,6 +60,18 @@
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
 		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneConfigurationName</key>
+					<string>Default Configuration</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+				</dict>
+			</array>
+		</dict>
 	</dict>
 </dict>
 </plist>

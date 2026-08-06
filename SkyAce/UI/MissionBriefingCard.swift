@@ -40,7 +40,7 @@ final class MissionBriefingCard: SKNode {
         self.sceneSize = sceneSize
         self.bottomInset = bottomInset
         self.onProceed = onProceed
-        self.scrim = SKSpriteNode(color: UIColor.black.withAlphaComponent(0.55), size: sceneSize)
+        self.scrim = SKSpriteNode(color: UIColor.black.withAlphaComponent(0.68), size: sceneSize)
         super.init()
         build()
     }

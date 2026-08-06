@@ -148,20 +148,22 @@ final class GameIntroScene: SKScene {
         return container
     }
 
-    /// The intro paragraph as a near-white centered label with a soft dark drop
-    /// shadow (approximated by an offset dark copy, since `SKLabelNode` has no
-    /// native shadow). Returns a container centered on `.zero`.
+    /// The intro paragraph as a dark-navy centered label lifted off the pale sky
+    /// by a soft white halo (approximated by an offset light copy, since
+    /// `SKLabelNode` has no native shadow). Dark text is the game's convention
+    /// for the light lower band and reads far more cleanly than white here.
+    /// Returns a container centered on `.zero`.
     private func shadowedIntroLabel(maxWidth: CGFloat) -> SKNode {
         let container = SKNode()
 
-        let shadow = introLabel(maxWidth: maxWidth)
-        shadow.fontColor = UIColor.black.withAlphaComponent(0.4)
-        shadow.position = CGPoint(x: 1, y: -2)
-        shadow.zPosition = 0
-        container.addChild(shadow)
+        let halo = introLabel(maxWidth: maxWidth)
+        halo.fontColor = UIColor.white.withAlphaComponent(0.6)
+        halo.position = CGPoint(x: 0, y: -1)
+        halo.zPosition = 0
+        container.addChild(halo)
 
         let label = introLabel(maxWidth: maxWidth)
-        label.fontColor = UIColor(hex: 0xF5F9FF)
+        label.fontColor = SkyColors.skOnPrimaryContainer
         label.position = .zero
         label.zPosition = 1
         container.addChild(label)

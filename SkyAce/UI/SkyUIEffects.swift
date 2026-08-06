@@ -263,6 +263,17 @@ enum SkySprites {
     static let iconWorldMountain = "icon_world_mountain"
     static let pilotAvatar       = "pilot_avatar"
 
+    // Mission intro / briefing art (SKY-61 / SKY-70). Full-screen backgrounds
+    // and the two commander portraits are stretched to an explicit size at
+    // every call site, so a single-scale imageset renders correctly on all
+    // devices.
+    static let introBackground        = "intro_bg"
+    static let briefingCardClearSkies = "briefing_card_clearskies"
+    static let briefingCardStormChaser = "briefing_card_stormchaser"
+    static let pilotPortraitNeutral   = "pilot_portrait_neutral"
+    static let pilotPortraitSerious   = "pilot_portrait_serious"
+    static let chapterTransition      = "chapter_transition"
+
     // Shop upgrade icons (Assets.xcassets/*.imageset).
     static let upgradeEngine     = "engine_boost"
 

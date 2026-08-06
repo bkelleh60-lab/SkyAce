@@ -263,6 +263,17 @@ enum SkySprites {
     static let iconWorldMountain = "icon_world_mountain"
     static let pilotAvatar       = "pilot_avatar"
 
+    // Mission intro / briefing art (SKY-61 / SKY-70). Full-screen backgrounds
+    // and the two commander portraits are stretched to an explicit size at
+    // every call site, so a single-scale imageset renders correctly on all
+    // devices.
+    static let introBackground        = "intro_bg"
+    static let briefingCardClearSkies = "briefing_card_clearskies"
+    static let briefingCardStormChaser = "briefing_card_stormchaser"
+    static let pilotPortraitNeutral   = "pilot_portrait_neutral"
+    static let pilotPortraitSerious   = "pilot_portrait_serious"
+    static let chapterTransition      = "chapter_transition"
+
     // Shop upgrade icons (Assets.xcassets/*.imageset).
     static let upgradeEngine     = "engine_boost"
 
@@ -406,6 +417,21 @@ enum SkySprites {
             tinted.draw(in: rect)
         }
         return SKSpriteNode(texture: SKTexture(image: image), size: canvas)
+    }
+}
+
+// MARK: - SKScene aspect-fill
+
+extension SKScene {
+    /// The size that fills `self.size` with `texture` while preserving the
+    /// texture's aspect ratio (center-crop cover). Used by the full-screen
+    /// narrative scenes so a fixed-aspect illustration covers the display
+    /// without distortion.
+    func aspectFillSize(for texture: SKTexture) -> CGSize {
+        let tex = texture.size()
+        guard tex.width > 0, tex.height > 0 else { return size }
+        let scale = max(size.width / tex.width, size.height / tex.height)
+        return CGSize(width: tex.width * scale, height: tex.height * scale)
     }
 }
 

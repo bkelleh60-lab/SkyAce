@@ -16,6 +16,8 @@ final class ProgressManager {
         static let musicEnabled        = "skyace.musicEnabled"
         static let sfxEnabled          = "skyace.sfxEnabled"
         static let landingPracticeInstructionShown = "skyace.landingPracticeInstructionShown"
+        static let hasSeenGameIntro          = "skyace.hasSeenGameIntro"
+        static let hasSeenChapterTransition  = "skyace.hasSeenChapterTransition"
     }
 
     private let defaults = UserDefaults.standard
@@ -24,6 +26,7 @@ final class ProgressManager {
         registerDefaults()
     }
 
+    /// Registers the initial UserDefaults values for a fresh install.
     private func registerDefaults() {
         defaults.register(defaults: [
             Key.coins:            0,
@@ -34,7 +37,9 @@ final class ProgressManager {
             Key.upgradeLevels:    [String: Int](),
             Key.musicEnabled:     true,
             Key.sfxEnabled:       true,
-            Key.landingPracticeInstructionShown: false
+            Key.landingPracticeInstructionShown: false,
+            Key.hasSeenGameIntro:          false,
+            Key.hasSeenChapterTransition:  false
         ])
     }
 
@@ -158,6 +163,22 @@ final class ProgressManager {
         set { defaults.set(newValue, forKey: Key.landingPracticeInstructionShown) }
     }
 
+    // MARK: - Mission intro screens (SKY-61)
+
+    /// True once the one-time game intro overlay has been shown on first
+    /// launch. Gates `GameIntroScene` so it appears exactly once.
+    var hasSeenGameIntro: Bool {
+        get { defaults.bool(forKey: Key.hasSeenGameIntro) }
+        set { defaults.set(newValue, forKey: Key.hasSeenGameIntro) }
+    }
+
+    /// True once the Clear Skies → Storm Chaser chapter transition has been
+    /// shown (between L5 completion and L6). Gates `ChapterTransitionScene`.
+    var hasSeenChapterTransition: Bool {
+        get { defaults.bool(forKey: Key.hasSeenChapterTransition) }
+        set { defaults.set(newValue, forKey: Key.hasSeenChapterTransition) }
+    }
+
     // MARK: - Audio toggles
 
     var musicEnabled: Bool {
@@ -172,10 +193,12 @@ final class ProgressManager {
 
     // MARK: - Reset (debug only)
     #if DEBUG
+    /// Clears all persisted progress and re-registers defaults. Debug builds only.
     func resetAllProgress() {
         [Key.coins, Key.completedLevels, Key.starRatings, Key.ownedPlanes,
          Key.selectedPlane, Key.upgradeLevels,
-         Key.landingPracticeInstructionShown].forEach {
+         Key.landingPracticeInstructionShown,
+         Key.hasSeenGameIntro, Key.hasSeenChapterTransition].forEach {
             defaults.removeObject(forKey: $0)
         }
         freeFlightCoinAccumulator = FreeFlight.CoinAccumulator()

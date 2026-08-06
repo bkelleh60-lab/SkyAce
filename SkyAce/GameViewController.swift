@@ -35,10 +35,19 @@ final class GameViewController: UIViewController {
         self.view = view
     }
 
+    /// Attaches the navigator and presents the first scene — the one-time game
+    /// intro on a fresh install, otherwise the menu — then starts menu music.
     override func viewDidLoad() {
         super.viewDidLoad()
         SkyNavigator.shared.attach(view: skView, presenter: self)
-        SkyNavigator.shared.showMenu()
+        // SKY-61: on first launch, the one-time game intro plays before the
+        // menu / level select. It sets the `hasSeenGameIntro` gate on dismiss
+        // and routes to the menu itself.
+        if ProgressManager.shared.hasSeenGameIntro {
+            SkyNavigator.shared.showMenu()
+        } else {
+            SkyNavigator.shared.showGameIntro()
+        }
         AudioManager.shared.playMusic(SkyMusic.menu, fileExtension: "wav")
     }
 
@@ -103,6 +112,18 @@ final class SkyNavigator {
 
     func showMenu() {
         present(MenuScene(size: sceneSize()), music: SkyMusic.menu)
+    }
+
+    /// SKY-61: one-time game intro overlay shown on first launch. The scene
+    /// dismisses itself to the menu on tap.
+    func showGameIntro() {
+        present(GameIntroScene(size: sceneSize()), music: SkyMusic.menu)
+    }
+
+    /// SKY-61: chapter transition shown once between L5 and L6. `continuation`
+    /// runs on tap-dismiss to proceed to the player's original destination.
+    func showChapterTransition(then continuation: @escaping () -> Void) {
+        present(ChapterTransitionScene(size: sceneSize(), onDismiss: continuation), music: SkyMusic.menu)
     }
 
     func showMap() {

@@ -72,6 +72,9 @@ final class ResultsScene: SKScene {
 
     // MARK: - Win UI
 
+    /// Lays out the win screen — confetti, stars, coin count-up, and the
+    /// NEXT LEVEL / UPGRADE SHOP / BACK TO MAP actions (the first and last
+    /// route through the chapter transition after an L5 win).
     private func buildWin() {
         buildConfetti()
 
@@ -123,11 +126,13 @@ final class ResultsScene: SKScene {
         // Buttons
         let next = SkyPillButton(title: "NEXT LEVEL", style: .primary, size: CGSize(width: 240, height: 52)) { [weak self] in
             guard let self = self else { return }
-            let nextID = self.challenge.id + 1
-            if let nextChallenge = ChallengeCatalog.challenge(forID: nextID) {
-                SkyNavigator.shared.showGame(challenge: nextChallenge)
-            } else {
-                SkyNavigator.shared.showMap()
+            self.advanceAfterResults {
+                let nextID = self.challenge.id + 1
+                if let nextChallenge = ChallengeCatalog.challenge(forID: nextID) {
+                    SkyNavigator.shared.showGame(challenge: nextChallenge)
+                } else {
+                    SkyNavigator.shared.showMap()
+                }
             }
         }
         next.position = CGPoint(x: size.width / 2, y: size.height * 0.26)
@@ -232,6 +237,7 @@ final class ResultsScene: SKScene {
 
     // MARK: - Touch
 
+    /// Routes taps to the pill buttons and the BACK TO MAP link.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let location = touch.location(in: self)
@@ -242,9 +248,25 @@ final class ResultsScene: SKScene {
             }
             if node.name == "resultsBackToMap" {
                 AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
-                SkyNavigator.shared.showMap()
+                advanceAfterResults { SkyNavigator.shared.showMap() }
                 return
             }
+        }
+    }
+
+    // MARK: - Chapter transition (SKY-61)
+
+    /// Inserts the one-time Clear Skies → Storm Chaser chapter transition
+    /// between an L5 win and the player's next destination. In every other case
+    /// it runs `continuation` directly. The transition scene sets its own
+    /// `hasSeenChapterTransition` gate on dismiss, so it appears exactly once.
+    private func advanceAfterResults(_ continuation: @escaping () -> Void) {
+        if didWin,
+           challenge.id == 5,
+           !ProgressManager.shared.hasSeenChapterTransition {
+            SkyNavigator.shared.showChapterTransition(then: continuation)
+        } else {
+            continuation()
         }
     }
 }

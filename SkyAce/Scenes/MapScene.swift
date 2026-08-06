@@ -22,6 +22,11 @@ final class MapScene: SKScene {
     private var scrollVelocity: CGFloat = 0
     private var lastUpdateTime: TimeInterval = 0
 
+    // SKY-61: mission briefing overlay, shown when a level is started. While it
+    // is present, scrolling and level taps are suppressed (same pattern as the
+    // menu's world-select overlay).
+    private var briefingOverlay: MissionBriefingCard?
+
     // Derived
     private var activeLevelID: Int { findActiveLevelID() }
 
@@ -37,13 +42,17 @@ final class MapScene: SKScene {
         }
     }
 
-    // SKY-55: see MenuScene.didChangeSize. Rebuilds the level path, top/tab
-    // bars, and background to fill the new dimensions, then scrolls back to
-    // the active level (preserving the user's prior scroll position has no
-    // value once the layout's geometry has changed).
+    /// Rebuilds the level path, top/tab bars, and background to fill the new
+    /// dimensions on iPad rotation, then scrolls back to the active level
+    /// (SKY-55). Preserving the prior scroll position has no value once the
+    /// layout geometry has changed.
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
         guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
+        // A briefing overlay can't survive a full relayout — drop it; the
+        // player can re-tap the level once the map rebuilds.
+        briefingOverlay?.removeFromParent()
+        briefingOverlay = nil
         contentNode.removeAllChildren()
         contentNode.removeAllActions()
         contentNode.removeFromParent()
@@ -251,6 +260,8 @@ final class MapScene: SKScene {
         return container
     }
 
+    /// Builds the expanded info card under the active level node: chapter
+    /// label, name, reward, and the FLY NOW button that opens the briefing.
     private func addActiveInfoCard(challenge: Challenge, to parent: SKNode) {
         let cardSize = CGSize(width: 260, height: 130)
         let card = SKShapeNode(rectOf: cardSize, cornerRadius: 24)
@@ -287,8 +298,8 @@ final class MapScene: SKScene {
         reward.position = CGPoint(x: 0, y: -4)
         card.addChild(reward)
 
-        let fly = SkyPillButton(title: "FLY NOW", style: .primary, size: CGSize(width: 160, height: 38)) {
-            SkyNavigator.shared.showGame(challenge: challenge)
+        let fly = SkyPillButton(title: "FLY NOW", style: .primary, size: CGSize(width: 160, height: 38)) { [weak self] in
+            self?.presentBriefing(for: challenge)
         }
         fly.position = CGPoint(x: 0, y: -32)
         fly.name = "flyNow-\(challenge.id)"
@@ -365,12 +376,35 @@ final class MapScene: SKScene {
 
     // MARK: - Touch
 
+    /// Begins a pan, and — when the briefing overlay is up — routes START / Skip
+    /// and swallows every other touch; otherwise handles back / tab-bar taps.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
-        lastPanY = touch.location(in: self).y
+        let location = touch.location(in: self)
+        lastPanY = location.y
         scrollVelocity = 0
 
-        let location = touch.location(in: self)
+        // SKY-61: while the briefing overlay is up, route START / Skip and
+        // swallow everything else so the map can't scroll behind it.
+        if let overlay = briefingOverlay {
+            for node in nodes(at: location) {
+                var n: SKNode? = node
+                while let current = n {
+                    if let button = current as? SkyPillButton, button.name == "briefStart" {
+                        button.handleTap()
+                        return
+                    }
+                    if current.name == "briefSkip" {
+                        AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
+                        overlay.skip()
+                        return
+                    }
+                    n = current.parent
+                }
+            }
+            return
+        }
+
         for node in nodes(at: location) {
             if node.name == "mapBack" {
                 AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
@@ -384,7 +418,9 @@ final class MapScene: SKScene {
         }
     }
 
+    /// Drives pan-scrolling, unless the briefing overlay is up (which locks it).
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard briefingOverlay == nil else { return }
         guard let touch = touches.first else { return }
         let y = touch.location(in: self).y
         let dy = y - lastPanY
@@ -393,7 +429,9 @@ final class MapScene: SKScene {
         scrollVelocity = dy * 60
     }
 
+    /// On a tap (not a scroll), routes FLY NOW / level-node taps to the briefing.
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard briefingOverlay == nil else { return }
         guard let touch = touches.first else { return }
         let location = touch.location(in: contentNode)
         let tapped = contentNode.nodes(at: location)
@@ -421,16 +459,44 @@ final class MapScene: SKScene {
         }
     }
 
+    /// Routes a tapped level node: active/completed open the briefing, locked
+    /// levels do nothing.
     private func routeLevelTap(_ challenge: Challenge) {
         AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
         let state = levelState(for: challenge)
         switch state {
         case .active, .completed:
-            SkyNavigator.shared.showGame(challenge: challenge)
+            presentBriefing(for: challenge)
         case .progressionLocked:
             // Shake ding — no navigation.
             break
         }
+    }
+
+    // MARK: - Mission briefing overlay (SKY-61)
+
+    /// Presents the slide-up mission briefing for `challenge`, then enters
+    /// gameplay when the player taps START or Skip. If no brief exists for the
+    /// level (out of range), falls through directly to gameplay.
+    private func presentBriefing(for challenge: Challenge) {
+        guard briefingOverlay == nil else { return }
+        guard let brief = MissionContent.brief(forLevel: challenge.id) else {
+            SkyNavigator.shared.showGame(challenge: challenge)
+            return
+        }
+
+        let overlay = MissionBriefingCard(
+            brief: brief,
+            sceneSize: size,
+            bottomInset: view?.safeAreaInsets.bottom ?? 0
+        ) { [weak self] in
+            self?.briefingOverlay = nil
+            SkyNavigator.shared.showGame(challenge: challenge)
+        }
+        overlay.zPosition = 500
+        addChild(overlay)
+        briefingOverlay = overlay
+        overlay.animateIn()
     }
 }
 

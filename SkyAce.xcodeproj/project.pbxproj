@@ -39,6 +39,7 @@
 		B10001000000000000000201 /* ProgressManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000201 /* ProgressManager.swift */; };
 		B10001000000000000000202 /* AudioManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000202 /* AudioManager.swift */; };
 		B10001000000000000000205 /* CurrencyManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000205 /* CurrencyManager.swift */; };
+		B10001000000000000000206 /* GameCenterManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000206 /* GameCenterManager.swift */; };
 		B10001000000000000000301 /* Player.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000301 /* Player.swift */; };
 		B10001000000000000000302 /* Upgrade.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000302 /* Upgrade.swift */; };
 		B10001000000000000000303 /* Challenge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000303 /* Challenge.swift */; };
@@ -74,6 +75,7 @@
 		B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010001 /* CurrencyManagerTests.swift */; };
 		B10001000000000000010002 /* StarRatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010002 /* StarRatingTests.swift */; };
 		B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */; };
+		B10001000000000000010007 /* GameCenterAchievementsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010007 /* GameCenterAchievementsTests.swift */; };
 		B10002000000000000000601 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000601 /* Assets.xcassets */; };
 		B10002000000000000000602 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000602 /* PrivacyInfo.xcprivacy */; };
 		B10002000000000000000603 /* Sprites in Resources */ = {isa = PBXBuildFile; fileRef = F10002000000000000000603 /* Sprites */; };
@@ -126,6 +128,8 @@
 		F10001000000000000000201 /* ProgressManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgressManager.swift; sourceTree = "<group>"; };
 		F10001000000000000000202 /* AudioManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioManager.swift; sourceTree = "<group>"; };
 		F10001000000000000000205 /* CurrencyManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyManager.swift; sourceTree = "<group>"; };
+		F10001000000000000000206 /* GameCenterManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenterManager.swift; sourceTree = "<group>"; };
+		F10001000000000000000E01 /* SkyAce.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = SkyAce.entitlements; sourceTree = "<group>"; };
 		F10001000000000000000301 /* Player.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Player.swift; sourceTree = "<group>"; };
 		F10001000000000000000302 /* Upgrade.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Upgrade.swift; sourceTree = "<group>"; };
 		F10001000000000000000303 /* Challenge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Challenge.swift; sourceTree = "<group>"; };
@@ -161,6 +165,7 @@
 		F10001000000000000010001 /* CurrencyManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyManagerTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010002 /* StarRatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarRatingTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightCoinAccumulatorTests.swift; sourceTree = "<group>"; };
+		F10001000000000000010007 /* GameCenterAchievementsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenterAchievementsTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F10002000000000000000601 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10002000000000000000602 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -209,6 +214,7 @@
 				G10003000000000000000010 /* UI */,
 				G10003000000000000000007 /* Resources */,
 				F10001000000000000000000 /* Info.plist */,
+				F10001000000000000000E01 /* SkyAce.entitlements */,
 				F10002000000000000000602 /* PrivacyInfo.xcprivacy */,
 				F10002000000000000000604 /* LaunchScreen.storyboard */,
 			);
@@ -221,6 +227,7 @@
 				F10001000000000000000201 /* ProgressManager.swift */,
 				F10001000000000000000202 /* AudioManager.swift */,
 				F10001000000000000000205 /* CurrencyManager.swift */,
+				F10001000000000000000206 /* GameCenterManager.swift */,
 			);
 			path = Managers;
 			sourceTree = "<group>";
@@ -333,6 +340,7 @@
 				F10001000000000000010002 /* StarRatingTests.swift */,
 				F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */,
 				F10001000000000000010006 /* MissionContentTests.swift */,
+				F10001000000000000010007 /* GameCenterAchievementsTests.swift */,
 				F10001000000000000010004 /* Info.plist */,
 			);
 			path = SkyAceTests;
@@ -473,6 +481,7 @@
 				B10001000000000000000201 /* ProgressManager.swift in Sources */,
 				B10001000000000000000202 /* AudioManager.swift in Sources */,
 				B10001000000000000000205 /* CurrencyManager.swift in Sources */,
+				B10001000000000000000206 /* GameCenterManager.swift in Sources */,
 				B10001000000000000000301 /* Player.swift in Sources */,
 				B10001000000000000000302 /* Upgrade.swift in Sources */,
 				B10001000000000000000303 /* Challenge.swift in Sources */,
@@ -515,6 +524,7 @@
 				B10001000000000000010002 /* StarRatingTests.swift in Sources */,
 				B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */,
 				B10001000000000000010006 /* MissionContentTests.swift in Sources */,
+				B10001000000000000010007 /* GameCenterAchievementsTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -657,6 +667,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SkyAce/SkyAce.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1.0.1;
 				ENABLE_PREVIEWS = YES;
@@ -692,6 +703,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = SkyAce/SkyAce.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1.0.1;
 				ENABLE_PREVIEWS = YES;

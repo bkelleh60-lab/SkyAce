@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- SKY-68: Game Center. The single game-center entitlement covers both
+	     achievements (implemented in this ticket) and leaderboards (deferred to
+	     a future ticket) — there is no separate leaderboard entitlement. -->
+	<key>com.apple.developer.game-center</key>
+	<true/>
+</dict>
+</plist>

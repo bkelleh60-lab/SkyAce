@@ -12,8 +12,9 @@ import SpriteKit
 /// stormy card + serious portrait.
 ///
 /// This node is not itself interactive — the presenting scene (`MapScene`)
-/// routes taps to `startButton` / the Skip link and calls `skip()`, matching
-/// the overlay-routing pattern already used for the menu's world select.
+/// finds the START button / Skip hit area by name and drives `handleTap()` /
+/// `skip()`, matching the overlay-routing pattern already used for the menu's
+/// world select.
 final class MissionBriefingCard: SKNode {
 
     private let brief: MissionBrief
@@ -24,16 +25,15 @@ final class MissionBriefingCard: SKNode {
     private let scrim: SKSpriteNode
     private let cardGroup = SKNode()
 
-    /// Exposed so the presenting scene can drive `handleTap()` when a touch
-    /// lands on it (same contract as SkyPillButton elsewhere).
-    private(set) var startButton: SkyPillButton!
-
     private var restY: CGFloat = 0
     private var offscreenY: CGFloat = 0
     private var isProceeding = false
 
     // MARK: - Init
 
+    /// Creates the overlay for `brief`. `onProceed` runs after START or Skip
+    /// slides the card away, to enter gameplay. `bottomInset` nudges the resting
+    /// position clear of the home indicator.
     init(brief: MissionBrief,
          sceneSize: CGSize,
          bottomInset: CGFloat,
@@ -50,6 +50,8 @@ final class MissionBriefingCard: SKNode {
 
     // MARK: - Build
 
+    /// Assembles the scrim, themed card art, portrait, tagline, story, and the
+    /// START / Skip controls, positioned off-screen ready for `animateIn()`.
     private func build() {
         scrim.anchorPoint = .zero
         scrim.position = .zero
@@ -119,17 +121,24 @@ final class MissionBriefingCard: SKNode {
         cardGroup.addChild(story)
 
         // START button + Skip link sit below the card on the scrim.
+        let buttonHeight: CGFloat = 52
         let button = SkyPillButton(
             title: "START",
             style: .primary,
-            size: CGSize(width: cardWidth * 0.82, height: 52)
+            size: CGSize(width: cardWidth * 0.82, height: buttonHeight)
         ) { [weak self] in self?.proceed() }
         button.name = "briefStart"
         button.zPosition = 2
-        let buttonY = -(cardHeight / 2) - 8 - 26
+        let buttonY = -(cardHeight / 2) - 12 - buttonHeight / 2
         button.position = CGPoint(x: 0, y: buttonY)
         cardGroup.addChild(button)
-        startButton = button
+
+        // Skip: a bare label is only ~28×17pt — below Apple's 44pt minimum, and
+        // this is a kids' app. Wrap the label in an invisible 44pt-tall hit area
+        // that carries the routing name so MapScene's parent-walk resolves taps
+        // through the container.
+        let skipHitHeight: CGFloat = 44
+        let skipCenterY = buttonY - buttonHeight / 2 - 8 - skipHitHeight / 2
 
         let skip = SKLabelNode(text: "Skip")
         skip.fontName = SkyFonts.headlineName
@@ -137,17 +146,23 @@ final class MissionBriefingCard: SKNode {
         skip.fontColor = SkyColors.skOnPrimary.withAlphaComponent(0.9)
         skip.horizontalAlignmentMode = .center
         skip.verticalAlignmentMode = .center
-        skip.name = "briefSkip"
-        skip.zPosition = 2
-        skip.position = CGPoint(x: 0, y: buttonY - 26 - 16)
-        cardGroup.addChild(skip)
+        skip.position = .zero
+        skip.zPosition = 1
 
-        // Rest position: card block centered a touch above the screen center so
-        // the button + skip clear the home indicator. Offscreen start sits fully
-        // below the bottom edge for the slide-up.
-        let belowExtent = (cardHeight / 2) + 8 + 52 + 16 + 20 // to bottom of Skip
-        restY = sceneSize.height / 2 + max(0, (belowExtent - cardHeight / 2) / 2) + bottomInset * 0.2
-        offscreenY = -belowExtent - 40
+        let skipHitArea = SKSpriteNode(color: .clear, size: CGSize(width: 120, height: skipHitHeight))
+        skipHitArea.name = "briefSkip"
+        skipHitArea.zPosition = 2
+        skipHitArea.position = CGPoint(x: 0, y: skipCenterY)
+        skipHitArea.addChild(skip)
+        cardGroup.addChild(skipHitArea)
+
+        // Rest position: center the whole block (card + button + skip) on the
+        // screen center. Offscreen start sits fully below the bottom edge for
+        // the slide-up.
+        let bottomExtent = -skipCenterY + skipHitHeight / 2 // origin → skip bottom
+        let topExtent = cardHeight / 2                       // origin → card top
+        restY = sceneSize.height / 2 + (bottomExtent - topExtent) / 2 + bottomInset * 0.2
+        offscreenY = -bottomExtent - 40
         cardGroup.position = CGPoint(x: sceneSize.width / 2, y: offscreenY)
         cardGroup.zPosition = 1
         addChild(cardGroup)

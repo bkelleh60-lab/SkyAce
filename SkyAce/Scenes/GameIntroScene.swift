@@ -10,16 +10,22 @@ import SpriteKit
 final class GameIntroScene: SKScene {
 
     private var isDismissing = false
+    /// Taps are ignored until the scene has been on screen briefly, so an
+    /// over-eager first tap can't skip the intro before it has rendered.
+    private var acceptsTaps = false
 
     // MARK: - Lifecycle
 
+    /// Builds the scene and arms the tap-accept timer once it attaches to a view.
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimaryContainer
         SkyHaptics.prepare()
         layoutScene()
+        run(.sequence([.wait(forDuration: 0.6), .run { [weak self] in self?.acceptsTaps = true }]))
     }
 
-    // SKY-55 pattern: rebuild against the new dimensions on iPad rotation.
+    /// Rebuilds the layout against the new dimensions on iPad rotation
+    /// (SKY-55 pattern).
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
         guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
@@ -28,6 +34,7 @@ final class GameIntroScene: SKScene {
         layoutScene()
     }
 
+    /// Builds the background, intro paragraph, and tap hint in one pass.
     private func layoutScene() {
         buildBackground()
         buildIntroText()
@@ -36,10 +43,9 @@ final class GameIntroScene: SKScene {
 
     // MARK: - Background
 
+    /// Lays the full-bleed intro illustration, aspect-filled to cover the
+    /// screen, falling back to the sky gradient if the asset is missing.
     private func buildBackground() {
-        // Full-bleed intro illustration, aspect-filled so it covers the screen
-        // without distortion. Falls back to the sky gradient if the asset is
-        // somehow missing, so the scene is never blank.
         if let texture = SkySprites.texture(named: SkySprites.introBackground) {
             let bg = SKSpriteNode(texture: texture, size: aspectFillSize(for: texture))
             bg.position = CGPoint(x: size.width / 2, y: size.height / 2)
@@ -54,20 +60,12 @@ final class GameIntroScene: SKScene {
         }
     }
 
-    /// Size that covers `size` while preserving the texture's aspect ratio.
-    private func aspectFillSize(for texture: SKTexture) -> CGSize {
-        let tex = texture.size()
-        guard tex.width > 0, tex.height > 0 else { return size }
-        let scale = max(size.width / tex.width, size.height / tex.height)
-        return CGSize(width: tex.width * scale, height: tex.height * scale)
-    }
-
     // MARK: - Intro copy
 
+    /// Lays the intro paragraph in the lower band. The artwork there is pale, so
+    /// the text is dark navy on a soft translucent panel (the game's card
+    /// language) to guarantee contrast for the Kids Category.
     private func buildIntroText() {
-        // The lower band of the artwork is pale, so the paragraph reads in dark
-        // navy on a soft translucent panel — the game's card language — which
-        // guarantees contrast for the Kids Category.
         let maxWidth = size.width * 0.8
         let centerY = size.height * 0.27
 
@@ -98,6 +96,7 @@ final class GameIntroScene: SKScene {
         addChild(label)
     }
 
+    /// Adds the pulsing "tap to continue" affordance above the home indicator.
     private func buildTapHint() {
         let bottomInset = view?.safeAreaInsets.bottom ?? 0
         let hint = SKLabelNode(text: "TAP TO CONTINUE")
@@ -117,10 +116,13 @@ final class GameIntroScene: SKScene {
 
     // MARK: - Dismiss
 
+    /// Any tap (after the initial lockout) dismisses the intro.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard acceptsTaps else { return }
         dismiss()
     }
 
+    /// Records the one-time gate flag and routes to the menu. Runs at most once.
     private func dismiss() {
         guard !isDismissing else { return }
         isDismissing = true

@@ -420,6 +420,21 @@ enum SkySprites {
     }
 }
 
+// MARK: - SKScene aspect-fill
+
+extension SKScene {
+    /// The size that fills `self.size` with `texture` while preserving the
+    /// texture's aspect ratio (center-crop cover). Used by the full-screen
+    /// narrative scenes so a fixed-aspect illustration covers the display
+    /// without distortion.
+    func aspectFillSize(for texture: SKTexture) -> CGSize {
+        let tex = texture.size()
+        guard tex.width > 0, tex.height > 0 else { return size }
+        let scale = max(size.width / tex.width, size.height / tex.height)
+        return CGSize(width: tex.width * scale, height: tex.height * scale)
+    }
+}
+
 // MARK: - SkyHaptics
 
 /// Haptic feedback helpers. Thin wrapper over `UIImpactFeedbackGenerator` and

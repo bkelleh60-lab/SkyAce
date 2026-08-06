@@ -13,9 +13,15 @@ final class ChapterTransitionScene: SKScene {
 
     private let onDismiss: () -> Void
     private var isDismissing = false
+    /// The player reaches this scene by tapping NEXT LEVEL / BACK TO MAP on the
+    /// results screen; taps are ignored for a beat so a carried-over second tap
+    /// can't dismiss this one-time screen before it's readable.
+    private var acceptsTaps = false
 
     // MARK: - Init
 
+    /// Creates the transition scene. `onDismiss` runs on tap to continue to the
+    /// player's original destination (L6 or the map).
     init(size: CGSize, onDismiss: @escaping () -> Void) {
         self.onDismiss = onDismiss
         super.init(size: size)
@@ -24,12 +30,16 @@ final class ChapterTransitionScene: SKScene {
 
     // MARK: - Lifecycle
 
+    /// Builds the scene and arms the tap-accept timer once it attaches to a view.
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimary
         SkyHaptics.prepare()
         layoutScene()
+        run(.sequence([.wait(forDuration: 0.6), .run { [weak self] in self?.acceptsTaps = true }]))
     }
 
+    /// Rebuilds the layout against the new dimensions on iPad rotation
+    /// (SKY-55 pattern).
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
         guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
@@ -38,6 +48,7 @@ final class ChapterTransitionScene: SKScene {
         layoutScene()
     }
 
+    /// Builds the background, the two chapter lines, and the tap hint.
     private func layoutScene() {
         buildBackground()
         buildText()
@@ -46,6 +57,8 @@ final class ChapterTransitionScene: SKScene {
 
     // MARK: - Background
 
+    /// Lays the full-bleed transition illustration, aspect-filled to cover the
+    /// screen, falling back to a gradient if the asset is missing.
     private func buildBackground() {
         if let texture = SkySprites.texture(named: SkySprites.chapterTransition) {
             let bg = SKSpriteNode(texture: texture, size: aspectFillSize(for: texture))
@@ -61,19 +74,12 @@ final class ChapterTransitionScene: SKScene {
         }
     }
 
-    private func aspectFillSize(for texture: SKTexture) -> CGSize {
-        let tex = texture.size()
-        guard tex.width > 0, tex.height > 0 else { return size }
-        let scale = max(size.width / tex.width, size.height / tex.height)
-        return CGSize(width: tex.width * scale, height: tex.height * scale)
-    }
-
     // MARK: - Text
 
+    /// Stacks the two chapter lines centered on a soft dark panel. The artwork
+    /// splits bright (upper-left) to stormy (lower-right), so the dark panel
+    /// with white text keeps both lines legible across the whole composition.
     private func buildText() {
-        // The artwork splits bright (upper-left) to stormy (lower-right), so a
-        // soft dark panel with white text keeps both lines legible across the
-        // whole composition.
         let maxWidth = size.width * 0.78
         let centerY = size.height * 0.5
 
@@ -111,6 +117,7 @@ final class ChapterTransitionScene: SKScene {
         addChild(two)
     }
 
+    /// A centered, word-wrapping white label for one transition line.
     private func makeLabel(_ text: String, fontName: String, fontSize: CGFloat, maxWidth: CGFloat) -> SKLabelNode {
         let label = SKLabelNode(text: text)
         label.fontName = fontName
@@ -125,6 +132,7 @@ final class ChapterTransitionScene: SKScene {
         return label
     }
 
+    /// Adds the pulsing "tap to continue" affordance above the home indicator.
     private func buildTapHint() {
         let bottomInset = view?.safeAreaInsets.bottom ?? 0
         let hint = SKLabelNode(text: "TAP TO CONTINUE")
@@ -145,10 +153,13 @@ final class ChapterTransitionScene: SKScene {
 
     // MARK: - Dismiss
 
+    /// Any tap (after the initial lockout) dismisses the transition.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        guard acceptsTaps else { return }
         dismiss()
     }
 
+    /// Records the one-time gate flag and runs the continuation. Runs at most once.
     private func dismiss() {
         guard !isDismissing else { return }
         isDismissing = true

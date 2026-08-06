@@ -981,7 +981,8 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             coinsCollected: state.coinsCollected,
             coinsAvailable: state.totalCoinsSpawned,
             timeRemaining: state.levelTimeRemaining,
-            didWin: state.didWin
+            didWin: state.didWin,
+            tookAnyHit: state.tookAnyHit
         )
     }
 

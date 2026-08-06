@@ -9,15 +9,17 @@ final class ResultsScene: SKScene {
     private let coinsAvailable: Int
     private let timeRemaining: TimeInterval
     private let didWin: Bool
+    private let tookAnyHit: Bool
     private let starsEarned: Int
 
     // MARK: - Init
-    init(size: CGSize, challenge: Challenge, coinsCollected: Int, coinsAvailable: Int, timeRemaining: TimeInterval, didWin: Bool) {
+    init(size: CGSize, challenge: Challenge, coinsCollected: Int, coinsAvailable: Int, timeRemaining: TimeInterval, didWin: Bool, tookAnyHit: Bool) {
         self.challenge = challenge
         self.coinsCollected = coinsCollected
         self.coinsAvailable = coinsAvailable
         self.timeRemaining = timeRemaining
         self.didWin = didWin
+        self.tookAnyHit = tookAnyHit
         self.starsEarned = StarRating.stars(
             completed: didWin,
             coinsCollected: coinsCollected,
@@ -39,6 +41,27 @@ final class ResultsScene: SKScene {
     override func didMove(to view: SKView) {
         backgroundColor = didWin ? SkyColors.skPrimary : SkyColors.skOnSurface
         layoutScene()
+        reportAchievements()
+    }
+
+    /// SKY-68: hands the run outcome to Game Center. On a win, the run-specific
+    /// achievements (Untouchable, Speed Run, Chain Reaction) plus every
+    /// progress-based achievement are evaluated. On a loss, coins collected
+    /// mid-run still credited the lifetime total, so we still refresh the
+    /// progressive coin achievements. Run results are already committed to
+    /// `ProgressManager` in `init`, so the derived state is current here.
+    private func reportAchievements() {
+        if didWin {
+            GameCenterManager.shared.reportMissionWin(
+                challenge: challenge,
+                tookAnyHit: tookAnyHit,
+                coinsCollected: coinsCollected,
+                totalCoinsSpawned: coinsAvailable,
+                timeRemaining: timeRemaining
+            )
+        } else {
+            GameCenterManager.shared.refreshProgress()
+        }
     }
 
     // SKY-55: see MenuScene.didChangeSize. Re-runs the win/fail layout against

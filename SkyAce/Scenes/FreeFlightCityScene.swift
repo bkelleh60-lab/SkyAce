@@ -115,6 +115,11 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     override func willMove(from view: SKView) {
         super.willMove(from: view)
         AudioManager.shared.stopEngineLoop()
+        // SKY-68: leaving the scene ends one Free Flight session. Record it and
+        // report progress toward "Free Spirit" (and any coins earned this
+        // session toward the coin achievements).
+        ProgressManager.shared.incrementFreeFlightSessions()
+        GameCenterManager.shared.refreshProgress()
     }
 
     // SKY-55: see MenuScene.didChangeSize. Free Flight is an endless sandbox

@@ -488,6 +488,10 @@ final class ShopScene: SKScene {
             return
         }
         ProgressManager.shared.setUpgradeLevel(upgrade.currentLevel + 1, for: upgrade.kind.rawValue)
+        // SKY-68: an upgrade purchase can unlock "Upgraded" (first purchase) and
+        // "Full Kit" (maxing a track); both are derived from the now-updated
+        // upgrade levels.
+        GameCenterManager.shared.refreshProgress()
         AudioManager.shared.playSFX(SkySFX.win, on: self)
         // Refresh by re-presenting the scene — simpler than partial rebuilds.
         SkyNavigator.shared.showShop()

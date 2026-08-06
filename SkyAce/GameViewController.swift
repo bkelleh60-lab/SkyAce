@@ -40,6 +40,11 @@ final class GameViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         SkyNavigator.shared.attach(view: skView, presenter: self)
+        // SKY-68: authenticate the local player with Game Center at launch.
+        // GameKit surfaces its own sign-in sheet if needed (presented from this
+        // root VC) and reports nothing until the player is signed in — standard
+        // Apple behavior, no parental gate required.
+        GameCenterManager.shared.authenticate(presentingFrom: self)
         // SKY-61: on first launch, the one-time game intro plays before the
         // menu / level select. It sets the `hasSeenGameIntro` gate on dismiss
         // and routes to the menu itself.
@@ -143,14 +148,15 @@ final class SkyNavigator {
         present(scene, music: SkyMusic.gameplay)
     }
 
-    func showResults(challenge: Challenge, coinsCollected: Int, coinsAvailable: Int, timeRemaining: TimeInterval, didWin: Bool) {
+    func showResults(challenge: Challenge, coinsCollected: Int, coinsAvailable: Int, timeRemaining: TimeInterval, didWin: Bool, tookAnyHit: Bool) {
         let scene = ResultsScene(
             size: sceneSize(),
             challenge: challenge,
             coinsCollected: coinsCollected,
             coinsAvailable: coinsAvailable,
             timeRemaining: timeRemaining,
-            didWin: didWin
+            didWin: didWin,
+            tookAnyHit: tookAnyHit
         )
         present(scene, music: didWin ? SkyMusic.menu : SkyMusic.menu)
     }

@@ -428,11 +428,15 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         hudNode.addChild(button)
         abilityButton = button
 
-        // Restore visual state after a mid-run HUD rebuild (rotation): a spent
-        // one-shot stays spent; otherwise mirror the scene-owned `abilityState`
-        // so an in-flight speed boost / cooldown reads correctly (the driving
-        // SKAction lives on the scene, not the HUD).
-        if plane.ability.charges > 0 && abilityChargesRemaining == 0 {
+        // Restore visual state after a mid-run HUD rebuild (rotation). An
+        // in-flight burst / boost (`.active`) wins so it isn't masked by the
+        // zero-charge `.spent` fallback for a one-shot mid-burst; otherwise a
+        // used one-shot stays spent; otherwise mirror the scene-owned state
+        // (`.ready` / `.cooldown`). The driving SKAction lives on the scene, so
+        // it keeps advancing the state after the rebuild.
+        if abilityState == .active {
+            button.setState(.active)
+        } else if plane.ability.charges > 0 && abilityChargesRemaining == 0 {
             button.setState(.spent)
         } else {
             button.setState(abilityState)
@@ -1079,10 +1083,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         SkyHaptics.collect()
 
         // Button shows the active window, then greys out (one charge per run).
-        abilityButton?.setState(.active)
+        // Track via the scene-owned state so a HUD rebuild during the burst
+        // restores `.active` rather than the zero-charge `.spent` fallback.
+        setAbilityState(.active)
         run(SKAction.sequence([
             SKAction.wait(forDuration: duration),
-            SKAction.run { [weak self] in self?.abilityButton?.setState(.spent) }
+            SKAction.run { [weak self] in self?.setAbilityState(.spent) }
         ]), withKey: "abilityInvincibility")
     }
 
@@ -1148,15 +1154,18 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         let radius = plane.ability.magnetRadius
         guard radius > 0 else { return }
         let planePos = plane.position
+        let radiusSquared = radius * radius
+        // Scene selects candidates; the coin owns the switch to homing and the
+        // per-frame pull (per the node-behavior encapsulation guideline).
         for case let coin as CoinNode in worldNode.children {
-            let dx = planePos.x - coin.position.x
-            let dy = planePos.y - coin.position.y
             if coin.isMagnetized {
-                coin.position.x += dx * 0.25
-                coin.position.y += dy * 0.25
-            } else if (dx * dx + dy * dy) <= radius * radius {
-                coin.isMagnetized = true
-                coin.removeAllActions()  // drop scroll + bob; homing takes over
+                coin.home(toward: planePos)
+            } else {
+                let dx = planePos.x - coin.position.x
+                let dy = planePos.y - coin.position.y
+                if (dx * dx + dy * dy) <= radiusSquared {
+                    coin.beginMagnetHoming()
+                }
             }
         }
     }

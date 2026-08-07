@@ -6,11 +6,11 @@ final class CoinNode: SKNode {
 
     static let size: CGFloat = 26
 
-    /// Set by the coin-magnet passive (SKY-66, Night Hawk) once a coin enters
-    /// pull range: the scene removes the coin's scroll action and homes it
-    /// toward the plane each frame. Prevents re-capture and stops the scroll
-    /// `moveBy` from clobbering the homing position.
-    var isMagnetized = false
+    /// True once this coin has been captured by the coin-magnet passive
+    /// (SKY-66, Night Hawk). The scene selects nearby coins; the switch to
+    /// homing and the per-frame pull live here (see `beginMagnetHoming()` /
+    /// `home(toward:)`).
+    private(set) var isMagnetized = false
 
     /// Flippable element — either the sprite (when bundled) or the
     /// programmatic gold circle. Kept as a property so the flip animation
@@ -84,6 +84,24 @@ final class CoinNode: SKNode {
             SKAction.moveBy(x: 0, y: -4, duration: 0.6)
         ])
         run(SKAction.repeatForever(bob))
+    }
+
+    // MARK: - Coin magnet (SKY-66)
+
+    /// Switches this coin from scrolling to plane-homing. Drops the scroll +
+    /// bob actions so `home(toward:)` can drive position each frame without the
+    /// scroll `moveBy` clobbering it. Idempotent — a second call is a no-op.
+    func beginMagnetHoming() {
+        guard !isMagnetized else { return }
+        isMagnetized = true
+        removeAllActions()  // scroll + bob live on self; the flip lives on the child
+    }
+
+    /// Eases this coin toward `point` (the plane). Called each frame once
+    /// magnetized; collection still fires via the normal coin contact.
+    func home(toward point: CGPoint, fraction: CGFloat = 0.25) {
+        position.x += (point.x - position.x) * fraction
+        position.y += (point.y - position.y) * fraction
     }
 
     /// Called by scene when plane contacts the coin. Plays pop + removes.

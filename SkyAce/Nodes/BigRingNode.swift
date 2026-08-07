@@ -10,6 +10,13 @@ import SpriteKit
 /// high-value target rather than "another coin". Per SKY-63's Out of Scope,
 /// the ring does not move or rotate; the only animation is a subtle attract
 /// pulse for visibility.
+///
+/// Asset note: the "Sky Ace Plane Assets" Stitch project has no ring design, so
+/// the two programmatic bits here — the missing-asset fallback ring and the
+/// sparkle burst — are marked `// PLACEHOLDER: …`. Brian explicitly approved
+/// retaining them as-is for SKY-63 (PR #107), since the shipping visual is the
+/// designed `ring.png` and the placeholders only cover the asset-missing and
+/// transient-VFX cases.
 final class BigRingNode: SKNode {
 
     /// Ring radius in points. The 130pt diameter dwarfs a coin (26pt) so the

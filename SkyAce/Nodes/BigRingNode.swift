@@ -44,11 +44,15 @@ final class BigRingNode: SKNode {
 
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
-    /// Fallback gold ring for when the bundled sprite is unavailable. Mirrors
-    /// the stroked-circle fallback in `RingNode`, scaled to the big radius.
+    /// Fallback gold ring for when the bundled `ring` sprite is unavailable.
+    /// The shipping visual is the designed `ring.png` asset (see `init`); this
+    /// stroked-circle stand-in — mirroring `RingNode`'s fallback — only renders
+    /// if that asset fails to load. No ring design exists in the "Sky Ace Plane
+    /// Assets" Stitch project (checked SKY-63), so it is marked as a placeholder.
     private static func makeProgrammaticRing() -> SKNode {
         let container = SKNode()
 
+        // PLACEHOLDER: Stitch design required before App Store submission
         let outer = SKShapeNode(circleOfRadius: BigRingNode.radius)
         outer.strokeColor = SkyColors.tertiaryContainer
         outer.lineWidth = 14
@@ -123,6 +127,7 @@ final class BigRingNode: SKNode {
         let count = 10
         for i in 0..<count {
             let angle = (CGFloat(i) / CGFloat(count)) * .pi * 2
+            // PLACEHOLDER: Stitch design required before App Store submission
             let spark = SKShapeNode(circleOfRadius: CGFloat.random(in: 3...5))
             spark.fillColor = SkyColors.tertiaryContainer
             spark.strokeColor = .clear

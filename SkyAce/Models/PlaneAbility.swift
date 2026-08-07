@@ -12,7 +12,7 @@ import Foundation
 /// so each catalog entry reads cleanly.
 struct PlaneAbility {
 
-    enum Kind {
+    enum Kind: Equatable {
         case invincibilityBurst   // active
         case speedBoost           // active
         case glideControl         // passive

@@ -56,6 +56,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     // sequences that flip the button's visual state.
     private var abilityButton: AbilityButtonNode?
     private var abilityChargesRemaining = 0
+    /// Scene-owned mirror of the active-ability button's visual state. Survives
+    /// HUD rebuilds (the button is recreated on rotation / inset changes) so an
+    /// in-flight speed boost or cooldown is restored instead of reading as
+    /// `.ready`, and so `fireSpeedBoost()` can gate re-fires on the true state.
+    private var abilityState: AbilityButtonNode.State = .ready
     /// Live world-scroll multiplier. 1.0 normally; raised during a speed boost
     /// so the parallax layers keep pace with the sped-up gameplay actions.
     private var speedBoostFactor: CGFloat = 1.0
@@ -424,10 +429,13 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         abilityButton = button
 
         // Restore visual state after a mid-run HUD rebuild (rotation): a spent
-        // one-shot stays spent; an in-flight cooldown/boost re-reads as ready is
-        // acceptable since the driving SKAction lives on the scene, not the HUD.
+        // one-shot stays spent; otherwise mirror the scene-owned `abilityState`
+        // so an in-flight speed boost / cooldown reads correctly (the driving
+        // SKAction lives on the scene, not the HUD).
         if plane.ability.charges > 0 && abilityChargesRemaining == 0 {
             button.setState(.spent)
+        } else {
+            button.setState(abilityState)
         }
     }
 
@@ -1079,6 +1087,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func fireSpeedBoost() {
+        // Only fire when genuinely ready. The button's tap already gates on its
+        // own `.ready` state, but a mid-run HUD rebuild can recreate the button
+        // before its state is restored — this guard on the scene-owned state
+        // stops a re-fire from replacing the in-flight keyed action.
+        guard abilityState == .ready else { return }
         let ability = plane.ability
 
         speedBoostFactor = ability.speedBoostFactor
@@ -1090,7 +1103,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         run(AudioManager.shared.sfxAction(SkySFX.ringPass))
         SkyHaptics.collect()
 
-        abilityButton?.setState(.active)
+        setAbilityState(.active)
         // Timing runs on the scene (not worldNode) so it's unaffected by the
         // sped-up world: active for `duration`, then cooldown, then re-armed.
         run(SKAction.sequence([
@@ -1100,20 +1113,31 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 self.worldNode.speed = 1.0
                 self.speedBoostFactor = 1.0
                 self.plane.setBoostIntensity(0.0)
-                self.abilityButton?.setState(.cooldown)
+                self.setAbilityState(.cooldown)
             },
             SKAction.wait(forDuration: ability.cooldown),
-            SKAction.run { [weak self] in self?.abilityButton?.setState(.ready) }
+            SKAction.run { [weak self] in self?.setAbilityState(.ready) }
         ]), withKey: "abilitySpeedBoost")
+    }
+
+    /// Sets both the scene-owned ability state and the live button, keeping the
+    /// two in sync so a HUD rebuild can restore the correct visual.
+    private func setAbilityState(_ newState: AbilityButtonNode.State) {
+        abilityState = newState
+        abilityButton?.setState(newState)
     }
 
     /// Cancels any in-flight speed boost and restores normal world speed. Called
     /// when the run ends so a boost mid-flight can't fast-forward the crash / win
     /// animation (they play on nodes under `worldNode`).
     private func endActiveSpeedBoost() {
+        // Removing the keyed action skips its revert stage, so clear the speed
+        // trail here too — otherwise it keeps emitting through the crash / win
+        // animation.
         removeAction(forKey: "abilitySpeedBoost")
         worldNode.speed = 1.0
         speedBoostFactor = 1.0
+        plane.setBoostIntensity(0.0)
     }
 
     /// Coin-magnet passive (Night Hawk): pulls coins within `magnetRadius`

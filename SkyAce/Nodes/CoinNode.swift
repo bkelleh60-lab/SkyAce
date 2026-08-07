@@ -6,6 +6,12 @@ final class CoinNode: SKNode {
 
     static let size: CGFloat = 26
 
+    /// Set by the coin-magnet passive (SKY-66, Night Hawk) once a coin enters
+    /// pull range: the scene removes the coin's scroll action and homes it
+    /// toward the plane each frame. Prevents re-capture and stops the scroll
+    /// `moveBy` from clobbering the homing position.
+    var isMagnetized = false
+
     /// Flippable element — either the sprite (when bundled) or the
     /// programmatic gold circle. Kept as a property so the flip animation
     /// can scale it on the X axis.

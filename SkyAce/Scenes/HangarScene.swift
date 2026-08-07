@@ -8,6 +8,7 @@ final class HangarScene: SKScene {
     private var showcase: SKNode!
     private var nameLabel: SKLabelNode!
     private var subtitleLabel: SKLabelNode!
+    private var abilityLabel: SKLabelNode!
     private var flyButton: SkyPillButton!
     private var coinPriceLabel: CoinAmountNode!
     private var dotsContainer: SKNode!
@@ -159,6 +160,17 @@ final class HangarScene: SKScene {
         subtitleLabel.position = CGPoint(x: size.width / 2, y: size.height * 0.6 - 256)
         subtitleLabel.zPosition = 10
         addChild(subtitleLabel)
+
+        // Ability line (SKY-66) so players can see each plane's identity before
+        // selecting. Uses the plane's accent-friendly primary color; emoji glyph
+        // carries the ability, no new art asset.
+        abilityLabel = SKLabelNode(text: "")
+        abilityLabel.fontName = SkyFonts.bodyMediumName
+        abilityLabel.fontSize = 13
+        abilityLabel.fontColor = SkyColors.skPrimary
+        abilityLabel.position = CGPoint(x: size.width / 2, y: size.height * 0.6 - 280)
+        abilityLabel.zPosition = 10
+        addChild(abilityLabel)
     }
 
     // MARK: - Action button
@@ -234,6 +246,9 @@ final class HangarScene: SKScene {
         let plane = PlaneCatalog.all[currentIndex]
         nameLabel.text = plane.name
         subtitleLabel.text = plane.subtitle
+        let ability = plane.ability
+        let tag = ability.isActive ? "TAP" : "PASSIVE"
+        abilityLabel.text = "\(ability.iconEmoji) \(ability.displayName) · \(ability.blurb) (\(tag))"
         refreshDots()
         refreshShowcaseSprite(for: plane)
 

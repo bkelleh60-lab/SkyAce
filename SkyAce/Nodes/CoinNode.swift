@@ -71,6 +71,11 @@ final class CoinNode: SKNode {
         physicsBody = pb
     }
 
+    /// Action key for the horizontal scroll run the scene attaches to each
+    /// spawned coin. Exposed so the magnet can cancel *only* that action.
+    static let scrollActionKey = "coinScroll"
+    private static let bobActionKey = "coinBob"
+
     private func animate() {
         // Flip rotation + subtle bob.
         let flip = SKAction.sequence([
@@ -83,18 +88,21 @@ final class CoinNode: SKNode {
             SKAction.moveBy(x: 0, y: 4, duration: 0.6),
             SKAction.moveBy(x: 0, y: -4, duration: 0.6)
         ])
-        run(SKAction.repeatForever(bob))
+        run(SKAction.repeatForever(bob), withKey: CoinNode.bobActionKey)
     }
 
     // MARK: - Coin magnet (SKY-66)
 
-    /// Switches this coin from scrolling to plane-homing. Drops the scroll +
-    /// bob actions so `home(toward:)` can drive position each frame without the
-    /// scroll `moveBy` clobbering it. Idempotent — a second call is a no-op.
+    /// Switches this coin from scrolling to plane-homing. Removes only the
+    /// keyed scroll + bob actions so `home(toward:)` can drive position without
+    /// the scroll `moveBy` clobbering it, while leaving any in-flight `collect()`
+    /// pop-and-remove intact. Skips coins already collected (their physics body
+    /// is nil) so their removal isn't cancelled. Idempotent.
     func beginMagnetHoming() {
-        guard !isMagnetized else { return }
+        guard !isMagnetized, physicsBody != nil else { return }
         isMagnetized = true
-        removeAllActions()  // scroll + bob live on self; the flip lives on the child
+        removeAction(forKey: CoinNode.scrollActionKey)
+        removeAction(forKey: CoinNode.bobActionKey)
     }
 
     /// Eases this coin toward `point` (the plane). Called each frame once

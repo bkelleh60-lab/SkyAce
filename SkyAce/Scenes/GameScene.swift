@@ -701,7 +701,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             coin.run(SKAction.sequence([
                 SKAction.moveBy(x: -distance, y: 0, duration: duration),
                 SKAction.removeFromParent()
-            ]))
+            ]), withKey: CoinNode.scrollActionKey)
         }
     }
 
@@ -793,7 +793,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             coin.run(SKAction.sequence([
                 SKAction.moveBy(x: -distance, y: 0, duration: duration),
                 SKAction.removeFromParent()
-            ]))
+            ]), withKey: CoinNode.scrollActionKey)
         }
     }
 

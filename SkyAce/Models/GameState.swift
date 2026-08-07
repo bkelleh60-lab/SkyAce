@@ -24,6 +24,15 @@ final class GameState {
     let hitsAllowed: Int
     var hitsRemaining: Int
 
+    // MARK: - Big-ring streak (SKY-63)
+
+    /// Consecutive big rings flown through without a miss. Drives the escalating
+    /// bonus and the on-screen streak indicator; reset when a ring scrolls off
+    /// uncollected.
+    private(set) var bigRingStreak = 0
+    /// Total big rings collected this run (stat / potential results use).
+    private(set) var bigRingsCollected = 0
+
     init(challenge: Challenge) {
         self.challenge = challenge
         self.timeRemaining = challenge.timeTrialDuration
@@ -40,6 +49,28 @@ final class GameState {
 
     func registerCoinSpawned(count: Int = 1) {
         totalCoinsSpawned += count
+    }
+
+    /// Registers a big-ring fly-through: advances the streak and returns the
+    /// coin bonus (`baseBonus * newStreak` — Ring 1 = base, Ring 2 = 2·base, …).
+    /// The bonus is folded into both the collected and spawned coin tallies, so
+    /// it enriches the run's visible coin count without skewing the collection
+    /// ratio the star rating grades — the bonus is fully "collected" of what it
+    /// adds, keeping the invariant `coinsCollected <= totalCoinsSpawned`.
+    @discardableResult
+    func collectBigRing(baseBonus: Int) -> Int {
+        bigRingStreak += 1
+        bigRingsCollected += 1
+        let bonus = max(0, baseBonus) * bigRingStreak
+        coinsCollected += bonus
+        totalCoinsSpawned += bonus
+        return bonus
+    }
+
+    /// Resets the streak after a missed ring (one that scrolled off screen
+    /// uncollected).
+    func resetBigRingStreak() {
+        bigRingStreak = 0
     }
 
     /// Returns true if the plane is dead (run should end).

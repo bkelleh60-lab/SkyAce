@@ -52,6 +52,7 @@
 		B10001000000000000000406 /* LandingZoneNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000406 /* LandingZoneNode.swift */; };
 		B10001000000000000000407 /* CoinRewardPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000407 /* CoinRewardPill.swift */; };
 		B10001000000000000000408 /* ApproachLightWaveNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000408 /* ApproachLightWaveNode.swift */; };
+		B10001000000000000000409 /* BigRingNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000409 /* BigRingNode.swift */; };
 		B10001000000000000000501 /* GameScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000501 /* GameScene.swift */; };
 		B10001000000000000000502 /* MenuScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000502 /* MenuScene.swift */; };
 		B10001000000000000000503 /* MapScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000503 /* MapScene.swift */; };
@@ -74,6 +75,7 @@
 		B10001000000000000000707 /* AbilityButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000707 /* AbilityButtonNode.swift */; };
 		B10001000000000000010006 /* MissionContentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010006 /* MissionContentTests.swift */; };
 		B10001000000000000010007 /* PlaneAbilityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010007 /* PlaneAbilityTests.swift */; };
+		B10001000000000000010008 /* BigRingStreakTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010008 /* BigRingStreakTests.swift */; };
 		B10001000000000000010001 /* CurrencyManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010001 /* CurrencyManagerTests.swift */; };
 		B10001000000000000010002 /* StarRatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010002 /* StarRatingTests.swift */; };
 		B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */; };
@@ -142,6 +144,7 @@
 		F10001000000000000000406 /* LandingZoneNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LandingZoneNode.swift; sourceTree = "<group>"; };
 		F10001000000000000000407 /* CoinRewardPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoinRewardPill.swift; sourceTree = "<group>"; };
 		F10001000000000000000408 /* ApproachLightWaveNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ApproachLightWaveNode.swift; sourceTree = "<group>"; };
+		F10001000000000000000409 /* BigRingNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigRingNode.swift; sourceTree = "<group>"; };
 		F10001000000000000000501 /* GameScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000502 /* MenuScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000503 /* MapScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapScene.swift; sourceTree = "<group>"; };
@@ -164,6 +167,7 @@
 		F10001000000000000000707 /* AbilityButtonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AbilityButtonNode.swift; sourceTree = "<group>"; };
 		F10001000000000000010006 /* MissionContentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissionContentTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010007 /* PlaneAbilityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaneAbilityTests.swift; sourceTree = "<group>"; };
+		F10001000000000000010008 /* BigRingStreakTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BigRingStreakTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010001 /* CurrencyManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CurrencyManagerTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010002 /* StarRatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StarRatingTests.swift; sourceTree = "<group>"; };
 		F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FreeFlightCoinAccumulatorTests.swift; sourceTree = "<group>"; };
@@ -256,6 +260,7 @@
 				F10001000000000000000406 /* LandingZoneNode.swift */,
 				F10001000000000000000407 /* CoinRewardPill.swift */,
 				F10001000000000000000408 /* ApproachLightWaveNode.swift */,
+				F10001000000000000000409 /* BigRingNode.swift */,
 			);
 			path = Nodes;
 			sourceTree = "<group>";
@@ -342,6 +347,7 @@
 				F10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift */,
 				F10001000000000000010006 /* MissionContentTests.swift */,
 				F10001000000000000010007 /* PlaneAbilityTests.swift */,
+				F10001000000000000010008 /* BigRingStreakTests.swift */,
 				F10001000000000000010004 /* Info.plist */,
 			);
 			path = SkyAceTests;
@@ -495,6 +501,7 @@
 				B10001000000000000000406 /* LandingZoneNode.swift in Sources */,
 				B10001000000000000000407 /* CoinRewardPill.swift in Sources */,
 				B10001000000000000000408 /* ApproachLightWaveNode.swift in Sources */,
+				B10001000000000000000409 /* BigRingNode.swift in Sources */,
 				B10001000000000000000501 /* GameScene.swift in Sources */,
 				B10001000000000000000502 /* MenuScene.swift in Sources */,
 				B10001000000000000000503 /* MapScene.swift in Sources */,
@@ -527,6 +534,7 @@
 				B10001000000000000010005 /* FreeFlightCoinAccumulatorTests.swift in Sources */,
 				B10001000000000000010006 /* MissionContentTests.swift in Sources */,
 				B10001000000000000010007 /* PlaneAbilityTests.swift in Sources */,
+				B10001000000000000010008 /* BigRingStreakTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

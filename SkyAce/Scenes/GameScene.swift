@@ -42,6 +42,15 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// doesn't force the plane into a pillar.
     private var lastObstacleGapY: CGFloat?
 
+    // Big-ring spawn control (SKY-63). Obstacle-bearing modes pace rings by
+    // obstacle count; time-trial (no obstacles) paces them on a timer. Once a
+    // ring is "due" it's emitted as soon as its entry column is clear of
+    // pillars, so a tight-gap level can't silently starve the mechanic.
+    private var obstaclesSinceBigRing = 0
+    private var nextBigRingObstacleTarget = 0
+    private var nextBigRingTimeTrialTime: TimeInterval = 0
+    private var bigRingDue = false
+
     // Finish line — scheduled once per run; tracked so we can stop spawning
     // hazards/coins on its approach and route the cross through didBegin.
     private var finishLineNode: FinishLineNode?
@@ -74,6 +83,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private var progressLabel:   SKLabelNode!
     private var pauseButton:     SKNode!
     private var armorBadge: SKLabelNode?
+
+    // Big-ring streak indicator (SKY-63). Optional — rebuilt with the HUD and
+    // hidden while the streak is 0, so callers must nil-check.
+    private var streakPillBG: SKShapeNode?
+    private var streakIcon: SKNode?
+    private var streakLabel: SKLabelNode?
 
     /// Top safe-area inset (Dynamic Island / notch) pushed in by
     /// `GameViewController` once layout settles; keeps the centered pause
@@ -124,6 +139,13 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         buildHUD()
         buildStartHint()
         scheduleFinishLine()
+
+        // Big rings (SKY-63): prime the first spawn target for obstacle-paced
+        // modes and the lead-in delay for the time-trial timer.
+        nextBigRingObstacleTarget = Int.random(
+            in: GameScene.bigRingMinObstacleGap...GameScene.bigRingMaxObstacleGap
+        )
+        nextBigRingTimeTrialTime = GameScene.bigRingTimeTrialFirstDelay
 
         // SKY-75: engine ambience runs alongside the gameplay music. Played
         // from the AudioManager engine slot so it coexists with the music
@@ -177,6 +199,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         hudNode.removeAllChildren()
         armorBadge = nil
         abilityButton = nil
+        clearStreakIndicatorRefs()
         buildHUD()
 
         // Pause overlay's dim sprite is sized to the old scene; rebuild it.
@@ -337,6 +360,55 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             armorBadge = armor
         }
 
+        // Big-ring streak indicator (SKY-63), tucked under the coin pill. A gold
+        // pill with a small ring glyph and the live streak count. Hidden while
+        // the streak is 0 so it only appears once a run of rings is going;
+        // `updateStreakIndicator` restores its visibility from `state` after
+        // every HUD rebuild (rotation / inset changes).
+        let streakPillSize = CGSize(width: 92, height: 30)
+        let streakPill = SKShapeNode(rectOf: streakPillSize, cornerRadius: 15)
+        streakPill.fillColor = SkyColors.skTertiaryContainer
+        streakPill.strokeColor = .clear
+        streakPill.position = CGPoint(
+            x: -size.width / 2 + streakPillSize.width / 2 + 14,
+            y: pill.position.y - 40
+        )
+        streakPill.zPosition = 100
+        hudNode.addChild(streakPill)
+        streakPillBG = streakPill
+
+        let ringIconDiameter: CGFloat = 18
+        let ringIcon: SKNode
+        if let ringSprite = SkySprites.sprite(
+            named: SkySprites.ring,
+            size: CGSize(width: ringIconDiameter, height: ringIconDiameter)
+        ) {
+            ringIcon = ringSprite
+        } else {
+            let fallback = SKShapeNode(circleOfRadius: ringIconDiameter / 2)
+            fallback.strokeColor = SkyColors.skOnTertiaryContainer
+            fallback.lineWidth = 3
+            fallback.fillColor = .clear
+            ringIcon = fallback
+        }
+        ringIcon.position = CGPoint(x: streakPill.position.x - 22, y: streakPill.position.y)
+        ringIcon.zPosition = 101
+        hudNode.addChild(ringIcon)
+        streakIcon = ringIcon
+
+        let streak = SKLabelNode(text: "×0")
+        streak.fontName = SkyFonts.headlineName
+        streak.fontSize = 15
+        streak.fontColor = SkyColors.skOnTertiaryContainer
+        streak.verticalAlignmentMode = .center
+        streak.horizontalAlignmentMode = .center
+        streak.position = CGPoint(x: streakPill.position.x + 10, y: streakPill.position.y)
+        streak.zPosition = 101
+        hudNode.addChild(streak)
+        streakLabel = streak
+
+        updateStreakIndicator(pulse: false)
+
         // Mission info + progress bar (top-right)
         let missionCardSize = CGSize(width: 160, height: 54)
         let missionCard = SKShapeNode(rectOf: missionCardSize, cornerRadius: 18)
@@ -477,6 +549,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         hudNode.removeAllChildren()
         armorBadge = nil
         abilityButton = nil
+        clearStreakIndicatorRefs()
         buildHUD()
         updateHUD()
     }
@@ -584,6 +657,25 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// dense by design and were tuned separately per SKY-84 guidance.
     static let coinChainPatternInterval: TimeInterval = 1.4
 
+    // MARK: - Big-ring tuning (SKY-63)
+
+    /// Big rings appear every N obstacles in obstacle-bearing modes. A fresh
+    /// random target in this range is picked after each ring so the cadence
+    /// reads as organic rather than metronomic. Tunable for playtesting without
+    /// touching spawn code.
+    static let bigRingMinObstacleGap = 8
+    static let bigRingMaxObstacleGap = 12
+
+    /// Time-trial levels spawn no obstacles, so big rings there are paced on a
+    /// timer instead: `bigRingTimeTrialFirstDelay` before the first, then every
+    /// `bigRingTimeTrialInterval` seconds. Tunable.
+    static let bigRingTimeTrialInterval: TimeInterval = 6.0
+    static let bigRingTimeTrialFirstDelay: TimeInterval = 4.0
+
+    /// Coin bonus for the first ring in a streak; ring N awards `base * N`
+    /// (Ring 1 = +5, Ring 2 = +10, Ring 3 = +15, …). Tunable.
+    static let bigRingBaseBonus = 5
+
     private func spawnTick(currentTime: TimeInterval) {
         // Stop populating the run once the finish gate is on its way — gives
         // the player a clean approach without a hazard right at the line.
@@ -623,6 +715,39 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 lastPatternSpawn = currentTime
             }
         }
+
+        // Big rings (SKY-63) are emitted independently of the per-mode coin /
+        // obstacle cadence above.
+        updateBigRingSpawning()
+    }
+
+    /// Decides when a big ring is *due* (obstacle count in obstacle modes, a
+    /// timer in time trial) and emits it as soon as its entry column is clear
+    /// of pillars. Splitting "due" from "emitted" means a tight-gap level whose
+    /// cadence keeps landing on a fresh obstacle still gets its ring a beat
+    /// later instead of silently skipping it (SKY-63).
+    private func updateBigRingSpawning() {
+        if !bigRingDue {
+            switch challenge.type {
+            case .obstacleCourse, .coinChain:
+                if obstaclesSinceBigRing >= nextBigRingObstacleTarget {
+                    bigRingDue = true
+                    obstaclesSinceBigRing = 0
+                    nextBigRingObstacleTarget = Int.random(
+                        in: GameScene.bigRingMinObstacleGap...GameScene.bigRingMaxObstacleGap
+                    )
+                }
+            case .timeTrial:
+                if state.elapsedTime >= nextBigRingTimeTrialTime {
+                    bigRingDue = true
+                    nextBigRingTimeTrialTime += GameScene.bigRingTimeTrialInterval
+                }
+            }
+        }
+
+        if bigRingDue, spawnBigRing() {
+            bigRingDue = false
+        }
     }
 
     private func spawnObstaclePair() {
@@ -638,6 +763,14 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         // on top of the previous coin line. Cull any embedded coin so we
         // never present an uncollectible collectible.
         removeCoinsEmbeddedIn(obstacle)
+
+        // Big rings pace off obstacle count in this mode (SKY-63).
+        obstaclesSinceBigRing += 1
+        // Rings clear their column at spawn and same-speed scrolling keeps them
+        // clear of later obstacles — except a ring and an obstacle can spawn on
+        // nearly the same tick sharing a column. Void (not "miss") any big ring
+        // this new obstacle overlaps, mirroring the coin embed-cull above.
+        voidBigRingsEmbeddedIn(obstacle)
 
         let speed = plane.horizontalSpeed * challenge.speedMultiplier
         let distance = size.width + 200
@@ -703,6 +836,136 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 SKAction.removeFromParent()
             ]), withKey: CoinNode.scrollActionKey)
         }
+    }
+
+    // MARK: - Big rings (SKY-63)
+
+    /// Emits one big ring into a pillar-free entry column, returning `false`
+    /// (leaving it "due") if no clear vertical slot is currently available so
+    /// the caller retries on a later frame. The ring scrolls at the world speed
+    /// like every other node and is removed by `cullOffscreenChildren` — which
+    /// also registers the streak-breaking miss if it was never collected.
+    @discardableResult
+    private func spawnBigRing() -> Bool {
+        let startX = size.width + BigRingNode.radius + 40
+        guard let centerY = pickBigRingCenterY(startX: startX) else { return false }
+
+        let ring = BigRingNode()
+        ring.position = CGPoint(x: startX, y: centerY)
+        ring.zPosition = 3   // above coins (2) / obstacles (1), below the finish gate (4)
+        worldNode.addChild(ring)
+
+        let speed = plane.horizontalSpeed * challenge.speedMultiplier
+        let distance = startX + 200   // carry it fully off the left edge
+        let duration = TimeInterval(distance / max(speed, 1))
+        // No auto-remove: cullOffscreenChildren owns removal so a scroll-off can
+        // be scored as a miss.
+        ring.run(SKAction.moveBy(x: -distance, y: 0, duration: duration))
+        return true
+    }
+
+    /// Samples a few Y values in the mid-flight band and returns the first that
+    /// keeps the whole ring clear of every active pillar (buffer = ring radius,
+    /// so the check accounts for the ring's full size — SKY-60 clearance rules).
+    /// Returns `nil` when no clear slot exists this frame (e.g. a fresh obstacle
+    /// shares the entry column on a tight-gap level); the caller retries later.
+    private func pickBigRingCenterY(startX: CGFloat) -> CGFloat? {
+        let band = size.height * 0.25...size.height * 0.75
+        for _ in 0..<8 {
+            let candidate = CGFloat.random(in: band)
+            if !isInsideObstacle(CGPoint(x: startX, y: candidate), buffer: BigRingNode.radius) {
+                return candidate
+            }
+        }
+        return nil
+    }
+
+    /// Removes any big ring this newly spawned obstacle overlaps. These rings
+    /// are voided by geometry, not missed by the player, so they are removed
+    /// silently without touching the streak (counterpart to
+    /// `removeCoinsEmbeddedIn`).
+    private func voidBigRingsEmbeddedIn(_ obstacle: ObstacleNode) {
+        for case let ring as BigRingNode in worldNode.children
+            where !ring.wasCollected
+            && isInsidePillar(ring.position, of: obstacle, buffer: BigRingNode.radius) {
+            ring.removeFromParent()
+        }
+    }
+
+    /// Handles a plane / big-ring fly-through: plays the ring's burst, advances
+    /// the streak, credits the escalating coin bonus to both the run tally and
+    /// the persistent balance, and fires the feedback (sound, haptic, HUD).
+    private func collectBigRing(_ ring: BigRingNode) {
+        ring.collect()
+        let bonus = state.collectBigRing(baseBonus: GameScene.bigRingBaseBonus)
+        ProgressManager.shared.addCoins(bonus)
+        ring.run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        SkyHaptics.collect()
+        flashCoinPill()
+        updateStreakIndicator(pulse: true)
+        showBigRingBonus(bonus, at: ring.position)
+    }
+
+    /// Resets the streak after a missed ring and updates the indicator.
+    private func registerBigRingMiss() {
+        guard state.bigRingStreak > 0 else { return }
+        state.resetBigRingStreak()
+        updateStreakIndicator(pulse: false)
+    }
+
+    /// Floating "+N" gold reward that rises from the collected ring and fades.
+    /// Added under `worldNode` (which never scrolls) so it stays put on screen
+    /// rather than sliding with the gameplay nodes.
+    private func showBigRingBonus(_ bonus: Int, at position: CGPoint) {
+        let label = SKLabelNode(text: "+\(bonus)")
+        label.fontName = SkyFonts.headlineName
+        label.fontSize = 30
+        label.fontColor = SkyColors.tertiaryContainer
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        label.position = position
+        label.zPosition = 60
+        worldNode.addChild(label)
+        label.run(SKAction.sequence([
+            SKAction.group([
+                SKAction.moveBy(x: 0, y: 70, duration: 0.7),
+                SKAction.sequence([
+                    SKAction.wait(forDuration: 0.4),
+                    SKAction.fadeOut(withDuration: 0.3)
+                ])
+            ]),
+            SKAction.removeFromParent()
+        ]))
+    }
+
+    /// Syncs the top-left streak pill with `state.bigRingStreak`: updates the
+    /// count, shows it only while the streak is non-zero, and (when `pulse`)
+    /// pops it on a fresh fly-through. Called on collect, on miss, and after
+    /// every HUD rebuild so the indicator survives rotation / inset changes.
+    private func updateStreakIndicator(pulse: Bool) {
+        let streak = state.bigRingStreak
+        streakLabel?.text = "×\(streak)"
+        let visible = streak > 0
+        streakPillBG?.isHidden = !visible
+        streakIcon?.isHidden = !visible
+        streakLabel?.isHidden = !visible
+
+        guard visible, pulse else { return }
+        let pop = SKAction.sequence([
+            SKAction.scale(to: 1.18, duration: 0.08),
+            SKAction.scale(to: 1.0, duration: 0.12)
+        ])
+        streakPillBG?.run(pop)
+        streakIcon?.run(pop)
+    }
+
+    /// Drops the streak-indicator node references ahead of a HUD rebuild (they
+    /// are recreated in `buildHUD`), matching the armor-badge / ability-button
+    /// handling.
+    private func clearStreakIndicatorRefs() {
+        streakPillBG = nil
+        streakIcon = nil
+        streakLabel = nil
     }
 
     // MARK: - Finish line
@@ -864,6 +1127,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 if node.position.x < -120 {
                     node.removeFromParent()
                 }
+            } else if let ring = node as? BigRingNode, node.position.x < -120 {
+                // A big ring that scrolls off uncollected is a missed ring — it
+                // breaks the streak (SKY-63). Voided (embedded) rings are removed
+                // earlier and never reach here, so this only fires on true misses.
+                if !ring.wasCollected { registerBigRingMiss() }
+                node.removeFromParent()
             }
         }
     }
@@ -908,6 +1177,10 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
                 coin.run(AudioManager.shared.sfxAction(SkySFX.coinCollect))
                 SkyHaptics.collect()
                 flashCoinPill()
+            }
+        case PhysicsCategory.ring:
+            if let ring = otherBody.node as? BigRingNode, !ring.wasCollected {
+                collectBigRing(ring)
             }
         case PhysicsCategory.obstacle:
             handleHit(node: otherBody.node)

@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-/// Static catalog of the three planes. Runtime ownership lives in ProgressManager.
+/// Static catalog of the four planes. Runtime ownership lives in ProgressManager.
 struct Plane {
     let id: String
     let name: String
@@ -13,6 +13,8 @@ struct Plane {
     // Set when the bundled PNG is authored nose-left; PlaneNode mirrors the
     // sprite so the plane reads as flying right in every scene.
     let assetFacesLeft: Bool
+    // Asymmetric ability (SKY-66) — one per plane, active or passive.
+    let ability: PlaneAbility
 }
 
 enum PlaneCatalog {
@@ -24,7 +26,8 @@ enum PlaneCatalog {
         spriteName: SkySprites.planeJet,
         bodyColor: SkyColors.primaryContainer,
         accentColor: SkyColors.primary,
-        assetFacesLeft: false
+        assetFacesLeft: false,
+        ability: PlaneAbilityCatalog.glideControl
     )
 
     static let redBaron = Plane(
@@ -35,7 +38,8 @@ enum PlaneCatalog {
         spriteName: SkySprites.planeFighter,
         bodyColor: UIColor(hex: 0xE8424A),
         accentColor: UIColor(hex: 0xFFD709),
-        assetFacesLeft: true
+        assetFacesLeft: true,
+        ability: PlaneAbilityCatalog.invincibilityBurst
     )
 
     static let shadowDart = Plane(
@@ -46,7 +50,8 @@ enum PlaneCatalog {
         spriteName: SkySprites.planeShadowDart,
         bodyColor: UIColor(hex: 0x08314D),
         accentColor: UIColor(hex: 0x00BAFF),
-        assetFacesLeft: false
+        assetFacesLeft: false,
+        ability: PlaneAbilityCatalog.speedBoost
     )
 
     static let nightHawk = Plane(
@@ -57,7 +62,8 @@ enum PlaneCatalog {
         spriteName: SkySprites.planeNightHawk,
         bodyColor: UIColor(hex: 0x08314D),
         accentColor: UIColor(hex: 0xFF8C00),
-        assetFacesLeft: false
+        assetFacesLeft: false,
+        ability: PlaneAbilityCatalog.coinMagnet
     )
 
     static let all: [Plane] = [redBaron, blueSkyChaser, shadowDart, nightHawk]

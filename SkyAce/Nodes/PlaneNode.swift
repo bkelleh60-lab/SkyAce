@@ -67,6 +67,24 @@ final class PlaneNode: SKNode {
 
     let plane: Plane
 
+    /// This plane's asymmetric ability (SKY-66). Convenience passthrough so
+    /// scenes read `plane.ability` rather than `plane.plane.ability`.
+    var ability: PlaneAbility { plane.ability }
+
+    /// Gate for passive ability modifiers (glide climb/descent). Off by default
+    /// so Free Flight and Landing Practice — which have their own tuned descent
+    /// physics — are untouched; GameScene opts in by setting this true.
+    var passivesEnabled = false
+
+    /// True while an invincibility burst is active (Red Baron). Read by the
+    /// scene's hit handler to skip obstacle damage. Boundary crashes ignore it.
+    private(set) var isInvincible = false
+
+    /// Previous frame's clamped vertical velocity. Used by the glide passive to
+    /// counter a fraction of the per-frame gravity change without depending on
+    /// SpriteKit's internal gravity scale.
+    private var lastDy: CGFloat = 0
+
     private let body: SKNode
 
     /// The textured sprite inside `body`, when the bundled plane art is in
@@ -220,17 +238,21 @@ final class PlaneNode: SKNode {
         guard let pb = physicsBody else { return }
         let now = CACurrentMediaTime()
 
+        // Glide passive (Blue Sky Chaser): a crisper climb response. No-op
+        // (×1.0) for every other plane and whenever passives are disabled.
+        let impulse = passivesEnabled ? climbImpulse * plane.ability.climbMultiplier : climbImpulse
+
         if holdStartTime == nil {
-            // Tap onset — additive impulse with a floor of `climbImpulse` so
-            // a tap always lifts the plane, and a ceiling of `maxClimbVelocity`.
+            // Tap onset — additive impulse with a floor of `impulse` so a tap
+            // always lifts the plane, and a ceiling of `maxClimbVelocity`.
             holdStartTime = now
-            let boosted = max(pb.velocity.dy + climbImpulse, climbImpulse)
+            let boosted = max(pb.velocity.dy + impulse, impulse)
             pb.velocity.dy = min(boosted, PlaneNode.maxClimbVelocity)
         } else if let start = holdStartTime {
             // Sustained hold — drive dy toward a ramping hold target.
             let heldFor = now - start
             let ramp = CGFloat(min(heldFor / PlaneNode.holdImpulseDuration, 1.0))
-            let holdTarget = climbImpulse * (1 + (PlaneNode.holdImpulseScale - 1) * ramp)
+            let holdTarget = impulse * (1 + (PlaneNode.holdImpulseScale - 1) * ramp)
             let clamped = min(holdTarget, PlaneNode.maxClimbVelocity)
             if pb.velocity.dy < clamped {
                 pb.velocity.dy = clamped
@@ -258,20 +280,38 @@ final class PlaneNode: SKNode {
     }
 
     /// Called every frame (by the scene) to clamp velocity and settle rotation.
-    func update() {
+    /// `delta` is the frame's elapsed seconds; only the glide passive uses it,
+    /// so it defaults to 0 for scenes that don't apply passives.
+    func update(delta: TimeInterval = 0) {
         guard let pb = physicsBody else { return }
 
         // Detect touch release: climb() wasn't called this frame, so reset
         // the hold state so the next tap fires a fresh onset impulse.
+        let wasClimbing = climbActiveThisFrame
         if !climbActiveThisFrame {
             holdStartTime = nil
         }
         climbActiveThisFrame = false
 
         var v = pb.velocity
+
+        // Glide passive (Blue Sky Chaser): soften descent. The physics engine
+        // has already applied this frame's gravity to `v.dy`, so we counter a
+        // fraction of the observed downward change. Measuring the change rather
+        // than recomputing gravity keeps this independent of SpriteKit's
+        // internal gravity scale and of the frame rate. Skipped while climbing
+        // (that velocity comes from input, not gravity).
+        if passivesEnabled, !wasClimbing, plane.ability.descentGravityMultiplier < 1 {
+            let deltaDy = v.dy - lastDy
+            if deltaDy < 0 {
+                v.dy -= deltaDy * (1 - plane.ability.descentGravityMultiplier)
+            }
+        }
+
         if v.dy > PlaneNode.maxClimbVelocity { v.dy = PlaneNode.maxClimbVelocity }
         if v.dy < PlaneNode.maxDownVelocity  { v.dy = PlaneNode.maxDownVelocity }
         pb.velocity = v
+        lastDy = v.dy
 
         // Tilt nose down while falling.
         if v.dy < 0 {
@@ -378,6 +418,42 @@ final class PlaneNode: SKNode {
                 ]))
             }
         }
+    }
+
+    // MARK: - Invincibility burst (SKY-66, Red Baron)
+
+    /// Fires the invincibility burst: sets `isInvincible` for `duration`, then
+    /// auto-clears. Re-entrant taps during an active burst are ignored (the
+    /// scene also gates on charges). A blue shield shimmer + brief pop signals
+    /// the active window to the player.
+    func activateInvincibility(duration: TimeInterval) {
+        guard !isInvincible else { return }
+        isInvincible = true
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: duration),
+            SKAction.run { [weak self] in self?.isInvincible = false }
+        ]), withKey: "invincibility")
+        playShieldFlash(duration: duration)
+    }
+
+    /// Blue colorize shimmer + scale pop for the invincibility window. Mirrors
+    /// `playHitFlash`'s child-walk so it works on the sprite body; SKShapeNode
+    /// children (programmatic fallback) simply don't colorize.
+    private func playShieldFlash(duration: TimeInterval) {
+        let hold = max(0, duration - 0.2)
+        let shimmer = SKAction.sequence([
+            SKAction.colorize(with: UIColor(hex: 0x00BAFF), colorBlendFactor: 0.75, duration: 0.08),
+            SKAction.wait(forDuration: hold),
+            SKAction.colorize(withColorBlendFactor: 0.0, duration: 0.12)
+        ])
+        body.enumerateChildNodes(withName: "*") { node, _ in
+            if let sprite = node as? SKSpriteNode { sprite.run(shimmer) }
+        }
+        let base = body.xScale
+        body.run(SKAction.sequence([
+            SKAction.scale(to: base * 1.12, duration: 0.1),
+            SKAction.scale(to: base, duration: 0.16)
+        ]))
     }
 
     /// Drives the speed-trail emitter behind the plane. `intensity` is a

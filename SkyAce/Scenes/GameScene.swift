@@ -50,6 +50,21 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     // Input
     private var isTouchingScreen = false
 
+    // Ability (SKY-66). The button + charge/cooldown indicator is only built
+    // for planes with an *active* ability; passives apply silently via the
+    // plane node / coin-magnet pull. Charges/cooldown are driven by SKAction
+    // sequences that flip the button's visual state.
+    private var abilityButton: AbilityButtonNode?
+    private var abilityChargesRemaining = 0
+    /// Scene-owned mirror of the active-ability button's visual state. Survives
+    /// HUD rebuilds (the button is recreated on rotation / inset changes) so an
+    /// in-flight speed boost or cooldown is restored instead of reading as
+    /// `.ready`, and so `fireSpeedBoost()` can gate re-fires on the true state.
+    private var abilityState: AbilityButtonNode.State = .ready
+    /// Live world-scroll multiplier. 1.0 normally; raised during a speed boost
+    /// so the parallax layers keep pace with the sped-up gameplay actions.
+    private var speedBoostFactor: CGFloat = 1.0
+
     // HUD
     private var coinLabel: CoinAmountNode!
     private var coinPillBG: SKShapeNode!
@@ -102,6 +117,10 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         buildParallaxBackground()
         buildBoundaries()
         buildPlane()
+        // Abilities (SKY-66): passives apply only in mission runs; active-ability
+        // charges are primed here so the HUD button builds in the right state.
+        plane.passivesEnabled = true
+        abilityChargesRemaining = plane.ability.charges
         buildHUD()
         buildStartHint()
         scheduleFinishLine()
@@ -157,6 +176,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         // worldNode-attached gameplay state isn't touched.
         hudNode.removeAllChildren()
         armorBadge = nil
+        abilityButton = nil
         buildHUD()
 
         // Pause overlay's dim sprite is sized to the old scene; rebuild it.
@@ -385,6 +405,42 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         pauseLabel.name = "pauseButton"
         hudNode.addChild(pauseLabel)
         self.pauseButton = pauseBG
+
+        buildAbilityButton()
+    }
+
+    /// Builds the bottom-right ability button for planes with an active ability
+    /// (SKY-66). Passive planes get no button — their effect is felt, not
+    /// tapped. Rebuilt with the rest of the HUD on rotation / inset changes, so
+    /// its visual state is restored from the current charge/cooldown state.
+    private func buildAbilityButton() {
+        guard plane.ability.isActive else { return }
+
+        let bottomInset = view?.safeAreaInsets.bottom ?? 0
+        let button = AbilityButtonNode(emoji: plane.ability.iconEmoji) { [weak self] in
+            self?.fireAbility()
+        }
+        button.position = CGPoint(
+            x: size.width / 2 - 46,
+            y: -size.height / 2 + bottomInset + 54
+        )
+        button.zPosition = 100
+        hudNode.addChild(button)
+        abilityButton = button
+
+        // Restore visual state after a mid-run HUD rebuild (rotation). An
+        // in-flight burst / boost (`.active`) wins so it isn't masked by the
+        // zero-charge `.spent` fallback for a one-shot mid-burst; otherwise a
+        // used one-shot stays spent; otherwise mirror the scene-owned state
+        // (`.ready` / `.cooldown`). The driving SKAction lives on the scene, so
+        // it keeps advancing the state after the rebuild.
+        if abilityState == .active {
+            button.setState(.active)
+        } else if plane.ability.charges > 0 && abilityChargesRemaining == 0 {
+            button.setState(.spent)
+        } else {
+            button.setState(abilityState)
+        }
     }
 
     /// Vertical center for the pause button, dropped below the top safe-area
@@ -420,6 +476,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         topSafeInset = inset
         hudNode.removeAllChildren()
         armorBadge = nil
+        abilityButton = nil
         buildHUD()
         updateHUD()
     }
@@ -454,18 +511,24 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         if isTouchingScreen {
             plane.climb()
         }
-        plane.update()
+        plane.update(delta: delta)
+
+        // Coin-magnet passive (Night Hawk) pulls nearby coins toward the plane.
+        if plane.ability.kind == .coinMagnet {
+            applyCoinMagnet()
+        }
 
         // Keep plane horizontally fixed — world moves past it.
         plane.position.x += (size.width * 0.25 - plane.position.x) * 0.12
 
-        // Parallax drift.
+        // Parallax drift. `speedBoostFactor` (1.0 except during an active speed
+        // boost) keeps the clouds in step with the sped-up gameplay actions.
         distantCloudLayer.children.forEach { cloud in
-            cloud.position.x -= 0.3 * CGFloat(plane.horizontalSpeed * challenge.speedMultiplier) * CGFloat(delta) * 0.4
+            cloud.position.x -= 0.3 * CGFloat(plane.horizontalSpeed * challenge.speedMultiplier) * speedBoostFactor * CGFloat(delta) * 0.4
             if cloud.position.x < -80 { cloud.position.x = size.width + 40 }
         }
         nearCloudLayer.children.forEach { cloud in
-            cloud.position.x -= CGFloat(plane.horizontalSpeed * challenge.speedMultiplier) * CGFloat(delta) * 0.7
+            cloud.position.x -= CGFloat(plane.horizontalSpeed * challenge.speedMultiplier) * speedBoostFactor * CGFloat(delta) * 0.7
             if cloud.position.x < -80 { cloud.position.x = size.width + 40 }
         }
 
@@ -858,6 +921,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func handleHit(node: SKNode?) {
+        // Invincibility burst (SKY-66, Red Baron): fly through the obstacle with
+        // no damage and no armor cost while the burst is active. The shield
+        // shimmer is already showing on the plane.
+        if plane.isInvincible { return }
+
         plane.playHitFlash()
         plane.run(AudioManager.shared.sfxAction(SkySFX.hit))
         SkyHaptics.hit()
@@ -897,6 +965,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private func triggerFailSequence() {
         guard !runHasFinished else { return }
         runHasFinished = true
+        endActiveSpeedBoost()
         SkyHaptics.fail()
 
         // SKY-75: cut the engine and timer-warning loop the moment the run
@@ -934,6 +1003,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func triggerWinSequence() {
+        endActiveSpeedBoost()
         SkyHaptics.win()
 
         // SKY-75: cut the engine and timer-warning loop before the win
@@ -985,6 +1055,121 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         )
     }
 
+    // MARK: - Ability (SKY-66)
+
+    /// Fires the selected plane's active ability. Routed from the ability
+    /// button's tap (which already gates on the button being `.ready`), so this
+    /// only adds the per-kind resource check. No-op mid-pause / after the run
+    /// ends.
+    private func fireAbility() {
+        guard !state.isPaused, !runHasFinished else { return }
+        switch plane.ability.kind {
+        case .invincibilityBurst:
+            fireInvincibilityBurst()
+        case .speedBoost:
+            fireSpeedBoost()
+        case .glideControl, .coinMagnet:
+            break  // passive — no active trigger
+        }
+    }
+
+    private func fireInvincibilityBurst() {
+        guard abilityChargesRemaining > 0 else { return }
+        abilityChargesRemaining -= 1
+
+        let duration = plane.ability.duration
+        plane.activateInvincibility(duration: duration)
+        run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        SkyHaptics.collect()
+
+        // Button shows the active window, then greys out (one charge per run).
+        // Track via the scene-owned state so a HUD rebuild during the burst
+        // restores `.active` rather than the zero-charge `.spent` fallback.
+        setAbilityState(.active)
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: duration),
+            SKAction.run { [weak self] in self?.setAbilityState(.spent) }
+        ]), withKey: "abilityInvincibility")
+    }
+
+    private func fireSpeedBoost() {
+        // Only fire when genuinely ready. The button's tap already gates on its
+        // own `.ready` state, but a mid-run HUD rebuild can recreate the button
+        // before its state is restored — this guard on the scene-owned state
+        // stops a re-fire from replacing the in-flight keyed action.
+        guard abilityState == .ready else { return }
+        let ability = plane.ability
+
+        speedBoostFactor = ability.speedBoostFactor
+        // Speeds every scroll action under worldNode (obstacles/coins/finish)
+        // uniformly; the parallax layers are matched via `speedBoostFactor` in
+        // update(). Plane vertical feel is physics-driven and untouched.
+        worldNode.speed = ability.speedBoostFactor
+        plane.setBoostIntensity(0.9)
+        run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        SkyHaptics.collect()
+
+        setAbilityState(.active)
+        // Timing runs on the scene (not worldNode) so it's unaffected by the
+        // sped-up world: active for `duration`, then cooldown, then re-armed.
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: ability.duration),
+            SKAction.run { [weak self] in
+                guard let self = self else { return }
+                self.worldNode.speed = 1.0
+                self.speedBoostFactor = 1.0
+                self.plane.setBoostIntensity(0.0)
+                self.setAbilityState(.cooldown)
+            },
+            SKAction.wait(forDuration: ability.cooldown),
+            SKAction.run { [weak self] in self?.setAbilityState(.ready) }
+        ]), withKey: "abilitySpeedBoost")
+    }
+
+    /// Sets both the scene-owned ability state and the live button, keeping the
+    /// two in sync so a HUD rebuild can restore the correct visual.
+    private func setAbilityState(_ newState: AbilityButtonNode.State) {
+        abilityState = newState
+        abilityButton?.setState(newState)
+    }
+
+    /// Cancels any in-flight speed boost and restores normal world speed. Called
+    /// when the run ends so a boost mid-flight can't fast-forward the crash / win
+    /// animation (they play on nodes under `worldNode`).
+    private func endActiveSpeedBoost() {
+        // Removing the keyed action skips its revert stage, so clear the speed
+        // trail here too — otherwise it keeps emitting through the crash / win
+        // animation.
+        removeAction(forKey: "abilitySpeedBoost")
+        worldNode.speed = 1.0
+        speedBoostFactor = 1.0
+        plane.setBoostIntensity(0.0)
+    }
+
+    /// Coin-magnet passive (Night Hawk): pulls coins within `magnetRadius`
+    /// toward the plane. On entering range a coin's scroll action is removed and
+    /// it homes toward the (moving) plane each frame — collection still happens
+    /// via the normal coin contact in `didBegin`.
+    private func applyCoinMagnet() {
+        let radius = plane.ability.magnetRadius
+        guard radius > 0 else { return }
+        let planePos = plane.position
+        let radiusSquared = radius * radius
+        // Scene selects candidates; the coin owns the switch to homing and the
+        // per-frame pull (per the node-behavior encapsulation guideline).
+        for case let coin as CoinNode in worldNode.children {
+            if coin.isMagnetized {
+                coin.home(toward: planePos)
+            } else {
+                let dx = planePos.x - coin.position.x
+                let dy = planePos.y - coin.position.y
+                if (dx * dx + dy * dy) <= radiusSquared {
+                    coin.beginMagnetHoming()
+                }
+            }
+        }
+    }
+
     // MARK: - Touch / pause
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
@@ -996,6 +1181,16 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         if let tapped = nodes(at: location).first(where: { $0.name == "pauseButton" }) ?? hudNode.nodes(at: hudLocation).first(where: { $0.name == "pauseButton" }) {
             _ = tapped
             togglePause()
+            return
+        }
+
+        // HUD ability button (SKY-66). Checked before `isTouchingScreen` so a
+        // press here never also triggers a climb — same pattern as the pause
+        // button. Only reachable while unpaused (the overlay swallows touches
+        // when paused).
+        if !state.isPaused, let button = abilityButton,
+           hudNode.nodes(at: hudLocation).contains(where: { $0.name == "abilityButton" }) {
+            button.handleTap()
             return
         }
 

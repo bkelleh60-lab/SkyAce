@@ -91,8 +91,8 @@ final class MissionBriefingCard: SKNode {
         tagline.zPosition = 2
 
         let story = SKLabelNode(text: brief.storyContext)
-        story.fontName = SkyFonts.bodyMediumName
-        story.fontSize = 14
+        story.fontName = SkyFonts.boldName
+        story.fontSize = 16
         story.fontColor = textColor
         story.numberOfLines = 0
         story.lineBreakMode = .byWordWrapping
@@ -114,6 +114,27 @@ final class MissionBriefingCard: SKNode {
         cursor -= (tagH + gap)
         story.position = CGPoint(x: 0, y: cursor - storyH / 2)
 
+        // Dark scrim behind the tagline + story text zone to lift contrast,
+        // especially on the Storm Chaser card where dark cloud art sits under
+        // the body copy (SKY-115). It spans the text block only — never the
+        // portrait — and sits above the card art but below the text.
+        let textPadding: CGFloat = 8
+        let textZoneWidth = max(tagline.calculateAccumulatedFrame().width,
+                                story.calculateAccumulatedFrame().width) + textPadding * 2
+        let taglineTop = tagline.position.y + tagH / 2
+        let storyBottom = story.position.y - storyH / 2
+        let textScrim = SKShapeNode(
+            rectOf: CGSize(width: textZoneWidth,
+                           height: (taglineTop - storyBottom) + textPadding * 2),
+            cornerRadius: 8
+        )
+        textScrim.fillColor = UIColor.black.withAlphaComponent(0.35)
+        textScrim.strokeColor = .clear
+        textScrim.position = CGPoint(x: 0, y: (taglineTop + storyBottom) / 2)
+        textScrim.zPosition = 1
+        textScrim.name = "briefTextScrim"
+
+        cardGroup.addChild(textScrim)
         cardGroup.addChild(portrait)
         cardGroup.addChild(tagline)
         cardGroup.addChild(story)

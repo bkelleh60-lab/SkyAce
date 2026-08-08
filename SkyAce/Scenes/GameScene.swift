@@ -1371,6 +1371,8 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         }
     }
 
+    /// Red Baron's invincibility burst: spends the single charge, runs the
+    /// timed shield window, then greys the button out for the rest of the run.
     private func fireInvincibilityBurst() {
         guard abilityChargesRemaining > 0 else { return }
         abilityChargesRemaining -= 1

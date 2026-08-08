@@ -8,11 +8,14 @@ import SpriteKit
 /// flag.
 final class PlaneAbilityTests: XCTestCase {
 
+    /// Resets progress before each test so upgrade-scaled climb values are
+    /// deterministic (wing level 0 → base climb impulse).
     override func setUp() {
         super.setUp()
         ProgressManager.shared.resetAllProgress()
     }
 
+    /// Clears progress after each test so state can't leak between cases.
     override func tearDown() {
         ProgressManager.shared.resetAllProgress()
         super.tearDown()

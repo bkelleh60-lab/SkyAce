@@ -776,6 +776,8 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         }
         isTouching = true
     }
+    /// Touch lifted — stop climbing (the plane resumes its glide/descent).
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) { isTouching = false }
+    /// Touch cancelled (e.g. a system interruption) — stop climbing.
     override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) { isTouching = false }
 }

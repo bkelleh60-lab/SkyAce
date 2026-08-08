@@ -32,6 +32,8 @@ final class AbilityButtonNode: SKNode {
 
     private(set) var state: State = .ready
 
+    /// Creates an ability button showing `emoji`, invoking `onTap` when the
+    /// button is tapped while armed (`.ready`).
     init(emoji: String, onTap: @escaping () -> Void) {
         self.onTap = onTap
 

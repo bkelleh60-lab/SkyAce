@@ -48,14 +48,19 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     private var isTouching = false
     private var lastUpdateTime: TimeInterval = 0
 
-    // Quick Climb ability (SKY-117). Only built for the Blue Sky Chaser; its
-    // HUD button fires an upward burst. Free Flight is a fresh scene per entry,
-    // so uses reset to the ability's charge count each time.
+    // Active abilities surfaced in Free Flight (SKY-117 / SKY-119). The HUD
+    // button fires either the Blue Sky Chaser's Quick Climb burst or the Night
+    // Hawk's Coin Magnet pulse. Free Flight is a fresh scene per entry, so uses
+    // reset to the ability's charge count each time.
     private var abilityButton: AbilityButtonNode?
     private var abilityUsesRemaining = 0
     /// Latched once the first ability button is built so a scene-size rebuild
-    /// (`didChangeSize` → `layoutScene`) doesn't refill spent Quick Climb uses.
+    /// (`didChangeSize` → `layoutScene`) doesn't refill spent ability uses.
     private var abilityUsesInitialized = false
+    /// Wall-clock deadline (in `update`'s `currentTime`) until which a Coin
+    /// Magnet pulse is pulling coins toward the plane (Night Hawk, SKY-119).
+    /// 0 ⇒ no pull active.
+    private var magnetActiveUntil: TimeInterval = 0
 
     // Parallax + decor
     private var farBackground = SKNode()   // Stitch cityscape PNG, slow scroll
@@ -145,6 +150,7 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         lastLandmarkSpawn = 0
         lastSpawnedLandmark = nil
         boostActiveUntil = 0
+        magnetActiveUntil = 0
         lastUpdateTime = 0
         plane = nil
         currencyHUD = nil
@@ -167,13 +173,14 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         buildAbilityButton()
     }
 
-    // MARK: - Ability button (SKY-117)
+    // MARK: - Ability button (SKY-117 / SKY-119)
 
-    /// Builds the Quick Climb HUD button, bottom-right, only when the Blue Sky
-    /// Chaser is the active plane. Other planes' abilities aren't surfaced in
-    /// Free Flight, so no button is shown for them.
+    /// Builds the ability HUD button, bottom-right, only for the two planes
+    /// whose active abilities are surfaced in Free Flight: the Blue Sky Chaser
+    /// (Quick Climb) and the Night Hawk (Coin Magnet). Other planes' abilities
+    /// aren't surfaced here, so no button is shown for them.
     private func buildAbilityButton() {
-        guard plane.ability.kind == .quickClimb else { return }
+        guard plane.ability.kind == .quickClimb || plane.ability.kind == .coinMagnet else { return }
         // Prime the use count once per scene lifetime, not on every rebuild, so
         // rotating the device can't hand back already-spent uses.
         if !abilityUsesInitialized {
@@ -183,7 +190,7 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
 
         let bottomInset = view?.safeAreaInsets.bottom ?? 0
         let button = AbilityButtonNode(emoji: plane.ability.iconEmoji) { [weak self] in
-            self?.fireQuickClimb()
+            self?.fireAbility()
         }
         button.position = CGPoint(x: size.width - 46, y: bottomInset + 54)
         button.zPosition = 200
@@ -193,6 +200,16 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         if abilityUsesRemaining == 0 { button.setState(.spent) }
         addChild(button)
         abilityButton = button
+    }
+
+    /// Routes the ability button tap to the active plane's ability. The button
+    /// already gates on its own `.ready` state before calling this.
+    private func fireAbility() {
+        switch plane.ability.kind {
+        case .quickClimb: fireQuickClimb()
+        case .coinMagnet: fireCoinMagnet()
+        default:          break
+        }
     }
 
     /// Spends one Quick Climb use: fires the plane's upward burst, plays the
@@ -209,6 +226,59 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         abilityButton?.setUseCount(abilityUsesRemaining)
         if abilityUsesRemaining == 0 {
             abilityButton?.setState(.spent)
+        }
+    }
+
+    /// Spends one Coin Magnet use (Night Hawk, SKY-119): opens the timed pull
+    /// window that `update()` uses to home nearby coins toward the plane, plays
+    /// the activation ring + SFX/haptic, decrements the counter, and shows the
+    /// active window on the button. When the window ends the button re-arms if
+    /// uses remain or greys out (`.spent`) once spent. No-op when none remain.
+    private func fireCoinMagnet() {
+        guard abilityUsesRemaining > 0 else { return }
+        abilityUsesRemaining -= 1
+
+        magnetActiveUntil = lastUpdateTime + plane.ability.duration
+        plane.emitMagnetPulse()
+        run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        SkyHaptics.collect()
+
+        abilityButton?.setUseCount(abilityUsesRemaining)
+        abilityButton?.setState(.active)
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: plane.ability.duration),
+            SKAction.run { [weak self] in
+                guard let self = self else { return }
+                self.abilityButton?.setState(self.abilityUsesRemaining == 0 ? .spent : .ready)
+            }
+        ]), withKey: "coinMagnetWindow")
+    }
+
+    /// Coin Magnet pull (SKY-119): while a pulse window is open, homes every
+    /// coin within `magnetRadius` toward the plane. Free Flight coins are nested
+    /// inside their landmark containers, so positions are compared in
+    /// `worldNode` space and each magnetized coin is eased toward the plane's
+    /// position expressed in the coin's own parent space. Collection still fires
+    /// via the normal coin contact in `didBegin`.
+    private func applyCoinMagnet() {
+        let radius = plane.ability.magnetRadius
+        guard radius > 0 else { return }
+        let planePos = plane.position   // worldNode space (worldNode at origin)
+        let radiusSquared = radius * radius
+
+        landmarkLayer.enumerateChildNodes(withName: "//*") { node, _ in
+            guard let coin = node as? CoinNode, let parent = coin.parent else { return }
+            if coin.isMagnetized {
+                coin.home(toward: self.worldNode.convert(planePos, to: parent))
+            } else {
+                let coinInWorld = parent.convert(coin.position, to: self.worldNode)
+                let dx = planePos.x - coinInWorld.x
+                let dy = planePos.y - coinInWorld.y
+                if (dx * dx + dy * dy) <= radiusSquared {
+                    coin.beginMagnetHoming()
+                    coin.home(toward: self.worldNode.convert(planePos, to: parent))
+                }
+            }
         }
     }
 
@@ -647,6 +717,12 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         // spare — collectible placement keys off this same band.
         plane.position.y = min(planeMaxY, max(planeMinY, plane.position.y))
         plane.position.x += (size.width * 0.28 - plane.position.x) * 0.12
+
+        // Coin Magnet pulse (Night Hawk, SKY-119): pull nearby coins while a
+        // fired window is open. Player-triggered only — never passive.
+        if plane.ability.kind == .coinMagnet, currentTime < magnetActiveUntil {
+            applyCoinMagnet()
+        }
 
         // Boost multiplier scales every horizontal scroll source so the world
         // accelerates uniformly. landmarkLayer.speed propagates to running

@@ -16,7 +16,7 @@ struct PlaneAbility {
         case invincibilityBurst   // active
         case speedBoost           // active
         case quickClimb           // active
-        case coinMagnet           // passive
+        case coinMagnet           // active
     }
 
     let kind: Kind
@@ -137,14 +137,19 @@ enum PlaneAbilityCatalog {
         speedBoostFactor: 1.5
     )
 
-    /// Night Hawk — passive coin magnet: pulls nearby coins in, trading the
-    /// bomber's bulk for easier collection.
+    /// Night Hawk — active Coin Magnet (SKY-119): a player-fired pulse that pulls
+    /// nearby coins toward the plane for `duration`. Three uses per level
+    /// (charge-limited, no cooldown), reset each level. Firing is gated by the
+    /// HUD ability button; the pull radius/behavior are unchanged from the
+    /// former passive implementation — only the trigger moved to the button.
     static let coinMagnet = PlaneAbility(
         kind: .coinMagnet,
-        isActive: false,
+        isActive: true,
         displayName: "Coin Magnet",
-        blurb: "Pulls in nearby coins",
+        blurb: "Pull in nearby coins — 3 uses per level",
         iconEmoji: "🧲",
+        duration: 3,
+        charges: 3,
         magnetRadius: 110
     )
 }

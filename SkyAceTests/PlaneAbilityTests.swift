@@ -31,13 +31,13 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertEqual(PlaneCatalog.nightHawk.ability.kind, .coinMagnet)
     }
 
-    /// `isActive` matches each ability kind: active kinds are HUD/tap-fired,
-    /// the coin magnet is passive.
+    /// Every plane's ability is now active/HUD-fired, including the Night Hawk's
+    /// Coin Magnet after SKY-119 converted it from passive to a HUD button.
     func testActiveFlagMatchesKind() {
         XCTAssertTrue(PlaneCatalog.redBaron.ability.isActive)      // tap-fired
         XCTAssertTrue(PlaneCatalog.shadowDart.ability.isActive)    // tap-fired
         XCTAssertTrue(PlaneCatalog.blueSkyChaser.ability.isActive) // HUD-button-fired
-        XCTAssertFalse(PlaneCatalog.nightHawk.ability.isActive)    // passive
+        XCTAssertTrue(PlaneCatalog.nightHawk.ability.isActive)     // HUD-button-fired (SKY-119)
     }
 
     // MARK: - Balance constants (single dial for tuning)
@@ -70,9 +70,14 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertLessThanOrEqual(a.climbMultiplier, 2.0)
     }
 
-    /// Night Hawk's coin magnet has a positive pull radius.
-    func testCoinMagnetHasPositiveRadius() {
-        XCTAssertGreaterThan(PlaneCatalog.nightHawk.ability.magnetRadius, 0)
+    /// Night Hawk's Coin Magnet is active with three uses, a positive pull
+    /// radius, and a positive pulse duration (SKY-119).
+    func testCoinMagnetIsActiveWithThreeUsesAndPositiveRadius() {
+        let a = PlaneCatalog.nightHawk.ability
+        XCTAssertTrue(a.isActive)
+        XCTAssertEqual(a.charges, 3)               // three uses per level
+        XCTAssertGreaterThan(a.magnetRadius, 0)    // pulls coins within a radius
+        XCTAssertGreaterThan(a.duration, 0)        // timed pull window
     }
 
     // MARK: - Quick Climb burst (SKY-117)

@@ -85,6 +85,11 @@ final class PlaneNode: SKNode {
     /// scene's hit handler to skip obstacle damage. Boundary crashes ignore it.
     private(set) var isInvincible = false
 
+    /// True while Ghost Mode is active (Shadow Dart, SKY-118). Read by the
+    /// scene's hit handler to phase through the obstacle (no damage) and to
+    /// consume the ability on pass-through. Boundary crashes ignore it.
+    private(set) var isGhosting = false
+
     /// Wall-clock time until which the raised burst velocity ceiling
     /// (`maxBurstClimbVelocity`) applies after a Quick Climb. 0 ⇒ normal clamp.
     private var quickClimbBurstUntil: TimeInterval = 0
@@ -535,6 +540,51 @@ final class PlaneNode: SKNode {
                 SKAction.group([expand, fade]),
                 SKAction.removeFromParent()
             ]))
+        }
+    }
+
+    // MARK: - Ghost Mode (SKY-118, Shadow Dart)
+
+    /// Enters Ghost Mode: drops the plane to 45% opacity and runs a repeating
+    /// blue/teal shimmer so it reads as phased-out. The scene owns the timing
+    /// and the collision short-circuit (see `GameScene.fireGhostMode`); this
+    /// only carries the flag + visuals. Re-entrant calls are ignored.
+    func beginGhostMode() {
+        guard !isGhosting else { return }
+        isGhosting = true
+        alpha = 0.45
+        playGhostShimmer()
+    }
+
+    /// Exits Ghost Mode: restores full opacity and clears the shimmer. Safe to
+    /// call when not ghosting (no-op) so the scene can end it from either the
+    /// pass-through hit or the duration timer without tracking which fired.
+    func endGhostMode() {
+        guard isGhosting else { return }
+        isGhosting = false
+        alpha = 1.0
+        body.enumerateChildNodes(withName: "*") { node, _ in
+            guard let sprite = node as? SKSpriteNode else { return }
+            sprite.removeAction(forKey: PlaneNode.ghostShimmerKey)
+            sprite.run(SKAction.colorize(withColorBlendFactor: 0.0, duration: 0.12))
+        }
+    }
+
+    private static let ghostShimmerKey = "ghostShimmer"
+
+    /// Repeating teal↔blue colorize pulse for the Ghost Mode window. Mirrors
+    /// `playShieldFlash`'s child-walk so it lands on the sprite body; the
+    /// programmatic fallback (SKShapeNode children) simply doesn't colorize and
+    /// relies on the 45% opacity alone.
+    private func playGhostShimmer() {
+        let shimmer = SKAction.repeatForever(SKAction.sequence([
+            SKAction.colorize(with: UIColor(hex: 0x2BE8D6), colorBlendFactor: 0.6, duration: 0.35),
+            SKAction.colorize(with: UIColor(hex: 0x00BAFF), colorBlendFactor: 0.4, duration: 0.35)
+        ]))
+        body.enumerateChildNodes(withName: "*") { node, _ in
+            if let sprite = node as? SKSpriteNode {
+                sprite.run(shimmer, withKey: PlaneNode.ghostShimmerKey)
+            }
         }
     }
 

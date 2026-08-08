@@ -27,7 +27,7 @@ final class PlaneAbilityTests: XCTestCase {
     func testEachPlaneHasItsIntendedAbility() {
         XCTAssertEqual(PlaneCatalog.redBaron.ability.kind, .invincibilityBurst)
         XCTAssertEqual(PlaneCatalog.blueSkyChaser.ability.kind, .quickClimb)
-        XCTAssertEqual(PlaneCatalog.shadowDart.ability.kind, .speedBoost)
+        XCTAssertEqual(PlaneCatalog.shadowDart.ability.kind, .ghostMode)
         XCTAssertEqual(PlaneCatalog.nightHawk.ability.kind, .coinMagnet)
     }
 
@@ -51,12 +51,13 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertEqual(a.charges, 1)
     }
 
-    /// Shadow Dart's speed boost is cooldown-gated with an above-1 speed factor.
-    func testSpeedBoostHasCooldownAndAboveOneFactor() {
+    /// Shadow Dart's Ghost Mode (SKY-118) is a single-use active with a timed
+    /// phase-through window.
+    func testGhostModeIsActiveSingleUseWithDuration() {
         let a = PlaneCatalog.shadowDart.ability
-        XCTAssertGreaterThan(a.speedBoostFactor, 1.0)
-        XCTAssertGreaterThan(a.cooldown, 0)
-        XCTAssertEqual(a.charges, 0) // cooldown-gated, not charge-limited
+        XCTAssertTrue(a.isActive)
+        XCTAssertEqual(a.charges, 1)          // one use per level
+        XCTAssertGreaterThan(a.duration, 0)   // timed ghost window
     }
 
     /// Quick Climb is active with two uses and a 1.8×–2× burst multiplier.

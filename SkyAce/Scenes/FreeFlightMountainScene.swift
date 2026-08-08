@@ -60,10 +60,11 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
     private var isTouching = false
     private var lastUpdateTime: TimeInterval = 0
 
-    // Active abilities surfaced in Free Flight (SKY-117 / SKY-119). The HUD
-    // button fires either the Blue Sky Chaser's Quick Climb burst or the Night
-    // Hawk's Coin Magnet pulse. Free Flight is a fresh scene per entry, so uses
-    // reset to the ability's charge count each time.
+    // Active abilities surfaced in Free Flight: Quick Climb (Blue Sky Chaser,
+    // SKY-117), Ghost Mode (Shadow Dart, SKY-118), or Coin Magnet (Night Hawk,
+    // SKY-119). The HUD button fires whichever the active plane carries. Free
+    // Flight is a fresh scene per entry, so uses reset to the ability's charge
+    // count each time.
     private var abilityButton: AbilityButtonNode?
     private var abilityUsesRemaining = 0
     /// Latched once the first ability button is built so a scene-size rebuild
@@ -182,12 +183,14 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Ability button (SKY-117 / SKY-119)
 
-    /// Builds the ability HUD button, bottom-right, only for the two planes
-    /// whose active abilities are surfaced in Free Flight: the Blue Sky Chaser
-    /// (Quick Climb) and the Night Hawk (Coin Magnet). Other planes' abilities
-    /// aren't surfaced here, so no button is shown for them.
+    /// Builds the HUD ability button, bottom-right, for the charge-limited
+    /// actives surfaced in Free Flight: Quick Climb (Blue Sky Chaser, SKY-117),
+    /// Ghost Mode (Shadow Dart, SKY-118), and Coin Magnet (Night Hawk, SKY-119).
+    /// Other planes' abilities aren't surfaced here, so no button is shown.
     private func buildAbilityButton() {
-        guard plane.ability.kind == .quickClimb || plane.ability.kind == .coinMagnet else { return }
+        guard plane.ability.kind == .quickClimb
+            || plane.ability.kind == .ghostMode
+            || plane.ability.kind == .coinMagnet else { return }
         // Prime the use count once per scene lifetime, not on every rebuild, so
         // rotating the device can't hand back already-spent uses.
         if !abilityUsesInitialized {
@@ -197,7 +200,7 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
 
         let bottomInset = view?.safeAreaInsets.bottom ?? 0
         let button = AbilityButtonNode(emoji: plane.ability.iconEmoji) { [weak self] in
-            self?.fireAbility()
+            self?.fireActiveAbility()
         }
         button.position = CGPoint(x: size.width - 46, y: bottomInset + 54)
         button.zPosition = 200
@@ -209,11 +212,12 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         abilityButton = button
     }
 
-    /// Routes the ability button tap to the active plane's ability. The button
+    /// Routes an ability-button tap to the active plane's ability. The button
     /// already gates on its own `.ready` state before calling this.
-    private func fireAbility() {
+    private func fireActiveAbility() {
         switch plane.ability.kind {
         case .quickClimb: fireQuickClimb()
+        case .ghostMode:  fireGhostMode()
         case .coinMagnet: fireCoinMagnet()
         default:          break
         }
@@ -234,6 +238,30 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         if abilityUsesRemaining == 0 {
             abilityButton?.setState(.spent)
         }
+    }
+
+    /// Spends the single Ghost Mode use: phases the plane out for the ability's
+    /// duration, then restores it and greys the button out. Free Flight has no
+    /// obstacles to pass through, so Ghost Mode always runs the full window here
+    /// — the effect is purely the phased-out visual + coin/ring pickups continue
+    /// unaffected. No-op when none remain or one is already active.
+    private func fireGhostMode() {
+        guard abilityUsesRemaining > 0, !plane.isGhosting else { return }
+        abilityUsesRemaining -= 1
+
+        plane.beginGhostMode()
+        run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        SkyHaptics.collect()
+
+        abilityButton?.setUseCount(abilityUsesRemaining)
+        abilityButton?.setState(.active)
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: plane.ability.duration),
+            SKAction.run { [weak self] in
+                self?.plane.endGhostMode()
+                self?.abilityButton?.setState(.spent)
+            }
+        ]), withKey: "abilityGhost")
     }
 
     /// Spends one Coin Magnet use (Night Hawk, SKY-119): opens the timed pull

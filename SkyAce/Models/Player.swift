@@ -51,7 +51,7 @@ enum PlaneCatalog {
         bodyColor: UIColor(hex: 0x08314D),
         accentColor: UIColor(hex: 0x00BAFF),
         assetFacesLeft: false,
-        ability: PlaneAbilityCatalog.speedBoost
+        ability: PlaneAbilityCatalog.ghostMode
     )
 
     static let nightHawk = Plane(

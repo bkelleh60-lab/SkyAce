@@ -510,6 +510,39 @@ final class PlaneNode: SKNode {
         ]))
     }
 
+    // MARK: - Coin Magnet pulse (SKY-119, Night Hawk)
+
+    /// One-shot activation ring for the Coin Magnet: two concentric rings
+    /// emanate from the plane and expand outward as they fade, signalling the
+    /// pull radius when the ability fires. There is no existing magnet visual,
+    /// so this is the added activation cue called for in SKY-119. Purely
+    /// cosmetic — the coin pull itself is scene-driven — and self-removes once
+    /// the animation finishes.
+    func emitMagnetPulse() {
+        // PLACEHOLDER: Stitch design required before App Store submission
+        for delay in [0.0, 0.14] {
+            let ring = SKShapeNode(circleOfRadius: 20)
+            ring.strokeColor = UIColor(hex: 0x9FE4FF)
+            ring.fillColor = .clear
+            ring.lineWidth = 3
+            ring.zPosition = -2   // behind the plane body (body zPosition 10)
+            ring.alpha = 0.0
+            addChild(ring)
+
+            let expand = SKAction.scale(to: 5.5, duration: 0.5)
+            expand.timingMode = .easeOut
+            let fade = SKAction.sequence([
+                SKAction.fadeAlpha(to: 0.85, duration: 0.1),
+                SKAction.fadeOut(withDuration: 0.4)
+            ])
+            ring.run(SKAction.sequence([
+                SKAction.wait(forDuration: delay),
+                SKAction.group([expand, fade]),
+                SKAction.removeFromParent()
+            ]))
+        }
+    }
+
     // MARK: - Ghost Mode (SKY-118, Shadow Dart)
 
     /// Enters Ghost Mode: drops the plane to 45% opacity and runs a repeating

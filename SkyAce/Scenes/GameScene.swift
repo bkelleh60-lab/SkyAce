@@ -70,6 +70,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// in-flight active window (e.g. Ghost Mode) is restored instead of reading
     /// as `.ready`, and so fire handlers can gate re-fires on the true state.
     private var abilityState: AbilityButtonNode.State = .ready
+    /// True while a Coin Magnet pulse (Night Hawk, SKY-119) is pulling coins.
+    /// The pull runs each frame in `update()` only while this is set; an
+    /// SKAction opens the window on fire and closes it after the ability's
+    /// duration. Lives on the scene so a mid-window HUD rebuild keeps pulling.
+    private var isMagnetActive = false
 
     // HUD
     private var coinLabel: CoinAmountNode!
@@ -498,8 +503,10 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         abilityButton = button
 
         // Charge-limited actives show their remaining-use counter on the button:
-        // Quick Climb (SKY-117) and Ghost Mode (SKY-118).
-        if plane.ability.kind == .quickClimb || plane.ability.kind == .ghostMode {
+        // Quick Climb (SKY-117), Ghost Mode (SKY-118), and Coin Magnet (SKY-119).
+        if plane.ability.kind == .quickClimb
+            || plane.ability.kind == .ghostMode
+            || plane.ability.kind == .coinMagnet {
             button.setUseCount(abilityChargesRemaining)
         }
 
@@ -589,8 +596,9 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         }
         plane.update(delta: delta)
 
-        // Coin-magnet passive (Night Hawk) pulls nearby coins toward the plane.
-        if plane.ability.kind == .coinMagnet {
+        // Coin Magnet (Night Hawk, SKY-119) pulls nearby coins toward the plane
+        // only while an activation window is open — it no longer fires passively.
+        if plane.ability.kind == .coinMagnet, isMagnetActive {
             applyCoinMagnet()
         }
 
@@ -1357,7 +1365,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         case .quickClimb:
             fireQuickClimb()
         case .coinMagnet:
-            break  // passive — no active trigger
+            fireCoinMagnet()
         }
     }
 
@@ -1377,6 +1385,33 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         if abilityChargesRemaining == 0 {
             setAbilityState(.spent)
         }
+    }
+
+    /// Coin Magnet (SKY-119, Night Hawk): spends one charge and opens the
+    /// timed pull window during which `update()` homes nearby coins toward the
+    /// plane (same radius/behavior as the former passive). The button shows the
+    /// active window, then re-arms if uses remain or greys out (`.spent`) once
+    /// spent. Tracks the window via the scene-owned `isMagnetActive` + keyed
+    /// action so a HUD rebuild mid-pulse keeps both the pull and the visual.
+    private func fireCoinMagnet() {
+        guard abilityChargesRemaining > 0 else { return }
+        abilityChargesRemaining -= 1
+
+        isMagnetActive = true
+        plane.emitMagnetPulse()
+        run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        SkyHaptics.collect()
+
+        abilityButton?.setUseCount(abilityChargesRemaining)
+        setAbilityState(.active)
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: plane.ability.duration),
+            SKAction.run { [weak self] in
+                guard let self = self else { return }
+                self.isMagnetActive = false
+                self.setAbilityState(self.abilityChargesRemaining == 0 ? .spent : .ready)
+            }
+        ]), withKey: "abilityCoinMagnet")
     }
 
     /// Red Baron's invincibility burst: spends the single charge, runs the
@@ -1455,10 +1490,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         plane.endGhostMode()
     }
 
-    /// Coin-magnet passive (Night Hawk): pulls coins within `magnetRadius`
-    /// toward the plane. On entering range a coin's scroll action is removed and
-    /// it homes toward the (moving) plane each frame — collection still happens
-    /// via the normal coin contact in `didBegin`.
+    /// Coin Magnet pull (Night Hawk, SKY-119): pulls coins within `magnetRadius`
+    /// toward the plane. Runs each frame only while the ability's activation
+    /// window is open (`isMagnetActive`). On entering range a coin's scroll
+    /// action is removed and it homes toward the (moving) plane each frame —
+    /// collection still happens via the normal coin contact in `didBegin`.
     private func applyCoinMagnet() {
         let radius = plane.ability.magnetRadius
         guard radius > 0 else { return }

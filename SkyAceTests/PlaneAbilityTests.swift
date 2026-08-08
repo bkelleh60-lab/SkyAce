@@ -27,17 +27,17 @@ final class PlaneAbilityTests: XCTestCase {
     func testEachPlaneHasItsIntendedAbility() {
         XCTAssertEqual(PlaneCatalog.redBaron.ability.kind, .invincibilityBurst)
         XCTAssertEqual(PlaneCatalog.blueSkyChaser.ability.kind, .quickClimb)
-        XCTAssertEqual(PlaneCatalog.shadowDart.ability.kind, .speedBoost)
+        XCTAssertEqual(PlaneCatalog.shadowDart.ability.kind, .ghostMode)
         XCTAssertEqual(PlaneCatalog.nightHawk.ability.kind, .coinMagnet)
     }
 
-    /// `isActive` matches each ability kind: active kinds are HUD/tap-fired,
-    /// the coin magnet is passive.
+    /// Every plane's ability is now active/HUD-fired, including the Night Hawk's
+    /// Coin Magnet after SKY-119 converted it from passive to a HUD button.
     func testActiveFlagMatchesKind() {
         XCTAssertTrue(PlaneCatalog.redBaron.ability.isActive)      // tap-fired
         XCTAssertTrue(PlaneCatalog.shadowDart.ability.isActive)    // tap-fired
         XCTAssertTrue(PlaneCatalog.blueSkyChaser.ability.isActive) // HUD-button-fired
-        XCTAssertFalse(PlaneCatalog.nightHawk.ability.isActive)    // passive
+        XCTAssertTrue(PlaneCatalog.nightHawk.ability.isActive)     // HUD-button-fired (SKY-119)
     }
 
     // MARK: - Balance constants (single dial for tuning)
@@ -51,12 +51,13 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertEqual(a.charges, 1)
     }
 
-    /// Shadow Dart's speed boost is cooldown-gated with an above-1 speed factor.
-    func testSpeedBoostHasCooldownAndAboveOneFactor() {
+    /// Shadow Dart's Ghost Mode (SKY-118) is a single-use active with a 3s
+    /// phase-through window.
+    func testGhostModeIsActiveSingleUseWithDuration() {
         let a = PlaneCatalog.shadowDart.ability
-        XCTAssertGreaterThan(a.speedBoostFactor, 1.0)
-        XCTAssertGreaterThan(a.cooldown, 0)
-        XCTAssertEqual(a.charges, 0) // cooldown-gated, not charge-limited
+        XCTAssertTrue(a.isActive)
+        XCTAssertEqual(a.charges, 1)                       // one use per level
+        XCTAssertEqual(a.duration, 3.0, accuracy: 0.001)  // 3s ghost window
     }
 
     /// Quick Climb is active with two uses and a 1.8×–2× burst multiplier.
@@ -70,9 +71,14 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertLessThanOrEqual(a.climbMultiplier, 2.0)
     }
 
-    /// Night Hawk's coin magnet has a positive pull radius.
-    func testCoinMagnetHasPositiveRadius() {
-        XCTAssertGreaterThan(PlaneCatalog.nightHawk.ability.magnetRadius, 0)
+    /// Night Hawk's Coin Magnet is active with three uses, a 110pt pull radius,
+    /// and a 3s pulse window (SKY-119).
+    func testCoinMagnetIsActiveWithThreeUsesAndPositiveRadius() {
+        let a = PlaneCatalog.nightHawk.ability
+        XCTAssertTrue(a.isActive)
+        XCTAssertEqual(a.charges, 3)                          // three uses per level
+        XCTAssertEqual(a.magnetRadius, 110, accuracy: 0.001) // pull radius
+        XCTAssertEqual(a.duration, 3.0, accuracy: 0.001)     // 3s pull window
     }
 
     // MARK: - Quick Climb burst (SKY-117)

@@ -51,13 +51,13 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertEqual(a.charges, 1)
     }
 
-    /// Shadow Dart's Ghost Mode (SKY-118) is a single-use active with a timed
+    /// Shadow Dart's Ghost Mode (SKY-118) is a single-use active with a 3s
     /// phase-through window.
     func testGhostModeIsActiveSingleUseWithDuration() {
         let a = PlaneCatalog.shadowDart.ability
         XCTAssertTrue(a.isActive)
-        XCTAssertEqual(a.charges, 1)          // one use per level
-        XCTAssertGreaterThan(a.duration, 0)   // timed ghost window
+        XCTAssertEqual(a.charges, 1)                       // one use per level
+        XCTAssertEqual(a.duration, 3.0, accuracy: 0.001)  // 3s ghost window
     }
 
     /// Quick Climb is active with two uses and a 1.8×–2× burst multiplier.
@@ -71,14 +71,14 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertLessThanOrEqual(a.climbMultiplier, 2.0)
     }
 
-    /// Night Hawk's Coin Magnet is active with three uses, a positive pull
-    /// radius, and a positive pulse duration (SKY-119).
+    /// Night Hawk's Coin Magnet is active with three uses, a 110pt pull radius,
+    /// and a 3s pulse window (SKY-119).
     func testCoinMagnetIsActiveWithThreeUsesAndPositiveRadius() {
         let a = PlaneCatalog.nightHawk.ability
         XCTAssertTrue(a.isActive)
-        XCTAssertEqual(a.charges, 3)               // three uses per level
-        XCTAssertGreaterThan(a.magnetRadius, 0)    // pulls coins within a radius
-        XCTAssertGreaterThan(a.duration, 0)        // timed pull window
+        XCTAssertEqual(a.charges, 3)                          // three uses per level
+        XCTAssertEqual(a.magnetRadius, 110, accuracy: 0.001) // pull radius
+        XCTAssertEqual(a.duration, 3.0, accuracy: 0.001)     // 3s pull window
     }
 
     // MARK: - Quick Climb burst (SKY-117)

@@ -94,22 +94,30 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertGreaterThan(burstDy, PlaneNode.maxClimbVelocity)
     }
 
-    /// An oversized multiplier is still clamped to the burst velocity ceiling.
+    /// An oversized multiplier is clamped to exactly the burst velocity ceiling
+    /// (from rest, the boosted value overshoots the cap, so it must land on it).
     func testQuickClimbBurstRespectsTheBurstCeiling() {
         let plane = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
-        plane.physicsBody?.velocity = .zero
+        guard let pb = plane.physicsBody else {
+            return XCTFail("PlaneNode must have a physics body")
+        }
+        pb.velocity = .zero
         plane.quickClimb(multiplier: 5.0) // absurd multiplier — must still clamp
-        let dy = plane.physicsBody?.velocity.dy ?? 0
-        XCTAssertLessThanOrEqual(dy, PlaneNode.maxBurstClimbVelocity)
+        XCTAssertEqual(pb.velocity.dy, PlaneNode.maxBurstClimbVelocity, accuracy: 0.001)
     }
 
-    /// A burst never lowers a climb that's already faster than the boosted value.
+    /// A burst never lowers a climb that's already faster than the boosted
+    /// value. Start strictly above the ceiling so "preserved" can't be confused
+    /// with "clamped to the ceiling" — `quickClimb` doesn't clamp its input.
     func testQuickClimbDoesNotReduceAnAlreadyFasterClimb() {
         let plane = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
-        plane.physicsBody?.velocity = CGVector(dx: 0, dy: PlaneNode.maxBurstClimbVelocity)
+        guard let pb = plane.physicsBody else {
+            return XCTFail("PlaneNode must have a physics body")
+        }
+        let existingDy = PlaneNode.maxBurstClimbVelocity + 1
+        pb.velocity = CGVector(dx: 0, dy: existingDy)
         plane.quickClimb(multiplier: PlaneCatalog.blueSkyChaser.ability.climbMultiplier)
-        let dy = plane.physicsBody?.velocity.dy ?? 0
-        XCTAssertEqual(dy, PlaneNode.maxBurstClimbVelocity, accuracy: 0.001)
+        XCTAssertEqual(pb.velocity.dy, existingDy, accuracy: 0.001)
     }
 
     // MARK: - Invincibility flag

@@ -15,7 +15,7 @@ struct PlaneAbility {
     enum Kind: Equatable {
         case invincibilityBurst   // active
         case speedBoost           // active
-        case glideControl         // passive
+        case quickClimb           // active
         case coinMagnet           // passive
     }
 
@@ -48,14 +48,10 @@ struct PlaneAbility {
     /// Seconds between uses for cooldown-gated actives (speed boost).
     let cooldown: TimeInterval
 
-    // MARK: - Passive tuning (no-op defaults for actives)
-
-    /// glideControl: multiplier on the plane's climb impulse (>1 = crisper).
+    /// quickClimb: multiplier on the plane's normal climb impulse for the
+    /// burst (>1 = a stronger jump than a regular tap). No-op (1.0) for other
+    /// kinds.
     let climbMultiplier: CGFloat
-
-    /// glideControl: fraction of world gravity felt while descending
-    /// (<1 = slower, more controlled fall).
-    let descentGravityMultiplier: CGFloat
 
     /// speedBoost: world-scroll speed multiplier applied for `duration`.
     let speedBoostFactor: CGFloat
@@ -63,6 +59,9 @@ struct PlaneAbility {
     /// coinMagnet: radius (points) within which coins are pulled toward the plane.
     let magnetRadius: CGFloat
 
+    /// Creates a plane ability. Fields that don't apply to `kind` take the
+    /// no-op defaults (multipliers 1.0, everything else 0) so each catalog
+    /// entry only specifies the tuning that matters for its kind.
     init(
         kind: Kind,
         isActive: Bool,
@@ -73,7 +72,6 @@ struct PlaneAbility {
         charges: Int = 0,
         cooldown: TimeInterval = 0,
         climbMultiplier: CGFloat = 1.0,
-        descentGravityMultiplier: CGFloat = 1.0,
         speedBoostFactor: CGFloat = 1.0,
         magnetRadius: CGFloat = 0
     ) {
@@ -86,7 +84,6 @@ struct PlaneAbility {
         self.charges = charges
         self.cooldown = cooldown
         self.climbMultiplier = climbMultiplier
-        self.descentGravityMultiplier = descentGravityMultiplier
         self.speedBoostFactor = speedBoostFactor
         self.magnetRadius = magnetRadius
     }
@@ -111,16 +108,18 @@ enum PlaneAbilityCatalog {
         charges: 1
     )
 
-    /// Blue Sky Chaser — passive glide: crisper climb, softer descent for a
-    /// higher control ceiling. Mild so it aids control without breaking pace.
-    static let glideControl = PlaneAbility(
-        kind: .glideControl,
-        isActive: false,
-        displayName: "Glide Control",
-        blurb: "Crisper climb, gentler descent",
-        iconEmoji: "🪶",
-        climbMultiplier: 1.12,
-        descentGravityMultiplier: 0.85
+    /// Blue Sky Chaser — active Quick Climb: a player-fired burst that jumps
+    /// the plane upward at ~1.9× a normal tap's impulse. Two uses per level
+    /// (charge-limited, no cooldown), reset each level. Firing is gated by the
+    /// HUD ability button, never a normal screen tap.
+    static let quickClimb = PlaneAbility(
+        kind: .quickClimb,
+        isActive: true,
+        displayName: "Quick Climb",
+        blurb: "Burst upward — 2 uses per level",
+        iconEmoji: "⬆️",
+        charges: 2,
+        climbMultiplier: 1.9
     )
 
     /// Shadow Dart — active overdrive: ~1.5s of ×1.5 world speed on a 5s

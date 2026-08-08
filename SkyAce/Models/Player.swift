@@ -27,7 +27,7 @@ enum PlaneCatalog {
         bodyColor: SkyColors.primaryContainer,
         accentColor: SkyColors.primary,
         assetFacesLeft: false,
-        ability: PlaneAbilityCatalog.glideControl
+        ability: PlaneAbilityCatalog.quickClimb
     )
 
     static let redBaron = Plane(

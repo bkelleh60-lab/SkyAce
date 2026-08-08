@@ -58,6 +58,16 @@ final class PlaneNode: SKNode {
     /// kept so a long fall doesn't blow past collision sweeps.
     static let maxDownVelocity: CGFloat = -400.0
 
+    /// Raised velocity ceiling allowed for the brief window after a Quick Climb
+    /// burst (Blue Sky Chaser). A ~1.9× burst would otherwise be clamped back to
+    /// `maxClimbVelocity` on the very next frame, so the jump wouldn't read as
+    /// stronger than a normal tap. Gravity brings the plane back under
+    /// `maxClimbVelocity` well before `quickClimbBurstDuration` elapses.
+    static let maxBurstClimbVelocity: CGFloat = 700.0
+
+    /// Seconds the raised burst ceiling stays in effect after a Quick Climb.
+    static let quickClimbBurstDuration: TimeInterval = 0.5
+
     // MARK: - Per-plane stats (set from ProgressManager upgrades on init)
 
     let horizontalSpeed: CGFloat
@@ -71,19 +81,13 @@ final class PlaneNode: SKNode {
     /// scenes read `plane.ability` rather than `plane.plane.ability`.
     var ability: PlaneAbility { plane.ability }
 
-    /// Gate for passive ability modifiers (glide climb/descent). Off by default
-    /// so Free Flight and Landing Practice — which have their own tuned descent
-    /// physics — are untouched; GameScene opts in by setting this true.
-    var passivesEnabled = false
-
     /// True while an invincibility burst is active (Red Baron). Read by the
     /// scene's hit handler to skip obstacle damage. Boundary crashes ignore it.
     private(set) var isInvincible = false
 
-    /// Previous frame's clamped vertical velocity. Used by the glide passive to
-    /// counter a fraction of the per-frame gravity change without depending on
-    /// SpriteKit's internal gravity scale.
-    private var lastDy: CGFloat = 0
+    /// Wall-clock time until which the raised burst velocity ceiling
+    /// (`maxBurstClimbVelocity`) applies after a Quick Climb. 0 ⇒ normal clamp.
+    private var quickClimbBurstUntil: TimeInterval = 0
 
     private let body: SKNode
 
@@ -238,9 +242,7 @@ final class PlaneNode: SKNode {
         guard let pb = physicsBody else { return }
         let now = CACurrentMediaTime()
 
-        // Glide passive (Blue Sky Chaser): a crisper climb response. No-op
-        // (×1.0) for every other plane and whenever passives are disabled.
-        let impulse = passivesEnabled ? climbImpulse * plane.ability.climbMultiplier : climbImpulse
+        let impulse = climbImpulse
 
         if holdStartTime == nil {
             // Tap onset — additive impulse with a floor of `impulse` so a tap
@@ -279,15 +281,70 @@ final class PlaneNode: SKNode {
         body.zRotation += (0.18 - body.zRotation) * 0.5
     }
 
+    // MARK: - Quick Climb burst (SKY-117, Blue Sky Chaser)
+
+    /// Fires a Quick Climb burst: one strong upward jump at `multiplier` times
+    /// the plane's normal climb impulse, plus a brief boost streak. Independent
+    /// of the tap/hold state (never arms a sustained-hold climb) and floors the
+    /// vertical velocity at the boosted value so a burst fully reverses a dive.
+    /// Opens the raised burst velocity ceiling so `update()` doesn't clamp the
+    /// jump back to the normal cap for the next `quickClimbBurstDuration`.
+    func quickClimb(multiplier: CGFloat) {
+        guard let pb = physicsBody else { return }
+        let boosted = min(climbImpulse * multiplier, PlaneNode.maxBurstClimbVelocity)
+        pb.velocity.dy = max(pb.velocity.dy, boosted)
+        quickClimbBurstUntil = CACurrentMediaTime() + PlaneNode.quickClimbBurstDuration
+
+        // Snap the nose up to sell the burst; update() eases it back.
+        body.zRotation = 0.35
+        playQuickClimbStreak()
+    }
+
+    /// One-shot upward boost streak for Quick Climb: a brief burst of trail
+    /// particles behind the plane. Kept separate from `boostTrail` (which Free
+    /// Flight drives every frame from its ring boost) so it reads identically in
+    /// missions and Free Flight, and self-removes once the particles finish.
+    private func playQuickClimbStreak() {
+        // PLACEHOLDER: Stitch design required before App Store submission
+        let emitter = SKEmitterNode()
+        emitter.particleTexture = SKTexture(image: PlaneNode.boostTrailParticleImage())
+        emitter.position = CGPoint(x: -48, y: 0)
+        emitter.particlePositionRange = CGVector(dx: 6, dy: 18)
+        emitter.particleBirthRate = 320
+        // Emit for ~0.5s then stop (birthRate × duration).
+        emitter.numParticlesToEmit = Int(320 * PlaneNode.quickClimbBurstDuration)
+        emitter.particleLifetime = 0.4
+        emitter.particleLifetimeRange = 0.15
+        emitter.emissionAngle = .pi
+        emitter.emissionAngleRange = 0.4
+        emitter.particleSpeed = 260
+        emitter.particleSpeedRange = 70
+        emitter.particleAlpha = 0.9
+        emitter.particleAlphaRange = 0.15
+        emitter.particleAlphaSpeed = -1.8
+        emitter.particleScale = 0.6
+        emitter.particleScaleRange = 0.2
+        emitter.particleScaleSpeed = -0.5
+        emitter.particleColorBlendFactor = 1.0
+        emitter.particleColorSequence = nil
+        emitter.particleColor = UIColor(hex: 0x9FE4FF)
+        emitter.targetNode = scene
+        emitter.zPosition = -1
+        body.addChild(emitter)
+        emitter.run(SKAction.sequence([
+            SKAction.wait(forDuration: PlaneNode.quickClimbBurstDuration + 0.55),
+            SKAction.removeFromParent()
+        ]))
+    }
+
     /// Called every frame (by the scene) to clamp velocity and settle rotation.
-    /// `delta` is the frame's elapsed seconds; only the glide passive uses it,
-    /// so it defaults to 0 for scenes that don't apply passives.
+    /// `delta` is the frame's elapsed seconds; retained for call-site
+    /// compatibility, currently unused.
     func update(delta: TimeInterval = 0) {
         guard let pb = physicsBody else { return }
 
         // Detect touch release: climb() wasn't called this frame, so reset
         // the hold state so the next tap fires a fresh onset impulse.
-        let wasClimbing = climbActiveThisFrame
         if !climbActiveThisFrame {
             holdStartTime = nil
         }
@@ -295,23 +352,15 @@ final class PlaneNode: SKNode {
 
         var v = pb.velocity
 
-        // Glide passive (Blue Sky Chaser): soften descent. The physics engine
-        // has already applied this frame's gravity to `v.dy`, so we counter a
-        // fraction of the observed downward change. Measuring the change rather
-        // than recomputing gravity keeps this independent of SpriteKit's
-        // internal gravity scale and of the frame rate. Skipped while climbing
-        // (that velocity comes from input, not gravity).
-        if passivesEnabled, !wasClimbing, plane.ability.descentGravityMultiplier < 1 {
-            let deltaDy = v.dy - lastDy
-            if deltaDy < 0 {
-                v.dy -= deltaDy * (1 - plane.ability.descentGravityMultiplier)
-            }
-        }
-
-        if v.dy > PlaneNode.maxClimbVelocity { v.dy = PlaneNode.maxClimbVelocity }
+        // Quick Climb (Blue Sky Chaser): allow a raised velocity ceiling for a
+        // brief window after a burst so the jump isn't immediately clamped back
+        // to the normal cap. Reverts to `maxClimbVelocity` once the window ends.
+        let climbCeiling = CACurrentMediaTime() < quickClimbBurstUntil
+            ? PlaneNode.maxBurstClimbVelocity
+            : PlaneNode.maxClimbVelocity
+        if v.dy > climbCeiling { v.dy = climbCeiling }
         if v.dy < PlaneNode.maxDownVelocity  { v.dy = PlaneNode.maxDownVelocity }
         pb.velocity = v
-        lastDy = v.dy
 
         // Tilt nose down while falling.
         if v.dy < 0 {

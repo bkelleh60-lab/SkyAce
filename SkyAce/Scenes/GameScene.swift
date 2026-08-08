@@ -67,12 +67,9 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private var abilityChargesRemaining = 0
     /// Scene-owned mirror of the active-ability button's visual state. Survives
     /// HUD rebuilds (the button is recreated on rotation / inset changes) so an
-    /// in-flight speed boost or cooldown is restored instead of reading as
-    /// `.ready`, and so `fireSpeedBoost()` can gate re-fires on the true state.
+    /// in-flight active window (e.g. Ghost Mode) is restored instead of reading
+    /// as `.ready`, and so fire handlers can gate re-fires on the true state.
     private var abilityState: AbilityButtonNode.State = .ready
-    /// Live world-scroll multiplier. 1.0 normally; raised during a speed boost
-    /// so the parallax layers keep pace with the sped-up gameplay actions.
-    private var speedBoostFactor: CGFloat = 1.0
 
     // HUD
     private var coinLabel: CoinAmountNode!
@@ -500,8 +497,9 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         hudNode.addChild(button)
         abilityButton = button
 
-        // Quick Climb (SKY-117) shows its remaining-use counter on the button.
-        if plane.ability.kind == .quickClimb {
+        // Charge-limited actives show their remaining-use counter on the button:
+        // Quick Climb (SKY-117) and Ghost Mode (SKY-118).
+        if plane.ability.kind == .quickClimb || plane.ability.kind == .ghostMode {
             button.setUseCount(abilityChargesRemaining)
         }
 
@@ -599,14 +597,14 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         // Keep plane horizontally fixed — world moves past it.
         plane.position.x += (size.width * 0.25 - plane.position.x) * 0.12
 
-        // Parallax drift. `speedBoostFactor` (1.0 except during an active speed
-        // boost) keeps the clouds in step with the sped-up gameplay actions.
+        // Parallax drift, paced off the plane's horizontal speed and the
+        // challenge multiplier.
         distantCloudLayer.children.forEach { cloud in
-            cloud.position.x -= 0.3 * CGFloat(plane.horizontalSpeed * challenge.speedMultiplier) * speedBoostFactor * CGFloat(delta) * 0.4
+            cloud.position.x -= 0.3 * CGFloat(plane.horizontalSpeed * challenge.speedMultiplier) * CGFloat(delta) * 0.4
             if cloud.position.x < -80 { cloud.position.x = size.width + 40 }
         }
         nearCloudLayer.children.forEach { cloud in
-            cloud.position.x -= CGFloat(plane.horizontalSpeed * challenge.speedMultiplier) * speedBoostFactor * CGFloat(delta) * 0.7
+            cloud.position.x -= CGFloat(plane.horizontalSpeed * challenge.speedMultiplier) * CGFloat(delta) * 0.7
             if cloud.position.x < -80 { cloud.position.x = size.width + 40 }
         }
 
@@ -1199,6 +1197,16 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func handleHit(node: SKNode?) {
+        // Ghost Mode (SKY-118, Shadow Dart): phase through this obstacle with no
+        // damage, and consume the ghost — passing one obstacle ends the ability.
+        // The plane's collisionBitMask is already 0 (scene resolves effects), so
+        // ending the ghost here still lets it fly cleanly out the far side; the
+        // same obstacle won't re-fire didBegin without a fresh contact.
+        if plane.isGhosting {
+            endGhostMode()
+            return
+        }
+
         // Invincibility burst (SKY-66, Red Baron): fly through the obstacle with
         // no damage and no armor cost while the burst is active. The shield
         // shimmer is already showing on the plane.
@@ -1243,7 +1251,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     private func triggerFailSequence() {
         guard !runHasFinished else { return }
         runHasFinished = true
-        endActiveSpeedBoost()
+        endActiveAbilityEffects()
         SkyHaptics.fail()
 
         // SKY-75: cut the engine and timer-warning loop the moment the run
@@ -1281,7 +1289,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func triggerWinSequence() {
-        endActiveSpeedBoost()
+        endActiveAbilityEffects()
         SkyHaptics.win()
 
         // SKY-75: cut the engine and timer-warning loop before the win
@@ -1344,8 +1352,8 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         switch plane.ability.kind {
         case .invincibilityBurst:
             fireInvincibilityBurst()
-        case .speedBoost:
-            fireSpeedBoost()
+        case .ghostMode:
+            fireGhostMode()
         case .quickClimb:
             fireQuickClimb()
         case .coinMagnet:
@@ -1392,38 +1400,42 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         ]), withKey: "abilityInvincibility")
     }
 
-    private func fireSpeedBoost() {
-        // Only fire when genuinely ready. The button's tap already gates on its
-        // own `.ready` state, but a mid-run HUD rebuild can recreate the button
-        // before its state is restored — this guard on the scene-owned state
-        // stops a re-fire from replacing the in-flight keyed action.
-        guard abilityState == .ready else { return }
-        let ability = plane.ability
+    /// Ghost Mode (SKY-118, Shadow Dart): spends the single charge, drops the
+    /// plane to a phased-out state, and arms the pass-through window. Collision
+    /// with an obstacle does no damage while ghosting (handled in `handleHit`)
+    /// and consumes the ghost — so the ability ends on the first obstacle passed
+    /// or after `duration` (3s), whichever comes first.
+    private func fireGhostMode() {
+        // The button's tap already gates on `.ready`; also guard the scene-owned
+        // state so a mid-run HUD rebuild can't re-fire and replace the in-flight
+        // keyed action.
+        guard abilityState == .ready, abilityChargesRemaining > 0, !plane.isGhosting else { return }
+        abilityChargesRemaining -= 1
 
-        speedBoostFactor = ability.speedBoostFactor
-        // Speeds every scroll action under worldNode (obstacles/coins/finish)
-        // uniformly; the parallax layers are matched via `speedBoostFactor` in
-        // update(). Plane vertical feel is physics-driven and untouched.
-        worldNode.speed = ability.speedBoostFactor
-        plane.setBoostIntensity(0.9)
+        plane.beginGhostMode()
         run(AudioManager.shared.sfxAction(SkySFX.ringPass))
         SkyHaptics.collect()
 
+        abilityButton?.setUseCount(abilityChargesRemaining)
         setAbilityState(.active)
-        // Timing runs on the scene (not worldNode) so it's unaffected by the
-        // sped-up world: active for `duration`, then cooldown, then re-armed.
+        // Fallback timer: end Ghost Mode after `duration` if no obstacle
+        // pass-through ended it first. Runs on the scene so it's independent of
+        // world speed. `endGhostMode()` is a no-op if the pass-through already
+        // ended it.
         run(SKAction.sequence([
-            SKAction.wait(forDuration: ability.duration),
-            SKAction.run { [weak self] in
-                guard let self = self else { return }
-                self.worldNode.speed = 1.0
-                self.speedBoostFactor = 1.0
-                self.plane.setBoostIntensity(0.0)
-                self.setAbilityState(.cooldown)
-            },
-            SKAction.wait(forDuration: ability.cooldown),
-            SKAction.run { [weak self] in self?.setAbilityState(.ready) }
-        ]), withKey: "abilitySpeedBoost")
+            SKAction.wait(forDuration: plane.ability.duration),
+            SKAction.run { [weak self] in self?.endGhostMode() }
+        ]), withKey: "abilityGhost")
+    }
+
+    /// Ends the active Ghost Mode window: restores the plane and greys the
+    /// button out (one use per level, now spent). Idempotent — safe to call
+    /// from the pass-through hit, the duration timer, or run end.
+    private func endGhostMode() {
+        guard plane.isGhosting else { return }
+        removeAction(forKey: "abilityGhost")
+        plane.endGhostMode()
+        setAbilityState(.spent)
     }
 
     /// Sets both the scene-owned ability state and the live button, keeping the
@@ -1433,17 +1445,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         abilityButton?.setState(newState)
     }
 
-    /// Cancels any in-flight speed boost and restores normal world speed. Called
-    /// when the run ends so a boost mid-flight can't fast-forward the crash / win
-    /// animation (they play on nodes under `worldNode`).
-    private func endActiveSpeedBoost() {
-        // Removing the keyed action skips its revert stage, so clear the speed
-        // trail here too — otherwise it keeps emitting through the crash / win
-        // animation.
-        removeAction(forKey: "abilitySpeedBoost")
-        worldNode.speed = 1.0
-        speedBoostFactor = 1.0
-        plane.setBoostIntensity(0.0)
+    /// Clears any in-flight active-ability effect when the run ends, so a
+    /// mid-flight ability can't bleed into the crash / win animation. Currently
+    /// just Ghost Mode: restores the plane's opacity and removes the shimmer.
+    private func endActiveAbilityEffects() {
+        removeAction(forKey: "abilityGhost")
+        plane.endGhostMode()
     }
 
     /// Coin-magnet passive (Night Hawk): pulls coins within `magnetRadius`

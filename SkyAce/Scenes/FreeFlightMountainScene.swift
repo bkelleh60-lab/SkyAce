@@ -60,9 +60,9 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
     private var isTouching = false
     private var lastUpdateTime: TimeInterval = 0
 
-    // Quick Climb ability (SKY-117). Only built for the Blue Sky Chaser; its
-    // HUD button fires an upward burst. Free Flight is a fresh scene per entry,
-    // so uses reset to the ability's charge count each time.
+    // Charge-limited active ability button: Quick Climb (Blue Sky Chaser,
+    // SKY-117) or Ghost Mode (Shadow Dart, SKY-118). Free Flight is a fresh
+    // scene per entry, so uses reset to the ability's charge count each time.
     private var abilityButton: AbilityButtonNode?
     private var abilityUsesRemaining = 0
     /// Latched once the first ability button is built so a scene-size rebuild
@@ -176,11 +176,12 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
 
     // MARK: - Ability button (SKY-117)
 
-    /// Builds the Quick Climb HUD button, bottom-right, only when the Blue Sky
-    /// Chaser is the active plane. Other planes' abilities aren't surfaced in
-    /// Free Flight, so no button is shown for them.
+    /// Builds the HUD ability button, bottom-right, for the charge-limited
+    /// actives surfaced in Free Flight: Quick Climb (Blue Sky Chaser, SKY-117)
+    /// and Ghost Mode (Shadow Dart, SKY-118). Other planes' abilities aren't
+    /// surfaced here, so no button is shown for them.
     private func buildAbilityButton() {
-        guard plane.ability.kind == .quickClimb else { return }
+        guard plane.ability.kind == .quickClimb || plane.ability.kind == .ghostMode else { return }
         // Prime the use count once per scene lifetime, not on every rebuild, so
         // rotating the device can't hand back already-spent uses.
         if !abilityUsesInitialized {
@@ -190,7 +191,7 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
 
         let bottomInset = view?.safeAreaInsets.bottom ?? 0
         let button = AbilityButtonNode(emoji: plane.ability.iconEmoji) { [weak self] in
-            self?.fireQuickClimb()
+            self?.fireActiveAbility()
         }
         button.position = CGPoint(x: size.width - 46, y: bottomInset + 54)
         button.zPosition = 200
@@ -200,6 +201,15 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         if abilityUsesRemaining == 0 { button.setState(.spent) }
         addChild(button)
         abilityButton = button
+    }
+
+    /// Routes an ability-button tap to the active plane's ability.
+    private func fireActiveAbility() {
+        switch plane.ability.kind {
+        case .quickClimb: fireQuickClimb()
+        case .ghostMode:  fireGhostMode()
+        default:          break
+        }
     }
 
     /// Spends one Quick Climb use: fires the plane's upward burst, plays the
@@ -217,6 +227,30 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         if abilityUsesRemaining == 0 {
             abilityButton?.setState(.spent)
         }
+    }
+
+    /// Spends the single Ghost Mode use: phases the plane out for the ability's
+    /// duration, then restores it and greys the button out. Free Flight has no
+    /// obstacles to pass through, so Ghost Mode always runs the full window here
+    /// — the effect is purely the phased-out visual + coin/ring pickups continue
+    /// unaffected. No-op when none remain or one is already active.
+    private func fireGhostMode() {
+        guard abilityUsesRemaining > 0, !plane.isGhosting else { return }
+        abilityUsesRemaining -= 1
+
+        plane.beginGhostMode()
+        run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        SkyHaptics.collect()
+
+        abilityButton?.setUseCount(abilityUsesRemaining)
+        abilityButton?.setState(.active)
+        run(SKAction.sequence([
+            SKAction.wait(forDuration: plane.ability.duration),
+            SKAction.run { [weak self] in
+                self?.plane.endGhostMode()
+                self?.abilityButton?.setState(.spent)
+            }
+        ]), withKey: "abilityGhost")
     }
 
     // MARK: - Background layers

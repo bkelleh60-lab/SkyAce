@@ -24,6 +24,12 @@ final class AbilityButtonNode: SKNode {
     private let glyph: SKLabelNode
     private let onTap: () -> Void
 
+    /// Optional remaining-uses badge (Quick Climb, SKY-117). Created lazily the
+    /// first time `setUseCount(_:)` is called; abilities without a use counter
+    /// (invincibility, speed boost) never build it.
+    private var useBadge: SKShapeNode?
+    private var useBadgeLabel: SKLabelNode?
+
     private(set) var state: State = .ready
 
     init(emoji: String, onTap: @escaping () -> Void) {
@@ -114,6 +120,42 @@ final class AbilityButtonNode: SKNode {
     private func stopReadyPulse() {
         removeAction(forKey: AbilityButtonNode.pulseKey)
         setScale(1.0)
+    }
+
+    // MARK: - Use counter (SKY-117)
+
+    /// Shows a small remaining-uses badge on the button (e.g. Quick Climb's
+    /// 2 → 1 → 0). Lazily builds the badge on first call. The badge is a child
+    /// of the button, so it dims with the button's alpha in the greyed-out
+    /// `.spent` state. Its nodes carry the `"abilityButton"` name so a tap that
+    /// lands on the badge still routes to the button.
+    func setUseCount(_ count: Int) {
+        if useBadge == nil {
+            let d: CGFloat = 22
+            let bg = SKShapeNode(circleOfRadius: d / 2)
+            bg.fillColor = SkyColors.skPrimary
+            bg.strokeColor = SkyColors.skOnPrimary
+            bg.lineWidth = 2
+            let offset = AbilityButtonNode.diameter / 2 - 3
+            bg.position = CGPoint(x: offset, y: offset)
+            bg.zPosition = 2
+            bg.name = "abilityButton"
+
+            let label = SKLabelNode(text: "\(count)")
+            label.fontName = SkyFonts.headlineName
+            label.fontSize = 14
+            label.fontColor = SkyColors.skOnPrimary
+            label.verticalAlignmentMode = .center
+            label.horizontalAlignmentMode = .center
+            label.name = "abilityButton"
+            label.zPosition = 3
+            bg.addChild(label)
+
+            addChild(bg)
+            useBadge = bg
+            useBadgeLabel = label
+        }
+        useBadgeLabel?.text = "\(count)"
     }
 
     // MARK: - Input

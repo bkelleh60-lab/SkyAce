@@ -48,6 +48,12 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
     private var isTouching = false
     private var lastUpdateTime: TimeInterval = 0
 
+    // Quick Climb ability (SKY-117). Only built for the Blue Sky Chaser; its
+    // HUD button fires an upward burst. Free Flight is a fresh scene per entry,
+    // so uses reset to the ability's charge count each time.
+    private var abilityButton: AbilityButtonNode?
+    private var abilityUsesRemaining = 0
+
     // Parallax + decor
     private var farBackground = SKNode()   // Stitch cityscape PNG, slow scroll
     private var nearForeground = SKNode()  // close warm-tone buildings, fast scroll
@@ -139,6 +145,7 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         lastUpdateTime = 0
         plane = nil
         currencyHUD = nil
+        abilityButton = nil
         removeAllChildren()
         removeAllActions()
         layoutScene()
@@ -154,6 +161,41 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         buildLandmarkLayer()
         buildPlane()
         buildTopBar()
+        buildAbilityButton()
+    }
+
+    // MARK: - Ability button (SKY-117)
+
+    /// Builds the Quick Climb HUD button, bottom-right, only when the Blue Sky
+    /// Chaser is the active plane. Other planes' abilities aren't surfaced in
+    /// Free Flight, so no button is shown for them.
+    private func buildAbilityButton() {
+        guard plane.ability.kind == .quickClimb else { return }
+        abilityUsesRemaining = plane.ability.charges
+
+        let bottomInset = view?.safeAreaInsets.bottom ?? 0
+        let button = AbilityButtonNode(emoji: plane.ability.iconEmoji) { [weak self] in
+            self?.fireQuickClimb()
+        }
+        button.position = CGPoint(x: size.width - 46, y: bottomInset + 54)
+        button.zPosition = 200
+        button.setUseCount(abilityUsesRemaining)
+        addChild(button)
+        abilityButton = button
+    }
+
+    private func fireQuickClimb() {
+        guard abilityUsesRemaining > 0 else { return }
+        abilityUsesRemaining -= 1
+
+        plane.quickClimb(multiplier: plane.ability.climbMultiplier)
+        run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        SkyHaptics.collect()
+
+        abilityButton?.setUseCount(abilityUsesRemaining)
+        if abilityUsesRemaining == 0 {
+            abilityButton?.setState(.spent)
+        }
     }
 
     // MARK: - Background layers
@@ -710,6 +752,13 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
                 button.handleTap()
                 return
             }
+        }
+        // Quick Climb button (SKY-117): fire the ability instead of a climb so a
+        // press here never doubles as a flap.
+        if let button = abilityButton,
+           nodes(at: location).contains(where: { $0.name == "abilityButton" }) {
+            button.handleTap()
+            return
         }
         isTouching = true
     }

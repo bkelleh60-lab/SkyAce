@@ -2,10 +2,10 @@ import XCTest
 import SpriteKit
 @testable import SkyAce
 
-/// SKY-66 — asymmetric plane abilities. Covers the catalog wiring (each plane
-/// carries its intended ability) and the parts of the behavior that don't need
-/// a live scene: the passive glide climb multiplier, the passives gate, and the
-/// invincibility flag.
+/// SKY-66 / SKY-117 — asymmetric plane abilities. Covers the catalog wiring
+/// (each plane carries its intended ability) and the parts of the behavior that
+/// don't need a live scene: the Quick Climb burst impulse and the invincibility
+/// flag.
 final class PlaneAbilityTests: XCTestCase {
 
     override func setUp() {
@@ -22,16 +22,16 @@ final class PlaneAbilityTests: XCTestCase {
 
     func testEachPlaneHasItsIntendedAbility() {
         XCTAssertEqual(PlaneCatalog.redBaron.ability.kind, .invincibilityBurst)
-        XCTAssertEqual(PlaneCatalog.blueSkyChaser.ability.kind, .glideControl)
+        XCTAssertEqual(PlaneCatalog.blueSkyChaser.ability.kind, .quickClimb)
         XCTAssertEqual(PlaneCatalog.shadowDart.ability.kind, .speedBoost)
         XCTAssertEqual(PlaneCatalog.nightHawk.ability.kind, .coinMagnet)
     }
 
     func testActiveFlagMatchesKind() {
-        XCTAssertTrue(PlaneCatalog.redBaron.ability.isActive)   // tap-fired
-        XCTAssertTrue(PlaneCatalog.shadowDart.ability.isActive) // tap-fired
-        XCTAssertFalse(PlaneCatalog.blueSkyChaser.ability.isActive) // passive
-        XCTAssertFalse(PlaneCatalog.nightHawk.ability.isActive)     // passive
+        XCTAssertTrue(PlaneCatalog.redBaron.ability.isActive)      // tap-fired
+        XCTAssertTrue(PlaneCatalog.shadowDart.ability.isActive)    // tap-fired
+        XCTAssertTrue(PlaneCatalog.blueSkyChaser.ability.isActive) // HUD-button-fired
+        XCTAssertFalse(PlaneCatalog.nightHawk.ability.isActive)    // passive
     }
 
     // MARK: - Balance constants (single dial for tuning)
@@ -51,58 +51,54 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertEqual(a.charges, 0) // cooldown-gated, not charge-limited
     }
 
-    func testGlideSoftensDescentAndSharpensClimb() {
+    func testQuickClimbIsActiveWithTwoUsesAndStrongMultiplier() {
+        // Per SKY-117: two uses per level, and a burst multiplier in the
+        // 1.8×–2× band so the jump reads as noticeably stronger than a tap.
         let a = PlaneCatalog.blueSkyChaser.ability
-        XCTAssertGreaterThan(a.climbMultiplier, 1.0)
-        XCTAssertLessThan(a.descentGravityMultiplier, 1.0)
+        XCTAssertTrue(a.isActive)
+        XCTAssertEqual(a.charges, 2)
+        XCTAssertGreaterThanOrEqual(a.climbMultiplier, 1.8)
+        XCTAssertLessThanOrEqual(a.climbMultiplier, 2.0)
     }
 
     func testCoinMagnetHasPositiveRadius() {
         XCTAssertGreaterThan(PlaneCatalog.nightHawk.ability.magnetRadius, 0)
     }
 
-    // MARK: - PlaneNode passive gate + glide climb
+    // MARK: - Quick Climb burst (SKY-117)
 
-    func testPassivesDisabledByDefault() {
+    func testQuickClimbBurstIsStrongerThanANormalTap() {
+        // A single tap from rest drives dy to the plane's climb impulse.
+        let tap = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
+        tap.physicsBody?.velocity = .zero
+        tap.climb()
+        let tapDy = tap.physicsBody?.velocity.dy ?? 0
+
+        // A Quick Climb burst from rest jumps well past that, exceeding even the
+        // normal per-frame velocity cap (the raised burst ceiling permits it).
+        let burst = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
+        burst.physicsBody?.velocity = .zero
+        burst.quickClimb(multiplier: PlaneCatalog.blueSkyChaser.ability.climbMultiplier)
+        let burstDy = burst.physicsBody?.velocity.dy ?? 0
+
+        XCTAssertGreaterThan(burstDy, tapDy)
+        XCTAssertGreaterThan(burstDy, PlaneNode.maxClimbVelocity)
+    }
+
+    func testQuickClimbBurstRespectsTheBurstCeiling() {
         let plane = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
-        XCTAssertFalse(plane.passivesEnabled,
-                       "Passives must be off by default so Free Flight / Landing Practice are untouched.")
+        plane.physicsBody?.velocity = .zero
+        plane.quickClimb(multiplier: 5.0) // absurd multiplier — must still clamp
+        let dy = plane.physicsBody?.velocity.dy ?? 0
+        XCTAssertLessThanOrEqual(dy, PlaneNode.maxBurstClimbVelocity)
     }
 
-    func testGlideClimbMultiplierAppliesOnlyWhenPassivesEnabled() {
-        // A single tap from rest drives dy to the (multiplied) climb impulse.
-        let base = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
-        base.physicsBody?.velocity = .zero
-        base.climb()
-        let baselineDy = base.physicsBody?.velocity.dy ?? 0
-
-        let glide = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
-        glide.passivesEnabled = true
-        glide.physicsBody?.velocity = .zero
-        glide.climb()
-        let glideDy = glide.physicsBody?.velocity.dy ?? 0
-
-        let expected = baselineDy * PlaneCatalog.blueSkyChaser.ability.climbMultiplier
-        XCTAssertEqual(glideDy, expected, accuracy: 0.5,
-                       "Glide passive should scale the climb impulse by climbMultiplier.")
-        XCTAssertGreaterThan(glideDy, baselineDy)
-    }
-
-    func testNonGlidePlaneClimbUnaffectedByPassivesFlag() {
-        // Red Baron's ability has a 1.0 climb multiplier, so enabling passives
-        // must not change its climb.
-        let off = PlaneNode(planeID: PlaneCatalog.redBaron.id)
-        off.physicsBody?.velocity = .zero
-        off.climb()
-        let dyOff = off.physicsBody?.velocity.dy ?? 0
-
-        let on = PlaneNode(planeID: PlaneCatalog.redBaron.id)
-        on.passivesEnabled = true
-        on.physicsBody?.velocity = .zero
-        on.climb()
-        let dyOn = on.physicsBody?.velocity.dy ?? 0
-
-        XCTAssertEqual(dyOff, dyOn, accuracy: 0.001)
+    func testQuickClimbDoesNotReduceAnAlreadyFasterClimb() {
+        let plane = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
+        plane.physicsBody?.velocity = CGVector(dx: 0, dy: PlaneNode.maxBurstClimbVelocity)
+        plane.quickClimb(multiplier: PlaneCatalog.blueSkyChaser.ability.climbMultiplier)
+        let dy = plane.physicsBody?.velocity.dy ?? 0
+        XCTAssertEqual(dy, PlaneNode.maxBurstClimbVelocity, accuracy: 0.001)
     }
 
     // MARK: - Invincibility flag

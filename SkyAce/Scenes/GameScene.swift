@@ -132,9 +132,9 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         buildParallaxBackground()
         buildBoundaries()
         buildPlane()
-        // Abilities (SKY-66): passives apply only in mission runs; active-ability
-        // charges are primed here so the HUD button builds in the right state.
-        plane.passivesEnabled = true
+        // Abilities (SKY-66): active-ability charges are primed here so the HUD
+        // button builds in the right state. Quick Climb (SKY-117) resets to its
+        // full use count on every level start because each level is a fresh scene.
         abilityChargesRemaining = plane.ability.charges
         buildHUD()
         buildStartHint()
@@ -499,6 +499,11 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         button.zPosition = 100
         hudNode.addChild(button)
         abilityButton = button
+
+        // Quick Climb (SKY-117) shows its remaining-use counter on the button.
+        if plane.ability.kind == .quickClimb {
+            button.setUseCount(abilityChargesRemaining)
+        }
 
         // Restore visual state after a mid-run HUD rebuild (rotation). An
         // in-flight burst / boost (`.active`) wins so it isn't masked by the
@@ -1341,8 +1346,28 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
             fireInvincibilityBurst()
         case .speedBoost:
             fireSpeedBoost()
-        case .glideControl, .coinMagnet:
+        case .quickClimb:
+            fireQuickClimb()
+        case .coinMagnet:
             break  // passive — no active trigger
+        }
+    }
+
+    /// Quick Climb (SKY-117, Blue Sky Chaser): a charge-limited upward burst.
+    /// No active window or cooldown — the button stays armed between uses and
+    /// only greys out (`.spent`) once the last use is spent. The use counter on
+    /// the button tracks the remaining count.
+    private func fireQuickClimb() {
+        guard abilityChargesRemaining > 0 else { return }
+        abilityChargesRemaining -= 1
+
+        plane.quickClimb(multiplier: plane.ability.climbMultiplier)
+        run(AudioManager.shared.sfxAction(SkySFX.ringPass))
+        SkyHaptics.collect()
+
+        abilityButton?.setUseCount(abilityChargesRemaining)
+        if abilityChargesRemaining == 0 {
+            setAbilityState(.spent)
         }
     }
 

@@ -59,6 +59,9 @@ struct PlaneAbility {
     /// coinMagnet: radius (points) within which coins are pulled toward the plane.
     let magnetRadius: CGFloat
 
+    /// Creates a plane ability. Fields that don't apply to `kind` take the
+    /// no-op defaults (multipliers 1.0, everything else 0) so each catalog
+    /// entry only specifies the tuning that matters for its kind.
     init(
         kind: Kind,
         isActive: Bool,

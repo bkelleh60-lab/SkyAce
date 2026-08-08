@@ -20,6 +20,7 @@ final class PlaneAbilityTests: XCTestCase {
 
     // MARK: - Catalog wiring (thematic mapping)
 
+    /// Each plane maps to its intended ability kind (thematic wiring).
     func testEachPlaneHasItsIntendedAbility() {
         XCTAssertEqual(PlaneCatalog.redBaron.ability.kind, .invincibilityBurst)
         XCTAssertEqual(PlaneCatalog.blueSkyChaser.ability.kind, .quickClimb)
@@ -27,6 +28,8 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertEqual(PlaneCatalog.nightHawk.ability.kind, .coinMagnet)
     }
 
+    /// `isActive` matches each ability kind: active kinds are HUD/tap-fired,
+    /// the coin magnet is passive.
     func testActiveFlagMatchesKind() {
         XCTAssertTrue(PlaneCatalog.redBaron.ability.isActive)      // tap-fired
         XCTAssertTrue(PlaneCatalog.shadowDart.ability.isActive)    // tap-fired
@@ -36,6 +39,7 @@ final class PlaneAbilityTests: XCTestCase {
 
     // MARK: - Balance constants (single dial for tuning)
 
+    /// Red Baron's invincibility burst is a short, single-charge save.
     func testInvincibilityIsShortAndSingleCharge() {
         // Per the ticket balance note: ~0.4s clears one obstacle but can't
         // carry a tight sequence, and it's one use per run.
@@ -44,6 +48,7 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertEqual(a.charges, 1)
     }
 
+    /// Shadow Dart's speed boost is cooldown-gated with an above-1 speed factor.
     func testSpeedBoostHasCooldownAndAboveOneFactor() {
         let a = PlaneCatalog.shadowDart.ability
         XCTAssertGreaterThan(a.speedBoostFactor, 1.0)
@@ -51,6 +56,7 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertEqual(a.charges, 0) // cooldown-gated, not charge-limited
     }
 
+    /// Quick Climb is active with two uses and a 1.8×–2× burst multiplier.
     func testQuickClimbIsActiveWithTwoUsesAndStrongMultiplier() {
         // Per SKY-117: two uses per level, and a burst multiplier in the
         // 1.8×–2× band so the jump reads as noticeably stronger than a tap.
@@ -61,12 +67,15 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertLessThanOrEqual(a.climbMultiplier, 2.0)
     }
 
+    /// Night Hawk's coin magnet has a positive pull radius.
     func testCoinMagnetHasPositiveRadius() {
         XCTAssertGreaterThan(PlaneCatalog.nightHawk.ability.magnetRadius, 0)
     }
 
     // MARK: - Quick Climb burst (SKY-117)
 
+    /// A Quick Climb burst from rest jumps higher than a normal tap and past
+    /// the normal per-frame velocity cap.
     func testQuickClimbBurstIsStrongerThanANormalTap() {
         // A single tap from rest drives dy to the plane's climb impulse.
         let tap = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
@@ -85,6 +94,7 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertGreaterThan(burstDy, PlaneNode.maxClimbVelocity)
     }
 
+    /// An oversized multiplier is still clamped to the burst velocity ceiling.
     func testQuickClimbBurstRespectsTheBurstCeiling() {
         let plane = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
         plane.physicsBody?.velocity = .zero
@@ -93,6 +103,7 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertLessThanOrEqual(dy, PlaneNode.maxBurstClimbVelocity)
     }
 
+    /// A burst never lowers a climb that's already faster than the boosted value.
     func testQuickClimbDoesNotReduceAnAlreadyFasterClimb() {
         let plane = PlaneNode(planeID: PlaneCatalog.blueSkyChaser.id)
         plane.physicsBody?.velocity = CGVector(dx: 0, dy: PlaneNode.maxBurstClimbVelocity)
@@ -103,6 +114,7 @@ final class PlaneAbilityTests: XCTestCase {
 
     // MARK: - Invincibility flag
 
+    /// Activating the invincibility burst sets the `isInvincible` flag.
     func testActivateInvincibilitySetsFlag() {
         let plane = PlaneNode(planeID: PlaneCatalog.redBaron.id)
         XCTAssertFalse(plane.isInvincible)
@@ -110,6 +122,7 @@ final class PlaneAbilityTests: XCTestCase {
         XCTAssertTrue(plane.isInvincible)
     }
 
+    /// Re-activating invincibility while it's already active is a safe no-op.
     func testActivateInvincibilityIsIdempotentWhileActive() {
         // A second tap during an active burst must not re-arm or throw; the
         // scene also gates on charges, but the node is defensive on its own.

@@ -195,6 +195,9 @@ final class FreeFlightCityScene: SKScene, SKPhysicsContactDelegate {
         abilityButton = button
     }
 
+    /// Spends one Quick Climb use: fires the plane's upward burst, plays the
+    /// pickup SFX/haptic, decrements the counter, and greys the button out once
+    /// the uses run out. No-op when none remain.
     private func fireQuickClimb() {
         guard abilityUsesRemaining > 0 else { return }
         abilityUsesRemaining -= 1

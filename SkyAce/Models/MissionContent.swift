@@ -58,61 +58,61 @@ enum MissionContent {
         MissionBrief(
             level: 1,
             tagline: "First Wings Up",
-            storyContext: "Rio: \"Easy does it. Just you, the sky, and a few gates to clear. Let's see how you handle a plane.\"",
+            storyContext: "\"Easy does it. Just you, the sky, and a few gates to clear. Let's see how you handle a plane.\"",
             chapter: .clearSkies
         ),
         MissionBrief(
             level: 2,
             tagline: "Coins in the Clouds",
-            storyContext: "Rio: \"Sun's out, sky's yours. Grab everything you can find.\"",
+            storyContext: "\"Sun's out, sky's yours. Grab everything you can find.\"",
             chapter: .clearSkies
         ),
         MissionBrief(
             level: 3,
             tagline: "Racing the Clock",
-            storyContext: "Rio: \"You've got the basics. Now let's see if you've got speed.\"",
+            storyContext: "\"You've got the basics. Now let's see if you've got speed.\"",
             chapter: .clearSkies
         ),
         MissionBrief(
             level: 4,
             tagline: "Trust Your Hands",
-            storyContext: "Rio: \"Tighter gates this time. I know you can thread them. Show me.\"",
+            storyContext: "\"Tighter gates this time. I know you can thread them. Show me.\"",
             chapter: .clearSkies
         ),
         MissionBrief(
             level: 5,
             tagline: "Last Light Over Clear Skies",
-            storyContext: "Rio: \"This is the last stretch before things change. Fly your best. You're almost through.\"",
+            storyContext: "\"This is the last stretch before things change. Fly your best. You're almost through.\"",
             chapter: .clearSkies
         ),
         MissionBrief(
             level: 6,
             tagline: "Wind Picks Up",
-            storyContext: "Rio: \"Storm Chaser starts now. The wind's already talking. Listen to it.\"",
+            storyContext: "\"Storm Chaser starts now. The wind's already talking. Listen to it.\"",
             chapter: .stormChaser
         ),
         MissionBrief(
             level: 7,
             tagline: "Gaps in the Grey",
-            storyContext: "Rio: \"Visibility's dropping and the gates are tighter. Stay sharp out there.\"",
+            storyContext: "\"Visibility's dropping and the gates are tighter. Stay sharp out there.\"",
             chapter: .stormChaser
         ),
         MissionBrief(
             level: 8,
             tagline: "Chasing Coins Blind",
-            storyContext: "Rio: \"You'll barely see the coins coming. Trust your gut and go.\"",
+            storyContext: "\"You'll barely see the coins coming. Trust your gut and go.\"",
             chapter: .stormChaser
         ),
         MissionBrief(
             level: 9,
             tagline: "Racing the Storm",
-            storyContext: "Rio: \"The clock and the storm are both against you now. Beat them both.\"",
+            storyContext: "\"The clock and the storm are both against you now. Beat them both.\"",
             chapter: .stormChaser
         ),
         MissionBrief(
             level: 10,
             tagline: "Prove You're an Ace",
-            storyContext: "Rio: \"Everything you've learned comes down to this. Fly it like you mean it.\"",
+            storyContext: "\"Everything you've learned comes down to this. Fly it like you mean it.\"",
             chapter: .stormChaser
         )
     ]

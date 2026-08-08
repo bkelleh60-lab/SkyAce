@@ -305,6 +305,7 @@ final class PlaneNode: SKNode {
     /// Flight drives every frame from its ring boost) so it reads identically in
     /// missions and Free Flight, and self-removes once the particles finish.
     private func playQuickClimbStreak() {
+        // PLACEHOLDER: Stitch design required before App Store submission
         let emitter = SKEmitterNode()
         emitter.particleTexture = SKTexture(image: PlaneNode.boostTrailParticleImage())
         emitter.position = CGPoint(x: -48, y: 0)

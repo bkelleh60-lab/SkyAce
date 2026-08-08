@@ -133,6 +133,7 @@ final class AbilityButtonNode: SKNode {
     /// lands on the badge still routes to the button.
     func setUseCount(_ count: Int) {
         if useBadge == nil {
+            // PLACEHOLDER: Stitch design required before App Store submission
             let d: CGFloat = 22
             let bg = SKShapeNode(circleOfRadius: d / 2)
             bg.fillColor = SkyColors.skPrimary

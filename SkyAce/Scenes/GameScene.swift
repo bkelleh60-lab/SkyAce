@@ -1419,10 +1419,12 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
         abilityButton?.setUseCount(abilityChargesRemaining)
         setAbilityState(.active)
         // Fallback timer: end Ghost Mode after `duration` if no obstacle
-        // pass-through ended it first. Runs on the scene so it's independent of
-        // world speed. `endGhostMode()` is a no-op if the pass-through already
-        // ended it.
-        run(SKAction.sequence([
+        // pass-through ended it first. Runs on `worldNode` (not the scene) so it
+        // freezes with the rest of gameplay when paused (`pauseGame()` sets
+        // `worldNode.isPaused`) — otherwise the window would keep counting down
+        // and expire behind the pause overlay. `endGhostMode()` is a no-op if
+        // the pass-through already ended it.
+        worldNode.run(SKAction.sequence([
             SKAction.wait(forDuration: plane.ability.duration),
             SKAction.run { [weak self] in self?.endGhostMode() }
         ]), withKey: "abilityGhost")
@@ -1433,7 +1435,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// from the pass-through hit, the duration timer, or run end.
     private func endGhostMode() {
         guard plane.isGhosting else { return }
-        removeAction(forKey: "abilityGhost")
+        worldNode.removeAction(forKey: "abilityGhost")
         plane.endGhostMode()
         setAbilityState(.spent)
     }
@@ -1449,7 +1451,7 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     /// mid-flight ability can't bleed into the crash / win animation. Currently
     /// just Ghost Mode: restores the plane's opacity and removes the shimmer.
     private func endActiveAbilityEffects() {
-        removeAction(forKey: "abilityGhost")
+        worldNode.removeAction(forKey: "abilityGhost")
         plane.endGhostMode()
     }
 

@@ -14,7 +14,7 @@ struct PlaneAbility {
 
     enum Kind: Equatable {
         case invincibilityBurst   // active
-        case speedBoost           // active
+        case ghostMode            // active
         case quickClimb           // active
         case coinMagnet           // passive
     }
@@ -26,7 +26,7 @@ struct PlaneAbility {
     /// HUD ability button.
     let isActive: Bool
 
-    /// Short display name (Hangar ability line, e.g. "Overdrive").
+    /// Short display name (Hangar ability line, e.g. "Ghost Mode").
     let displayName: String
 
     /// One-line description for the Hangar plane card.
@@ -39,22 +39,16 @@ struct PlaneAbility {
 
     // MARK: - Active tuning (ignored for passives)
 
-    /// Seconds the burst / boost lasts.
+    /// Seconds the burst / effect lasts.
     let duration: TimeInterval
 
-    /// Uses per run. 0 means "unlimited, gated only by `cooldown`".
+    /// Uses per run/level. 0 means "unlimited".
     let charges: Int
-
-    /// Seconds between uses for cooldown-gated actives (speed boost).
-    let cooldown: TimeInterval
 
     /// quickClimb: multiplier on the plane's normal climb impulse for the
     /// burst (>1 = a stronger jump than a regular tap). No-op (1.0) for other
     /// kinds.
     let climbMultiplier: CGFloat
-
-    /// speedBoost: world-scroll speed multiplier applied for `duration`.
-    let speedBoostFactor: CGFloat
 
     /// coinMagnet: radius (points) within which coins are pulled toward the plane.
     let magnetRadius: CGFloat
@@ -70,9 +64,7 @@ struct PlaneAbility {
         iconEmoji: String,
         duration: TimeInterval = 0,
         charges: Int = 0,
-        cooldown: TimeInterval = 0,
         climbMultiplier: CGFloat = 1.0,
-        speedBoostFactor: CGFloat = 1.0,
         magnetRadius: CGFloat = 0
     ) {
         self.kind = kind
@@ -82,9 +74,7 @@ struct PlaneAbility {
         self.iconEmoji = iconEmoji
         self.duration = duration
         self.charges = charges
-        self.cooldown = cooldown
         self.climbMultiplier = climbMultiplier
-        self.speedBoostFactor = speedBoostFactor
         self.magnetRadius = magnetRadius
     }
 }
@@ -122,19 +112,21 @@ enum PlaneAbilityCatalog {
         climbMultiplier: 1.9
     )
 
-    /// Shadow Dart — active overdrive: ~1.5s of ×1.5 world speed on a 5s
-    /// cooldown. High risk/reward: more ground (and coins) but less reaction
-    /// time. Self-limiting on obstacle levels.
-    static let speedBoost = PlaneAbility(
-        kind: .speedBoost,
+    /// Shadow Dart — active Ghost Mode (SKY-118): a player-fired survival
+    /// ability. On activation the plane goes semi-transparent and phases
+    /// through the next obstacle it would hit — collisions do no damage while
+    /// ghosted. Ends the moment it passes one obstacle or after `duration`
+    /// (3s), whichever comes first. One use per level, reset each level.
+    /// Replaces the old Overdrive speed burst, which made obstacle levels
+    /// harder rather than easier.
+    static let ghostMode = PlaneAbility(
+        kind: .ghostMode,
         isActive: true,
-        displayName: "Overdrive",
-        blurb: "Speed burst on tap — short cooldown",
-        iconEmoji: "⚡️",
-        duration: 1.5,
-        charges: 0,
-        cooldown: 5.0,
-        speedBoostFactor: 1.5
+        displayName: "Ghost Mode",
+        blurb: "Phase through one obstacle — 1 use per level",
+        iconEmoji: "👻",
+        duration: 3.0,
+        charges: 1
     )
 
     /// Night Hawk — passive coin magnet: pulls nearby coins in, trading the

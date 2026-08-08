@@ -65,6 +65,9 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
     // so uses reset to the ability's charge count each time.
     private var abilityButton: AbilityButtonNode?
     private var abilityUsesRemaining = 0
+    /// Latched once the first ability button is built so a scene-size rebuild
+    /// (`didChangeSize` → `layoutScene`) doesn't refill spent Quick Climb uses.
+    private var abilityUsesInitialized = false
 
     private var bgFar          = SKNode()
     private var bgMid          = SKNode()
@@ -178,7 +181,12 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
     /// Free Flight, so no button is shown for them.
     private func buildAbilityButton() {
         guard plane.ability.kind == .quickClimb else { return }
-        abilityUsesRemaining = plane.ability.charges
+        // Prime the use count once per scene lifetime, not on every rebuild, so
+        // rotating the device can't hand back already-spent uses.
+        if !abilityUsesInitialized {
+            abilityUsesRemaining = plane.ability.charges
+            abilityUsesInitialized = true
+        }
 
         let bottomInset = view?.safeAreaInsets.bottom ?? 0
         let button = AbilityButtonNode(emoji: plane.ability.iconEmoji) { [weak self] in
@@ -187,6 +195,9 @@ final class FreeFlightMountainScene: SKScene, SKPhysicsContactDelegate {
         button.position = CGPoint(x: size.width - 46, y: bottomInset + 54)
         button.zPosition = 200
         button.setUseCount(abilityUsesRemaining)
+        // Restore the greyed-out state if a rebuild (rotation) happens after the
+        // uses were already spent.
+        if abilityUsesRemaining == 0 { button.setState(.spent) }
         addChild(button)
         abilityButton = button
     }

@@ -487,6 +487,8 @@ final class MenuScene: SKScene {
         if nextState {
             AudioManager.shared.playMusic(SkyMusic.menu)
         }
+        // Flip the speaker glyph to match the new mute state.
+        (childNode(withName: "topBar") as? SkyMenuTopBar)?.refreshSoundToggle()
     }
 }
 

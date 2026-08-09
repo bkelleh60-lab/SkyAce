@@ -1185,8 +1185,7 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         // extends far enough down that a fixed 0.48-height anchor clipped the
         // badge art; anchoring to the measured bottom keeps them clear (SKY-124).
         let pillGap: CGFloat = 18
-        let pillHalfHeight: CGFloat = 24 // CoinRewardPill default height (48) / 2
-        let pillY = celebrationBadgeBottomY - pillGap - pillHalfHeight
+        let pillY = celebrationBadgeBottomY - pillGap - CoinRewardPill.defaultHeight / 2
         pill.position = CGPoint(x: size.width / 2, y: pillY)
         pill.zPosition = 1
         pill.alpha = 0

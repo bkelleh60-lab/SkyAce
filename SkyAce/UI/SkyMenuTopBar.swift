@@ -27,15 +27,27 @@ final class SkyMenuTopBar: SKNode {
     private let avatar: SKNode
     private let title: SKLabelNode
     private let coinPill: SkyCoinPill
-    /// Trophy that opens the badge collection screen (SKY-124). Replaces the
-    /// former sun/settings glyph at the top-right.
+    /// Trophy glyph that opens the badge collection screen (SKY-124). Replaces
+    /// the former sun/settings glyph at the top-right.
     private let trophy: SKSpriteNode
-    /// Sound on/off toggle, relocated next to the trophy so the mute control
-    /// the sun icon used to provide is preserved (SKY-124).
+    /// Sound on/off toggle glyph, relocated next to the trophy so the mute
+    /// control the sun icon used to provide is preserved (SKY-124). Its symbol
+    /// reflects the current audio state.
     private let soundToggle: SKSpriteNode
+    /// Transparent 44x44 hit targets carrying the routing names, so the small
+    /// glyphs meet the 44pt minimum tap size in this kids' app.
+    private let trophyHit: SKSpriteNode
+    private let soundHit: SKSpriteNode
     /// Small gold "new badge" indicator drawn on the trophy while the player
     /// has earned a badge they haven't seen on the collection screen yet.
     private let badgeDot: SKShapeNode
+
+    /// SF Symbol name for the current audio state — the slashed speaker once
+    /// everything is muted, otherwise the standard speaker.
+    private static var soundSymbolName: String {
+        let isSoundOn = AudioManager.shared.musicEnabled || AudioManager.shared.sfxEnabled
+        return isSoundOn ? "speaker.wave.2.fill" : "speaker.slash.fill"
+    }
 
     init(width: CGFloat, topInset: CGFloat = 0) {
         self.barWidth = width
@@ -90,14 +102,16 @@ final class SkyMenuTopBar: SKNode {
             size: 28,
             color: SkyColors.onSurface
         )
-        trophy.name = "badgesButton"
+        trophyHit = SKSpriteNode(color: .clear, size: CGSize(width: 44, height: 44))
+        trophyHit.name = "badgesButton"
 
         soundToggle = SkySprites.sfSymbolNode(
-            systemName: "speaker.wave.2.fill",
+            systemName: SkyMenuTopBar.soundSymbolName,
             size: 26,
             color: SkyColors.onSurface
         )
-        soundToggle.name = "soundToggle"
+        soundHit = SKSpriteNode(color: .clear, size: CGSize(width: 44, height: 44))
+        soundHit.name = "soundToggle"
 
         // Notification-style dot (~8pt) in the app's coin/reward gold (#FFD709),
         // ringed in the surface colour so it reads against the trophy glyph.
@@ -114,19 +128,24 @@ final class SkyMenuTopBar: SKNode {
         avatar.zPosition = 2
         title.zPosition = 1
         coinPill.zPosition = 1
-        trophy.zPosition = 1
-        soundToggle.zPosition = 1
-        // Dot rides on the trophy, above its glyph.
+        trophyHit.zPosition = 1
+        soundHit.zPosition = 1
+        // Glyphs are visuals inside their hit targets; the dot rides above the
+        // trophy glyph.
+        trophy.zPosition = 0
+        soundToggle.zPosition = 0
         badgeDot.zPosition = 2
-        trophy.addChild(badgeDot)
+        trophyHit.addChild(trophy)
+        trophyHit.addChild(badgeDot)
+        soundHit.addChild(soundToggle)
 
         addChild(surface)
         addChild(avatarRing)
         addChild(avatar)
         addChild(title)
         addChild(coinPill)
-        addChild(trophy)
-        addChild(soundToggle)
+        addChild(trophyHit)
+        addChild(soundHit)
 
         applyLayout()
     }
@@ -175,11 +194,27 @@ final class SkyMenuTopBar: SKNode {
         coinPill.position = CGPoint(x: avatarX + avatarSize / 2 + 14 + 52, y: contentY - 16)
 
         // Trophy anchored at the far right (the old sun icon's slot); the sound
-        // toggle sits just inboard of it. Both clear the coin pill on the left.
-        trophy.position = CGPoint(x: barWidth / 2 - 32, y: contentY)
-        soundToggle.position = CGPoint(x: barWidth / 2 - 32 - 42, y: contentY)
+        // toggle sits just inboard of it. 48pt spacing keeps the two 44pt hit
+        // frames from overlapping. Both clear the coin pill on the left.
+        trophyHit.position = CGPoint(x: barWidth / 2 - 30, y: contentY)
+        soundHit.position = CGPoint(x: barWidth / 2 - 30 - 48, y: contentY)
 
-        // Nudge the dot to the trophy glyph's upper-right corner.
+        // Glyphs are centered in their hit targets; nudge the dot to the trophy
+        // glyph's upper-right corner.
+        trophy.position = .zero
+        soundToggle.position = .zero
         badgeDot.position = CGPoint(x: 11, y: 10)
+    }
+
+    /// Re-renders the sound glyph to match the current audio state. Called by
+    /// the menu after it toggles sound so the icon flips between the speaker
+    /// and slashed-speaker symbols.
+    func refreshSoundToggle() {
+        let glyph = SkySprites.sfSymbolNode(
+            systemName: SkyMenuTopBar.soundSymbolName,
+            size: 26,
+            color: SkyColors.onSurface
+        )
+        soundToggle.texture = glyph.texture
     }
 }

@@ -1,5 +1,4 @@
 import SpriteKit
-import CoreImage
 
 /// Badge collection screen (SKY-124). Reached from the home-screen trophy.
 /// Shows every earnable badge in a 2-column grid: earned badges render in full
@@ -14,6 +13,10 @@ final class BadgeCollectionScene: SKScene {
     /// launch set of two badges it fits without scrolling.
     private let contentNode = SKNode()
     private var contentHeight: CGFloat = 0
+    /// Scene-space Y of the top of the first grid row, captured in `buildGrid`
+    /// so the scroll extent accounts for the real space above the grid rather
+    /// than a fixed pad.
+    private var gridTopY: CGFloat = 0
     private var scrollVelocity: CGFloat = 0
     private var lastPanY: CGFloat = 0
     private var lastUpdateTime: TimeInterval = 0
@@ -69,16 +72,21 @@ final class BadgeCollectionScene: SKScene {
     private func buildTopBar() {
         let barCenterY = size.height - topSafeInset - 20
 
+        // Transparent 44x44 hit target carries the routing name; the chevron
+        // is just its visual, so the tap area meets the 44pt minimum.
+        let backHit = SKSpriteNode(color: .clear, size: CGSize(width: 44, height: 44))
+        backHit.position = CGPoint(x: 30, y: barCenterY)
+        backHit.zPosition = 200
+        backHit.name = "badgesBack"
         let back = SKLabelNode(text: "‹")
         back.fontName = SkyFonts.headlineName
         back.fontSize = 30
         back.fontColor = SkyColors.skOnPrimary
         back.verticalAlignmentMode = .center
         back.horizontalAlignmentMode = .center
-        back.position = CGPoint(x: 24, y: barCenterY)
-        back.zPosition = 200
-        back.name = "badgesBack"
-        addChild(back)
+        back.position = .zero
+        backHit.addChild(back)
+        addChild(backHit)
 
         // Screen header in the game's title style.
         let header = SKLabelNode(text: "My Badges")
@@ -121,7 +129,7 @@ final class BadgeCollectionScene: SKScene {
         // Grid starts below the header (and the empty-state hint if shown).
         let barCenterY = size.height - topSafeInset - 20
         let headerBottom = Badge.earnedCount == 0 ? barCenterY - 96 : barCenterY - 72
-        let gridTopY = headerBottom - 20
+        gridTopY = headerBottom - 20
 
         let badges = Badge.all
         for (index, badge) in badges.enumerated() {
@@ -129,7 +137,7 @@ final class BadgeCollectionScene: SKScene {
             let row = index / 2
             let x = sidePadding + cardWidth / 2 + CGFloat(col) * (cardWidth + columnGap)
             let y = gridTopY - cardHeight / 2 - CGFloat(row) * (cardHeight + rowGap)
-            let card = makeBadgeCard(badge, width: cardWidth, height: cardHeight)
+            let card = BadgeCardNode(badge: badge, size: CGSize(width: cardWidth, height: cardHeight))
             card.position = CGPoint(x: x, y: y)
             contentNode.addChild(card)
         }
@@ -139,79 +147,15 @@ final class BadgeCollectionScene: SKScene {
         contentHeight = CGFloat(rowCount) * cardHeight + CGFloat(max(0, rowCount - 1)) * rowGap
     }
 
-    private func makeBadgeCard(_ badge: Badge, width: CGFloat, height: CGFloat) -> SKNode {
-        let card = SKNode()
-
-        let bg = SKShapeNode(rectOf: CGSize(width: width, height: height), cornerRadius: 20)
-        bg.fillColor = SkyColors.skSurfaceContainerLowest
-        bg.strokeColor = .clear
-        card.addChild(bg)
-
-        let earned = badge.isEarned()
-        let imageSize = CGSize(width: 100, height: 100)
-        let imageNode: SKNode
-        if let texture = SkySprites.texture(named: badge.assetName) {
-            let display = earned ? texture : Self.desaturated(texture)
-            let sprite = SKSpriteNode(texture: display, size: imageSize)
-            sprite.alpha = earned ? 1.0 : 0.4
-            imageNode = sprite
-        } else {
-            // Art missing — neutral placeholder so the card still communicates.
-            let placeholder = SKShapeNode(circleOfRadius: 50)
-            placeholder.fillColor = SkyColors.skSurfaceContainerHigh
-            placeholder.strokeColor = .clear
-            placeholder.alpha = earned ? 1.0 : 0.4
-            imageNode = placeholder
-        }
-        imageNode.position = CGPoint(x: 0, y: height / 2 - 14 - 50)
-        card.addChild(imageNode)
-
-        let titleLabel = SKLabelNode(text: badge.title)
-        titleLabel.fontName = SkyFonts.boldName
-        titleLabel.fontSize = 15
-        titleLabel.fontColor = SkyColors.skOnSurface
-        titleLabel.horizontalAlignmentMode = .center
-        titleLabel.verticalAlignmentMode = .center
-        titleLabel.position = CGPoint(x: 0, y: -30)
-        card.addChild(titleLabel)
-
-        let detailLabel = SKLabelNode(text: badge.detail)
-        detailLabel.fontName = SkyFonts.bodyName
-        detailLabel.fontSize = 13
-        detailLabel.fontColor = SkyColors.skOnSurfaceVariant
-        detailLabel.horizontalAlignmentMode = .center
-        detailLabel.verticalAlignmentMode = .center
-        detailLabel.numberOfLines = 2
-        detailLabel.lineBreakMode = .byWordWrapping
-        detailLabel.preferredMaxLayoutWidth = width - 20
-        detailLabel.position = CGPoint(x: 0, y: -64)
-        card.addChild(detailLabel)
-
-        return card
-    }
-
-    /// Returns a greyscale copy of `texture` for rendering unearned badges.
-    /// Falls back to the original texture if the Core Image pipeline is
-    /// unavailable so an unearned badge still shows (just not desaturated).
-    private static func desaturated(_ texture: SKTexture) -> SKTexture {
-        let sourceImage = CIImage(cgImage: texture.cgImage())
-        guard let filter = CIFilter(name: "CIPhotoEffectMono") else { return texture }
-        filter.setValue(sourceImage, forKey: kCIInputImageKey)
-        let context = CIContext(options: nil)
-        guard let output = filter.outputImage,
-              let cgResult = context.createCGImage(output, from: output.extent) else {
-            return texture
-        }
-        return SKTexture(cgImage: cgResult)
-    }
-
     // MARK: - Scroll clamping
 
     private func clampOffset(_ y: CGFloat) -> CGFloat {
-        // Content is laid out from the top down, so it scrolls in the positive
-        // direction. Overscroll room below matches the bottom safe area.
-        let visibleHeight = size.height - topSafeInset - bottomSafeInset
-        let overflow = contentHeight - visibleHeight + 120
+        // Content is laid out downward from `gridTopY`. The grid can scroll up
+        // until its last row clears the bottom safe area; derive that extent
+        // from the real grid origin rather than a fixed pad.
+        let gridBottom = gridTopY - contentHeight
+        let bottomLimit = bottomSafeInset + 16
+        let overflow = bottomLimit - gridBottom
         guard overflow > 0 else { return 0 }
         return min(overflow, max(0, y))
     }

@@ -1,8 +1,8 @@
 import SpriteKit
 import UIKit
 
-/// Pilot-avatar / title / coin-pill / settings-gear header used on the home
-/// screen (and any other scene that wants the same treatment). Mirrors the
+/// Pilot-avatar / title / coin-pill / sound-toggle / trophy header used on the
+/// home screen (and any other scene that wants the same treatment). Mirrors the
 /// `SkyTabBar` pattern: the node is anchored to a fixed scene-coordinate
 /// position and exposes `setTopInset(_:)` so the host view controller can
 /// patch the layout once the real safe-area insets arrive.
@@ -11,7 +11,7 @@ import UIKit
 /// — i.e. the top-center of the scene. The surface fill extends DOWN from
 /// the origin so it covers both the safe-area inset (filling behind the
 /// Dynamic Island / notch) and the `contentHeight` strip below it. All
-/// content (avatar, title, coin pill, gear) sits at the vertical center of
+/// content (avatar, title, coin pill, sound toggle, trophy) sits at the center of
 /// that lower strip, well clear of the inset.
 final class SkyMenuTopBar: SKNode {
 
@@ -27,7 +27,15 @@ final class SkyMenuTopBar: SKNode {
     private let avatar: SKNode
     private let title: SKLabelNode
     private let coinPill: SkyCoinPill
-    private let gear: SKNode
+    /// Trophy that opens the badge collection screen (SKY-124). Replaces the
+    /// former sun/settings glyph at the top-right.
+    private let trophy: SKSpriteNode
+    /// Sound on/off toggle, relocated next to the trophy so the mute control
+    /// the sun icon used to provide is preserved (SKY-124).
+    private let soundToggle: SKSpriteNode
+    /// Small gold "new badge" indicator drawn on the trophy while the player
+    /// has earned a badge they haven't seen on the collection screen yet.
+    private let badgeDot: SKShapeNode
 
     init(width: CGFloat, topInset: CGFloat = 0) {
         self.barWidth = width
@@ -77,13 +85,27 @@ final class SkyMenuTopBar: SKNode {
         coinPill.setScale(0.85)
         coinPill.name = "coinPill"
 
-        gear = SkySprites.iconNode(
-            named: SkySprites.iconSettings,
-            fallbackEmoji: "⚙",
+        trophy = SkySprites.sfSymbolNode(
+            systemName: "trophy.fill",
             size: 28,
             color: SkyColors.onSurface
         )
-        gear.name = "settingsGear"
+        trophy.name = "badgesButton"
+
+        soundToggle = SkySprites.sfSymbolNode(
+            systemName: "speaker.wave.2.fill",
+            size: 26,
+            color: SkyColors.onSurface
+        )
+        soundToggle.name = "soundToggle"
+
+        // Notification-style dot (~8pt) in the app's coin/reward gold (#FFD709),
+        // ringed in the surface colour so it reads against the trophy glyph.
+        badgeDot = SKShapeNode(circleOfRadius: 4)
+        badgeDot.fillColor = SkyColors.skTertiaryContainer
+        badgeDot.strokeColor = SkyColors.skSurface
+        badgeDot.lineWidth = 1.5
+        badgeDot.isHidden = !Badge.hasUnseenEarnedBadges
 
         super.init()
 
@@ -92,14 +114,19 @@ final class SkyMenuTopBar: SKNode {
         avatar.zPosition = 2
         title.zPosition = 1
         coinPill.zPosition = 1
-        gear.zPosition = 1
+        trophy.zPosition = 1
+        soundToggle.zPosition = 1
+        // Dot rides on the trophy, above its glyph.
+        badgeDot.zPosition = 2
+        trophy.addChild(badgeDot)
 
         addChild(surface)
         addChild(avatarRing)
         addChild(avatar)
         addChild(title)
         addChild(coinPill)
-        addChild(gear)
+        addChild(trophy)
+        addChild(soundToggle)
 
         applyLayout()
     }
@@ -147,6 +174,12 @@ final class SkyMenuTopBar: SKNode {
 
         coinPill.position = CGPoint(x: avatarX + avatarSize / 2 + 14 + 52, y: contentY - 16)
 
-        gear.position = CGPoint(x: barWidth / 2 - 32, y: contentY)
+        // Trophy anchored at the far right (the old sun icon's slot); the sound
+        // toggle sits just inboard of it. Both clear the coin pill on the left.
+        trophy.position = CGPoint(x: barWidth / 2 - 32, y: contentY)
+        soundToggle.position = CGPoint(x: barWidth / 2 - 32 - 42, y: contentY)
+
+        // Nudge the dot to the trophy glyph's upper-right corner.
+        badgeDot.position = CGPoint(x: 11, y: 10)
     }
 }

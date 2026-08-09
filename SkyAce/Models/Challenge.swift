@@ -116,6 +116,11 @@ enum ChallengeCatalog {
     static func challenge(forID id: Int) -> Challenge? {
         return all.first(where: { $0.id == id })
     }
+
+    /// The id of the last level in the game (currently L10, "Sky Ace
+    /// Challenge"). Clearing it is the whole-game completion moment that earns
+    /// the Certified Sky Ace badge (SKY-123). Derived so it tracks the catalog.
+    static var finalLevelID: Int { all.map(\.id).max() ?? 0 }
 }
 
 /// Star rating thresholds:

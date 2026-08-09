@@ -1340,13 +1340,33 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func routeToResults() {
-        SkyNavigator.shared.showResults(
-            challenge: challenge,
-            coinsCollected: state.coinsCollected,
-            coinsAvailable: state.totalCoinsSpawned,
-            timeRemaining: state.levelTimeRemaining,
-            didWin: state.didWin
-        )
+        // Capture the run outcome up front. When the L10 celebration is shown
+        // first (below), presenting it replaces this GameScene as the SKView's
+        // current scene, so `self` is torn down before the celebration's
+        // dismiss continuation fires. The continuation therefore must not depend
+        // on `self` still being alive — it closes over the already-final
+        // `challenge`/`state` values instead (SKY-123).
+        let challenge = self.challenge
+        let state = self.state
+        let showResults = {
+            SkyNavigator.shared.showResults(
+                challenge: challenge,
+                coinsCollected: state.coinsCollected,
+                coinsAvailable: state.totalCoinsSpawned,
+                timeRemaining: state.levelTimeRemaining,
+                didWin: state.didWin
+            )
+        }
+
+        // SKY-123: clearing the final level (L10) earns the Certified Sky Ace
+        // badge — show its celebration screen first, then continue to the
+        // standard results. Every other outcome (a loss, or any level 1–9) goes
+        // straight to results.
+        if state.didWin, challenge.id == ChallengeCatalog.finalLevelID {
+            SkyNavigator.shared.showLevel10Celebration(then: showResults)
+        } else {
+            showResults()
+        }
     }
 
     // MARK: - Ability (SKY-66)

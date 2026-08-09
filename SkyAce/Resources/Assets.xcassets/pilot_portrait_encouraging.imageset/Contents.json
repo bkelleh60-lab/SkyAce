@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "pilot_portrait_encouraging.png",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

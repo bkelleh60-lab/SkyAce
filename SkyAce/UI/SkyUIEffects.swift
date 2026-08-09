@@ -272,6 +272,10 @@ enum SkySprites {
     static let briefingCardStormChaser = "briefing_card_stormchaser"
     static let pilotPortraitNeutral   = "pilot_portrait_neutral"
     static let pilotPortraitSerious   = "pilot_portrait_serious"
+    // Results-screen portraits (SKY-122). Rio's reaction to the run outcome:
+    // a thumbs-up on a win, a soft encouraging smile on a loss.
+    static let pilotPortraitHappy       = "pilot_portrait_happy"
+    static let pilotPortraitEncouraging = "pilot_portrait_encouraging"
     static let chapterTransition      = "chapter_transition"
 
     // Shop upgrade icons (Assets.xcassets/*.imageset).
@@ -390,6 +394,43 @@ enum SkySprites {
         let label = SKLabelNode(text: fallbackEmoji)
         label.fontSize = size
         label.fontColor = color
+        label.verticalAlignmentMode = .center
+        label.horizontalAlignmentMode = .center
+        return label
+    }
+
+    /// Returns a circular-cropped portrait node at `diameter` points, or an
+    /// emoji fallback label if the asset is missing. The source art is
+    /// aspect-filled into a circle (center-cropped) so a full-bust portrait
+    /// reads as a clean round avatar — the same floating-portrait treatment the
+    /// mission briefing card uses, clipped to a circle for the results screens
+    /// (SKY-122). Rendering through UIGraphicsImageRenderer bakes the circular
+    /// clip at native screen scale, avoiding SKCropNode/SKShapeNode mask
+    /// inconsistencies. The node draws centered on `.zero`.
+    static func circularPortraitNode(named name: String,
+                                     diameter: CGFloat,
+                                     fallbackEmoji: String,
+                                     fallbackColor: UIColor) -> SKNode {
+        if let source = UIImage(named: name) {
+            let side = CGSize(width: diameter, height: diameter)
+            let renderer = UIGraphicsImageRenderer(size: side)
+            let circular = renderer.image { _ in
+                let bounds = CGRect(origin: .zero, size: side)
+                UIBezierPath(ovalIn: bounds).addClip()
+                // Aspect-fill: scale the source to cover the circle, centered.
+                let src = source.size
+                guard src.width > 0, src.height > 0 else { return }
+                let scale = max(diameter / src.width, diameter / src.height)
+                let drawSize = CGSize(width: src.width * scale, height: src.height * scale)
+                let origin = CGPoint(x: (diameter - drawSize.width) / 2,
+                                     y: (diameter - drawSize.height) / 2)
+                source.draw(in: CGRect(origin: origin, size: drawSize))
+            }
+            return SKSpriteNode(texture: SKTexture(image: circular), size: side)
+        }
+        let label = SKLabelNode(text: fallbackEmoji)
+        label.fontSize = diameter * 0.8
+        label.fontColor = fallbackColor
         label.verticalAlignmentMode = .center
         label.horizontalAlignmentMode = .center
         return label

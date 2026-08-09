@@ -72,9 +72,14 @@ final class ResultsScene: SKScene {
 
     // MARK: - Win UI
 
-    /// Lays out the win screen — confetti, stars, coin count-up, and the
-    /// NEXT LEVEL / UPGRADE SHOP / BACK TO MAP actions (the first and last
-    /// route through the chapter transition after an L5 win).
+    /// Lays out the win screen — confetti, stars, Rio's congratulations, coin
+    /// count-up, and the NEXT LEVEL / UPGRADE SHOP / BACK TO MAP actions (the
+    /// first and last route through the chapter transition after an L5 win).
+    ///
+    /// The stars, Rio portrait, and her message share a vertically-centered
+    /// stack (SKY-122) so the added content holds its spacing on both a short
+    /// iPhone SE and a tall 15 Pro. Level 10 uses this same standard screen —
+    /// its dedicated celebration is a follow-up ticket.
     private func buildWin() {
         buildConfetti()
 
@@ -82,18 +87,20 @@ final class ResultsScene: SKScene {
         title.fontName = SkyFonts.headlineItalicName
         title.fontSize = 34
         title.fontColor = SkyColors.skOnPrimary
-        title.position = CGPoint(x: size.width / 2, y: size.height * 0.78)
+        title.position = CGPoint(x: size.width / 2, y: size.height * 0.82)
         addChild(title)
 
         let subtitle = SKLabelNode(text: challenge.name)
         subtitle.fontName = SkyFonts.bodyMediumName
         subtitle.fontSize = 14
         subtitle.fontColor = SkyColors.skOnPrimary.withAlphaComponent(0.8)
-        subtitle.position = CGPoint(x: size.width / 2, y: size.height * 0.78 - 32)
+        subtitle.position = CGPoint(x: size.width / 2, y: size.height * 0.82 - 30)
         addChild(subtitle)
 
-        // Stars with staggered spring pop-in.
+        // Stars with staggered spring pop-in, grouped in a row container so the
+        // whole trio can be positioned as one item in the centered stack.
         // Results scene sits on the primary sky-blue gradient — use white variants.
+        let starsRow = SKNode()
         for i in 0..<3 {
             let filled = i < starsEarned
             let spriteName = filled ? SkySprites.starFilledWhite : SkySprites.starEmptyWhite
@@ -106,20 +113,43 @@ final class ResultsScene: SKScene {
                 size: 56,
                 color: fallbackColor
             )
-            star.position = CGPoint(x: size.width / 2 - 80 + CGFloat(i) * 80, y: size.height * 0.58)
+            star.position = CGPoint(x: -80 + CGFloat(i) * 80, y: 0)
             star.setScale(0.0)
-            addChild(star)
+            starsRow.addChild(star)
 
             let delay = SKAction.wait(forDuration: 0.3 + Double(i) * 0.3)
             let up = SKAction.scale(to: 1.3, duration: 0.15)
             let down = SKAction.scale(to: 1.0, duration: 0.1)
             star.run(SKAction.sequence([delay, up, down]))
         }
+        addChild(starsRow)
+
+        // Rio's happy portrait + congratulations, between the stars and the
+        // coin pill. Circular crop matching the mission briefing card treatment.
+        let portrait = SkySprites.circularPortraitNode(
+            named: SkySprites.pilotPortraitHappy,
+            diameter: 80,
+            fallbackEmoji: "🧑‍✈️",
+            fallbackColor: SkyColors.skOnPrimary
+        )
+        addChild(portrait)
+
+        let message = rioMessageLabel(text: "Clean run. I knew you had it in you.")
+        addChild(message)
+
+        // Center the stars → portrait → message block in the band between the
+        // subtitle and the coin pill.
+        layoutStack(
+            [(starsRow, 56), (portrait, 80), (message, message.calculateAccumulatedFrame().height)],
+            x: size.width / 2,
+            bandTop: size.height * 0.82 - 30 - 24,
+            bandBottom: size.height * 0.40 + 30
+        )
 
         // Coin reward pill (gold) with count-up — shared CoinRewardPill so
         // mission end and Landing Practice render the identical treatment.
         let pill = CoinRewardPill(amount: 0)
-        pill.position = CGPoint(x: size.width / 2, y: size.height * 0.44)
+        pill.position = CGPoint(x: size.width / 2, y: size.height * 0.40)
         addChild(pill)
         pill.animateCountUp(to: challenge.reward)
 
@@ -198,15 +228,28 @@ final class ResultsScene: SKScene {
         title.fontName = SkyFonts.headlineItalicName
         title.fontSize = 32
         title.fontColor = SkyColors.skOnPrimary
-        title.position = CGPoint(x: size.width / 2, y: size.height * 0.72)
+        title.position = CGPoint(x: size.width / 2, y: size.height * 0.80)
         addChild(title)
 
         let subtitle = SKLabelNode(text: challenge.name)
         subtitle.fontName = SkyFonts.bodyMediumName
         subtitle.fontSize = 14
         subtitle.fontColor = SkyColors.skOnPrimary.withAlphaComponent(0.8)
-        subtitle.position = CGPoint(x: size.width / 2, y: size.height * 0.72 - 32)
+        subtitle.position = CGPoint(x: size.width / 2, y: size.height * 0.80 - 30)
         addChild(subtitle)
+
+        // Rio's encouraging portrait + message, between the level name and the
+        // coins-collected line. Same circular crop and size as the win screen.
+        let portrait = SkySprites.circularPortraitNode(
+            named: SkySprites.pilotPortraitEncouraging,
+            diameter: 80,
+            fallbackEmoji: "🧑‍✈️",
+            fallbackColor: SkyColors.skOnPrimary
+        )
+        addChild(portrait)
+
+        let message = rioMessageLabel(text: "Shake it off. Every ace has bad runs. Try again.")
+        addChild(message)
 
         let coinLine = CoinAmountNode(
             prefix: "Coins collected: ",
@@ -216,8 +259,18 @@ final class ResultsScene: SKScene {
             color: SkyColors.skOnPrimary.withAlphaComponent(0.85),
             iconAsset: SkySprites.iconCoinWhite
         )
-        coinLine.position = CGPoint(x: size.width / 2, y: size.height * 0.56)
         addChild(coinLine)
+
+        // Center the portrait → message → coins block in the band between the
+        // level name and the TRY AGAIN button.
+        layoutStack(
+            [(portrait, 80),
+             (message, message.calculateAccumulatedFrame().height),
+             (coinLine, coinLine.calculateAccumulatedFrame().height)],
+            x: size.width / 2,
+            bandTop: size.height * 0.80 - 30 - 24,
+            bandBottom: size.height * 0.38 + 34
+        )
 
         let retry = SkyPillButton(title: "TRY AGAIN", style: .primary, size: CGSize(width: 240, height: 52)) { [weak self] in
             guard let self = self else { return }
@@ -233,6 +286,45 @@ final class ResultsScene: SKScene {
         mapLink.position = CGPoint(x: size.width / 2, y: size.height * 0.22)
         mapLink.name = "resultsBackToMap"
         addChild(mapLink)
+    }
+
+    // MARK: - Rio message (SKY-122)
+
+    /// A centered, word-wrapping label carrying one of Rio's short reaction
+    /// lines. Uses the same font family and on-primary color as the rest of the
+    /// screen's body text so it reads as part of the existing screen.
+    private func rioMessageLabel(text: String) -> SKLabelNode {
+        let label = SKLabelNode(text: text)
+        label.fontName = SkyFonts.bodyMediumName
+        label.fontSize = 17
+        label.fontColor = SkyColors.skOnPrimary.withAlphaComponent(0.9)
+        label.numberOfLines = 0
+        label.lineBreakMode = .byWordWrapping
+        label.preferredMaxLayoutWidth = min(size.width - 64, 320)
+        label.horizontalAlignmentMode = .center
+        label.verticalAlignmentMode = .center
+        return label
+    }
+
+    // MARK: - Layout
+
+    /// Positions `items` (top→bottom) as a vertically-centered stack in the band
+    /// between `bandBottom` and `bandTop` at horizontal position `x`. Each entry
+    /// is a node and its measured height; nodes are placed by their center with
+    /// equal gaps. When the content is taller than the band the gap clamps to
+    /// zero so items stack contiguously without overlapping — keeping the layout
+    /// intact on the shortest supported screen (iPhone SE) while breathing on
+    /// taller ones (15 Pro).
+    private func layoutStack(_ items: [(node: SKNode, height: CGFloat)],
+                             x: CGFloat, bandTop: CGFloat, bandBottom: CGFloat) {
+        let totalContent = items.reduce(0) { $0 + $1.height }
+        let slack = max(0, (bandTop - bandBottom) - totalContent)
+        let gap = items.count > 1 ? slack / CGFloat(items.count + 1) : slack / 2
+        var cursor = bandTop - gap
+        for item in items {
+            item.node.position = CGPoint(x: x, y: cursor - item.height / 2)
+            cursor -= (item.height + gap)
+        }
     }
 
     // MARK: - Touch

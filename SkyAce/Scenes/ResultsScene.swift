@@ -311,19 +311,36 @@ final class ResultsScene: SKScene {
     /// Positions `items` (top→bottom) as a vertically-centered stack in the band
     /// between `bandBottom` and `bandTop` at horizontal position `x`. Each entry
     /// is a node and its measured height; nodes are placed by their center with
-    /// equal gaps. When the content is taller than the band the gap clamps to
-    /// zero so items stack contiguously without overlapping — keeping the layout
-    /// intact on the shortest supported screen (iPhone SE) while breathing on
-    /// taller ones (15 Pro).
+    /// equal gaps.
+    ///
+    /// On the tallest and mid-size screens (iPhone 15 Pro down through the
+    /// current iPhone SE at 375×667) the content fits with room to spare and is
+    /// laid out untouched. On the very shortest supported screen — the original
+    /// 320×568 SE — the stars + portrait + a wrapped message can exceed the band
+    /// between the header and the fixed coin pill/button below it. Rather than
+    /// let the message overlap the pill, the whole stack is uniformly scaled down
+    /// to fit the band, so Rio's portrait and message stay clear of the pill on
+    /// every device.
     private func layoutStack(_ items: [(node: SKNode, height: CGFloat)],
                              x: CGFloat, bandTop: CGFloat, bandBottom: CGFloat) {
+        let bandHeight = bandTop - bandBottom
         let totalContent = items.reduce(0) { $0 + $1.height }
-        let slack = max(0, (bandTop - bandBottom) - totalContent)
+
+        // Shrink-to-fit only when the content genuinely overflows the band; the
+        // common case leaves `fit == 1` and the layout unchanged.
+        let fit = (totalContent > bandHeight && totalContent > 0)
+            ? bandHeight / totalContent
+            : 1.0
+        let scaledHeights = items.map { $0.height * fit }
+        let scaledTotal = scaledHeights.reduce(0, +)
+        let slack = max(0, bandHeight - scaledTotal)
         let gap = items.count > 1 ? slack / CGFloat(items.count + 1) : slack / 2
+
         var cursor = bandTop - gap
-        for item in items {
-            item.node.position = CGPoint(x: x, y: cursor - item.height / 2)
-            cursor -= (item.height + gap)
+        for (i, item) in items.enumerated() {
+            if fit < 1.0 { item.node.setScale(fit) }
+            item.node.position = CGPoint(x: x, y: cursor - scaledHeights[i] / 2)
+            cursor -= (scaledHeights[i] + gap)
         }
     }
 

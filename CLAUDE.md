@@ -45,22 +45,41 @@ These are non-negotiable and must be respected in every change:
 - The host app is **UIKit + SpriteKit** — there is no SwiftUI in this project.
   Do not introduce SwiftUI for incidental work; if a feature genuinely needs it,
   raise it before starting.
-- The root is `GameViewController` (UIKit). Game scenes are SpriteKit `SKScene`
-  subclasses under `SkyAce/Scenes/` and are presented inside an `SKView` hosted
-  by the root view controller.
-- Reusable scene content lives in `SkyAce/Nodes/` (`SKNode`/`SKSpriteNode`
-  subclasses such as `PlaneNode`, `RingNode`, `ObstacleNode`, `FinishLineNode`).
-- Cross-cutting state lives in `SkyAce/Managers/` (`ProgressManager`,
-  `IAPManager`, `AudioManager`). Plain data types live in
-  `SkyAce/Models/`.
-- IAP logic is handled via StoreKit in `Managers/IAPManager.swift`. The purchase
-  trigger point must always present `ParentalGateViewController` modally and
-  only invoke StoreKit from its `onSuccess` callback.
-- `ParentalGateViewController` owns all gate logic. Its operands (`numberA`,
-  `numberB`) and `expectedAnswer` must remain `private` and must never be
-  exposed via accessors, notifications, or `print`/`os_log` output.
+- The root is `GameViewController` (UIKit, `SkyAce/GameViewController.swift`).
+  Game scenes are SpriteKit `SKScene` subclasses under `SkyAce/Scenes/` and are
+  presented inside an `SKView` hosted by the root view controller.
+- Reusable content is split by role:
+  - `SkyAce/Nodes/` — gameplay-world `SKNode`/`SKSpriteNode` subclasses that live
+    inside a scene's world and participate in gameplay/physics (`PlaneNode`,
+    `RingNode`, `BigRingNode`, `CoinNode`, `ObstacleNode`, `FinishLineNode`,
+    `LandingZoneNode`, …).
+  - `SkyAce/UI/` — reusable chrome/overlay nodes and shared UI primitives
+    (`MissionBriefingCard`, `SkyChunkyButton`, `SkyTabBar`, `SkyMenuTopBar`,
+    `CurrencyHUD`, `AbilityButtonNode`, and the `SkyUIEffects`/`SkySprites`
+    helpers). Rule of thumb: if it's part of the flying world, it goes in
+    `Nodes/`; if it's HUD, menu, or overlay chrome, it goes in `UI/`.
+- Design tokens live in `SkyAce/Colors.swift` (`SkyColors`, `SkyFonts`) and
+  `SkyAce/UI/SkyUIEffects.swift` (`SkySprites`, `SkyUIEffects`).
+- Cross-cutting state lives in `SkyAce/Managers/`. The managers that exist today
+  are `ProgressManager`, `CurrencyManager`, and `AudioManager`. Plain data types
+  live in `SkyAce/Models/`.
 - Progress and level unlock state is managed via `ProgressManager`.
 - Free Flight availability is derived from unlock state — do not duplicate that logic.
+
+### Monetization / parental gate (planned — not yet in the codebase)
+
+The IAP and parental-gate infrastructure described in the compliance rules is
+**not yet implemented** — there is currently no `IAPManager`,
+`ParentalGateViewController`, or `import StoreKit` anywhere in the repo. Do not
+assume these files exist. When this work is built, it MUST follow these rules:
+
+- IAP logic MUST live in `Managers/IAPManager.swift` and use StoreKit. The
+  purchase trigger point MUST present the parental gate modally and only invoke
+  StoreKit from its success callback.
+- The parental gate (planned `ParentalGateViewController`) owns all gate logic.
+  Its operands (e.g. `numberA`, `numberB`) and expected answer MUST remain
+  `private` and MUST never be exposed via accessors, notifications, or
+  `print`/`os_log` output.
 
 ---
 
@@ -68,12 +87,15 @@ These are non-negotiable and must be respected in every change:
 
 - Follow standard Swift naming conventions (camelCase for variables/functions, PascalCase for types).
 - UIKit views: build hierarchy programmatically with Auto Layout. Set
-  `translatesAutoresizingMaskIntoConstraints = false` on every view you add
-  (matching the pattern in `ParentalGateViewController`). Do not add Storyboards
-  or XIBs.
+  `translatesAutoresizingMaskIntoConstraints = false` on every view you add. Do
+  not add Storyboards or XIBs.
 - SpriteKit nodes: encapsulate visuals and per-node behavior inside the node
   subclass; keep scene files focused on layout, spawning, and physics-contact
   routing.
+- Use the shared design tokens — `SkyColors` and `SkyFonts` (in
+  `SkyAce/Colors.swift`) for colors and fonts, and `SkySprites` for asset
+  lookups. Never hardcode raw color literals, font names, or asset-name strings
+  in scenes or nodes.
 - No force unwraps (`!`) unless accompanied by an inline comment explaining why it is safe.
 - Keep view controllers and scenes focused on presentation. Persistent or
   cross-scene logic belongs in `Managers/`; pure data shapes belong in `Models/`.
@@ -114,9 +136,34 @@ or purely structural/functional UI with no visual design requirements.
 
 ---
 
+## Building & Testing
+
+- The project is a plain Xcode project (`SkyAce.xcodeproj`) with a shared
+  `SkyAce` scheme. There is no Swift Package Manager manifest and no CocoaPods.
+- Unit tests live in the `SkyAceTests` target (XCTest). Run them locally with:
+  ```sh
+  xcodebuild test -scheme SkyAce -destination 'platform=iOS Simulator,name=iPhone 15'
+  ```
+  (substitute any installed simulator for the destination).
+- **CI runs on Xcode Cloud**, not GitHub Actions — there is no
+  `.github/workflows/` directory. Pull requests are gated by the
+  "SkyAce | Production Build | Build - iOS" check, driven from App Store Connect.
+- When a change is not verifiable in this environment (e.g. no simulator
+  available), say so explicitly rather than claiming it was tested.
+
+---
+
 ## Git Workflow
 
-Follow this workflow for every piece of work:
+> **Branch conventions.** Automated Claude Code sessions run on their own
+> `claude/sky-<issue>-<id>` branches and open the PR as a **draft**
+> automatically — when working in that context, use the branch you were assigned
+> rather than creating a new `feature/*` branch. The `feature/sky-*` convention
+> below is for **manual local work** (its `[issue-number]` is that same `SKY-X`
+> number). Either way: branch from the latest `main`, include the `SKY-X` issue
+> key in the branch name and the commit messages, and open the PR against `main`.
+
+Follow this workflow for manual local work:
 
 1. **Before starting**, create a feature branch from `main`:
    ```

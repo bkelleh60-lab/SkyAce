@@ -34,6 +34,7 @@ final class BadgeCardNode: SKNode {
             imageNode = sprite
         } else {
             // Art missing — neutral placeholder so the card still communicates.
+            // PLACEHOLDER: Stitch design required before App Store submission
             let placeholder = SKShapeNode(circleOfRadius: 50)
             placeholder.fillColor = SkyColors.skSurfaceContainerHigh
             placeholder.strokeColor = .clear

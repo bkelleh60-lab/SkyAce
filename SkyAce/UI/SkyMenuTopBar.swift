@@ -49,6 +49,9 @@ final class SkyMenuTopBar: SKNode {
         return isSoundOn ? "speaker.wave.2.fill" : "speaker.slash.fill"
     }
 
+    /// Builds the header content — avatar, title, coin pill, trophy (with its
+    /// unseen-badge dot), and sound toggle — for a bar of the given `width`,
+    /// laid out below `topInset`.
     init(width: CGFloat, topInset: CGFloat = 0) {
         self.barWidth = width
         self.topInset = topInset
@@ -164,13 +167,15 @@ final class SkyMenuTopBar: SKNode {
     }
 
     /// Plumbing for landscape support (SKY-049). Stored now so future layout
-    /// work can shift edge-anchored content (avatar, gear) inboard of the
+    /// work can shift edge-anchored content (avatar, trophy) inboard of the
     /// Dynamic Island sensor housing without further wiring changes.
     func setHorizontalInsets(left: CGFloat, right: CGFloat) {
         leftInset = left
         rightInset = right
     }
 
+    /// Positions the surface fill and all content for the current width and
+    /// top inset. Re-run whenever the inset changes.
     private func applyLayout() {
         let contentHeight = Self.contentHeight
         let totalHeight = topInset + contentHeight

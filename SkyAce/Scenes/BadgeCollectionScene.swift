@@ -26,6 +26,8 @@ final class BadgeCollectionScene: SKScene {
 
     // MARK: - Lifecycle
 
+    /// Builds the screen on first present and marks all earned badges as seen,
+    /// which clears the home-screen trophy "new badge" dot.
     override func didMove(to view: SKView) {
         backgroundColor = SkyColors.skPrimary
         SkyHaptics.prepare()
@@ -34,7 +36,8 @@ final class BadgeCollectionScene: SKScene {
         layoutScene()
     }
 
-    // SKY-55 pattern: rebuild on rotation (iPad) so the grid re-centers.
+    /// SKY-55 pattern: tears down and rebuilds the layout on a size change
+    /// (e.g. iPad rotation) so the grid re-centers for the new dimensions.
     override func didChangeSize(_ oldSize: CGSize) {
         super.didChangeSize(oldSize)
         guard view != nil, oldSize != .zero, oldSize != size, !children.isEmpty else { return }
@@ -47,6 +50,8 @@ final class BadgeCollectionScene: SKScene {
         layoutScene()
     }
 
+    /// Reads the current safe-area insets and builds the background, fixed
+    /// header/back chrome, and the scrollable badge grid.
     private func layoutScene() {
         topSafeInset = view?.safeAreaInsets.top ?? 0
         bottomSafeInset = view?.safeAreaInsets.bottom ?? 0
@@ -57,6 +62,7 @@ final class BadgeCollectionScene: SKScene {
 
     // MARK: - Background
 
+    /// Paints the shared sky gradient behind the grid.
     private func buildGradient() {
         let gradient = SKGradientBackgroundNode(
             size: size,
@@ -69,6 +75,8 @@ final class BadgeCollectionScene: SKScene {
 
     // MARK: - Fixed chrome (back + header)
 
+    /// Lays out the fixed back button, the "My Badges" header, and — when
+    /// nothing is earned yet — the empty-state hint line.
     private func buildTopBar() {
         let barCenterY = size.height - topSafeInset - 20
 
@@ -115,6 +123,8 @@ final class BadgeCollectionScene: SKScene {
 
     // MARK: - Badge grid
 
+    /// Lays out every badge as a `BadgeCardNode` in a 2-column grid inside the
+    /// scrollable content node, and records the grid extent for scroll clamping.
     private func buildGrid() {
         contentNode.position = .zero
         contentNode.zPosition = 0
@@ -149,6 +159,8 @@ final class BadgeCollectionScene: SKScene {
 
     // MARK: - Scroll clamping
 
+    /// Clamps a proposed content-node Y offset to the valid scroll range,
+    /// returning 0 when the grid fits without scrolling.
     private func clampOffset(_ y: CGFloat) -> CGFloat {
         // Content is laid out downward from `gridTopY`. The grid can scroll up
         // until its last row clears the bottom safe area; derive that extent
@@ -160,6 +172,7 @@ final class BadgeCollectionScene: SKScene {
         return min(overflow, max(0, y))
     }
 
+    /// Applies decaying inertial scrolling to the grid each frame after a flick.
     override func update(_ currentTime: TimeInterval) {
         let delta: TimeInterval = lastUpdateTime == 0 ? 0 : currentTime - lastUpdateTime
         lastUpdateTime = currentTime
@@ -170,6 +183,8 @@ final class BadgeCollectionScene: SKScene {
 
     // MARK: - Touch
 
+    /// Routes a tap to the back button (returning to the menu) and starts
+    /// tracking a potential scroll drag.
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         lastPanY = touch.location(in: self).y
@@ -185,6 +200,7 @@ final class BadgeCollectionScene: SKScene {
         }
     }
 
+    /// Drags the grid vertically with the finger and records the fling velocity.
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
         guard let touch = touches.first else { return }
         let y = touch.location(in: self).y

@@ -11,6 +11,7 @@ final class BadgeCardNode: SKNode {
     /// across every desaturated badge rather than rebuilt per card.
     private static let ciContext = CIContext(options: nil)
 
+    /// Creates a card for `badge` at the given card `size`.
     init(badge: Badge, size: CGSize) {
         super.init()
         build(badge: badge, size: size)
@@ -18,6 +19,9 @@ final class BadgeCardNode: SKNode {
 
     required init?(coder aDecoder: NSCoder) { fatalError() }
 
+    /// Builds the card's surface, the badge art (full colour when earned,
+    /// desaturated at 40% opacity when not, or a placeholder if art is missing),
+    /// and the name + description labels.
     private func build(badge: Badge, size: CGSize) {
         let bg = SKShapeNode(rectOf: size, cornerRadius: 20)
         bg.fillColor = SkyColors.skSurfaceContainerLowest

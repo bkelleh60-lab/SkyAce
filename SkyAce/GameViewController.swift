@@ -143,6 +143,13 @@ final class SkyNavigator {
         present(scene, music: SkyMusic.gameplay)
     }
 
+    /// SKY-123: one-time-feeling Level 10 celebration shown before the standard
+    /// results screen when L10 is cleared. `continuation` runs on tap-dismiss
+    /// (or auto-advance) to proceed to `ResultsScene`.
+    func showLevel10Celebration(then continuation: @escaping () -> Void) {
+        present(Level10CelebrationScene(size: sceneSize(), onDismiss: continuation), music: SkyMusic.menu)
+    }
+
     func showResults(challenge: Challenge, coinsCollected: Int, coinsAvailable: Int, timeRemaining: TimeInterval, didWin: Bool) {
         let scene = ResultsScene(
             size: sceneSize(),

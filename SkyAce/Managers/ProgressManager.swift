@@ -18,6 +18,9 @@ final class ProgressManager {
         static let landingPracticeInstructionShown = "skyace.landingPracticeInstructionShown"
         static let hasSeenGameIntro          = "skyace.hasSeenGameIntro"
         static let hasSeenChapterTransition  = "skyace.hasSeenChapterTransition"
+        // SKY-123: the badge-collection screen (SKY-124) reads this exact key,
+        // so it intentionally omits the `skyace.` prefix the other keys carry.
+        static let hasEarnedCertifiedSkyAce  = "hasEarnedCertifiedSkyAce"
     }
 
     private let defaults = UserDefaults.standard
@@ -39,7 +42,8 @@ final class ProgressManager {
             Key.sfxEnabled:       true,
             Key.landingPracticeInstructionShown: false,
             Key.hasSeenGameIntro:          false,
-            Key.hasSeenChapterTransition:  false
+            Key.hasSeenChapterTransition:  false,
+            Key.hasEarnedCertifiedSkyAce:  false
         ])
     }
 
@@ -179,6 +183,16 @@ final class ProgressManager {
         set { defaults.set(newValue, forKey: Key.hasSeenChapterTransition) }
     }
 
+    // MARK: - Badges (SKY-123)
+
+    /// True once the player has cleared Level 10 and seen the Certified Sky Ace
+    /// celebration. Set by `Level10CelebrationScene`; read by the badge
+    /// collection screen (SKY-124) to render the badge as earned.
+    var hasEarnedCertifiedSkyAce: Bool {
+        get { defaults.bool(forKey: Key.hasEarnedCertifiedSkyAce) }
+        set { defaults.set(newValue, forKey: Key.hasEarnedCertifiedSkyAce) }
+    }
+
     // MARK: - Audio toggles
 
     var musicEnabled: Bool {
@@ -198,7 +212,8 @@ final class ProgressManager {
         [Key.coins, Key.completedLevels, Key.starRatings, Key.ownedPlanes,
          Key.selectedPlane, Key.upgradeLevels,
          Key.landingPracticeInstructionShown,
-         Key.hasSeenGameIntro, Key.hasSeenChapterTransition].forEach {
+         Key.hasSeenGameIntro, Key.hasSeenChapterTransition,
+         Key.hasEarnedCertifiedSkyAce].forEach {
             defaults.removeObject(forKey: $0)
         }
         freeFlightCoinAccumulator = FreeFlight.CoinAccumulator()

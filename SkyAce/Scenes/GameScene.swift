@@ -1340,6 +1340,20 @@ final class GameScene: SKScene, SKPhysicsContactDelegate {
     }
 
     private func routeToResults() {
+        // SKY-123: clearing the final level (L10) earns the Certified Sky Ace
+        // badge — show its celebration screen first, then continue to the
+        // standard results. Every other outcome (a loss, or any level 1–9) goes
+        // straight to results.
+        if state.didWin, challenge.id == ChallengeCatalog.finalLevelID {
+            SkyNavigator.shared.showLevel10Celebration { [weak self] in
+                self?.presentResults()
+            }
+        } else {
+            presentResults()
+        }
+    }
+
+    private func presentResults() {
         SkyNavigator.shared.showResults(
             challenge: challenge,
             coinsCollected: state.coinsCollected,

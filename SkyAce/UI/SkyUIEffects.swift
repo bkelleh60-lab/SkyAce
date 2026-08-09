@@ -276,6 +276,10 @@ enum SkySprites {
     // a thumbs-up on a win, a soft encouraging smile on a loss.
     static let pilotPortraitHappy       = "pilot_portrait_happy"
     static let pilotPortraitEncouraging = "pilot_portrait_encouraging"
+    // Level 10 celebration (SKY-123). Rio cheering with both fists raised, and
+    // the gold "Certified Sky Ace" medallion the player earns for clearing L10.
+    static let pilotPortraitExcited     = "pilot_portrait_excited"
+    static let badgeCertifiedSkyAce     = "badge_certified_sky_ace"
     static let chapterTransition      = "chapter_transition"
 
     // Shop upgrade icons (Assets.xcassets/*.imageset).

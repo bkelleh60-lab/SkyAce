@@ -71,6 +71,7 @@
 		B10001000000000000000307 /* PlaneAbility.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000307 /* PlaneAbility.swift */; };
 		B1000100000000000000050B /* GameIntroScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000100000000000000050B /* GameIntroScene.swift */; };
 		B1000100000000000000050C /* ChapterTransitionScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000100000000000000050C /* ChapterTransitionScene.swift */; };
+		B1000100000000000000050D /* Level10CelebrationScene.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000100000000000000050D /* Level10CelebrationScene.swift */; };
 		B10001000000000000000706 /* MissionBriefingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000706 /* MissionBriefingCard.swift */; };
 		B10001000000000000000707 /* AbilityButtonNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000000707 /* AbilityButtonNode.swift */; };
 		B10001000000000000010006 /* MissionContentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10001000000000000010006 /* MissionContentTests.swift */; };
@@ -163,6 +164,7 @@
 		F10001000000000000000307 /* PlaneAbility.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaneAbility.swift; sourceTree = "<group>"; };
 		F1000100000000000000050B /* GameIntroScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameIntroScene.swift; sourceTree = "<group>"; };
 		F1000100000000000000050C /* ChapterTransitionScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChapterTransitionScene.swift; sourceTree = "<group>"; };
+		F1000100000000000000050D /* Level10CelebrationScene.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Level10CelebrationScene.swift; sourceTree = "<group>"; };
 		F10001000000000000000706 /* MissionBriefingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissionBriefingCard.swift; sourceTree = "<group>"; };
 		F10001000000000000000707 /* AbilityButtonNode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AbilityButtonNode.swift; sourceTree = "<group>"; };
 		F10001000000000000010006 /* MissionContentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MissionContentTests.swift; sourceTree = "<group>"; };
@@ -279,6 +281,7 @@
 				F1000100000000000000050A /* LandingPracticeScene.swift */,
 				F1000100000000000000050B /* GameIntroScene.swift */,
 				F1000100000000000000050C /* ChapterTransitionScene.swift */,
+				F1000100000000000000050D /* Level10CelebrationScene.swift */,
 			);
 			path = Scenes;
 			sourceTree = "<group>";
@@ -511,6 +514,7 @@
 				B10001000000000000000307 /* PlaneAbility.swift in Sources */,
 				B1000100000000000000050B /* GameIntroScene.swift in Sources */,
 				B1000100000000000000050C /* ChapterTransitionScene.swift in Sources */,
+				B1000100000000000000050D /* Level10CelebrationScene.swift in Sources */,
 				B10001000000000000000706 /* MissionBriefingCard.swift in Sources */,
 				B10001000000000000000707 /* AbilityButtonNode.swift in Sources */,
 				B10001000000000000000507 /* HangarScene.swift in Sources */,

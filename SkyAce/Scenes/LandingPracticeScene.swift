@@ -280,6 +280,10 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// `ProgressManager.coins` and pops up by the reward each smooth landing so
     /// the credit is visible without leaving the scene. Rebuilt with the bar.
     private var coinPill: SkyCoinPill?
+    /// Scene-space Y of the celebration badge's bottom edge, captured when the
+    /// badge is popped in. The coin-reward pill positions itself just below
+    /// this so the two never overlap on shorter screens (SKY-124).
+    private var celebrationBadgeBottomY: CGFloat = 0
 
     // MARK: - Lifecycle
 
@@ -1153,6 +1157,9 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
         ]))
         plane.playTouchdownFlare()
         SkyHaptics.win()
+        // SKY-124: a smooth landing permanently earns the "Pilot of the Year"
+        // badge shown on the badge collection screen.
+        ProgressManager.shared.hasEarnedPerfectLanding = true
         showCelebrationBadge()
 
         // SKY-95: grant 50 coins per smooth landing, capped at 500/day. The
@@ -1173,7 +1180,13 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
     /// land just after the badge's scale-in so the two read in sequence.
     private func showCoinRewardPill(amount: Int) {
         let pill = CoinRewardPill(amount: amount)
-        pill.position = CGPoint(x: size.width / 2, y: size.height * 0.48)
+        // Sit the pill just under the badge's real bottom edge rather than a
+        // fixed screen fraction. On shorter screens (iPhone SE) the badge
+        // extends far enough down that a fixed 0.48-height anchor clipped the
+        // badge art; anchoring to the measured bottom keeps them clear (SKY-124).
+        let pillGap: CGFloat = 18
+        let pillY = celebrationBadgeBottomY - pillGap - CoinRewardPill.defaultHeight / 2
+        pill.position = CGPoint(x: size.width / 2, y: pillY)
         pill.zPosition = 1
         pill.alpha = 0
         feedbackLayer.addChild(pill)
@@ -1227,6 +1240,9 @@ final class LandingPracticeScene: SKScene, SKPhysicsContactDelegate {
             badge = SKSpriteNode(color: UIColor(hex: 0xFFD709), size: badgeSize)
         }
         badge.position = CGPoint(x: size.width / 2, y: size.height * 0.62)
+        // Record the badge's bottom edge so the coin-reward pill can sit
+        // clear of it (SKY-124).
+        celebrationBadgeBottomY = badge.position.y - badgeSize.height / 2
         badge.setScale(0.01)
         feedbackLayer.addChild(badge)
 

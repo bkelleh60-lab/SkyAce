@@ -21,6 +21,15 @@ final class ProgressManager {
         // SKY-123: the badge-collection screen (SKY-124) reads this exact key,
         // so it intentionally omits the `skyace.` prefix the other keys carry.
         static let hasEarnedCertifiedSkyAce  = "hasEarnedCertifiedSkyAce"
+        // SKY-124: earned when the player nails a perfect (smooth) landing in
+        // Runway Challenge. Mirrors the unprefixed convention of the other
+        // badge key so the collection screen reads a stable, self-describing
+        // name.
+        static let hasEarnedPerfectLanding   = "hasEarnedPerfectLanding"
+        // SKY-124: how many badges the player had already earned the last time
+        // they opened the badge collection screen. Drives the home-screen
+        // trophy "new badge" dot without needing per-badge timestamps.
+        static let lastSeenBadgeCount        = "skyace.lastSeenBadgeCount"
     }
 
     private let defaults = UserDefaults.standard
@@ -43,7 +52,9 @@ final class ProgressManager {
             Key.landingPracticeInstructionShown: false,
             Key.hasSeenGameIntro:          false,
             Key.hasSeenChapterTransition:  false,
-            Key.hasEarnedCertifiedSkyAce:  false
+            Key.hasEarnedCertifiedSkyAce:  false,
+            Key.hasEarnedPerfectLanding:   false,
+            Key.lastSeenBadgeCount:        0
         ])
     }
 
@@ -193,6 +204,22 @@ final class ProgressManager {
         set { defaults.set(newValue, forKey: Key.hasEarnedCertifiedSkyAce) }
     }
 
+    /// True once the player has landed a perfect (smooth) touchdown in Runway
+    /// Challenge. Set by `LandingPracticeScene`; read by the badge collection
+    /// screen (SKY-124) to render the "Pilot of the Year" badge as earned.
+    var hasEarnedPerfectLanding: Bool {
+        get { defaults.bool(forKey: Key.hasEarnedPerfectLanding) }
+        set { defaults.set(newValue, forKey: Key.hasEarnedPerfectLanding) }
+    }
+
+    /// Number of badges the player had earned the last time they opened the
+    /// badge collection screen. The home-screen trophy shows a "new badge" dot
+    /// while `Badge.earnedCount` exceeds this value (SKY-124).
+    var lastSeenBadgeCount: Int {
+        get { defaults.integer(forKey: Key.lastSeenBadgeCount) }
+        set { defaults.set(newValue, forKey: Key.lastSeenBadgeCount) }
+    }
+
     // MARK: - Audio toggles
 
     var musicEnabled: Bool {
@@ -213,7 +240,8 @@ final class ProgressManager {
          Key.selectedPlane, Key.upgradeLevels,
          Key.landingPracticeInstructionShown,
          Key.hasSeenGameIntro, Key.hasSeenChapterTransition,
-         Key.hasEarnedCertifiedSkyAce].forEach {
+         Key.hasEarnedCertifiedSkyAce, Key.hasEarnedPerfectLanding,
+         Key.lastSeenBadgeCount].forEach {
             defaults.removeObject(forKey: $0)
         }
         freeFlightCoinAccumulator = FreeFlight.CoinAccumulator()

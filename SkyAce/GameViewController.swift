@@ -134,6 +134,12 @@ final class SkyNavigator {
         present(ShopScene(size: sceneSize()), music: SkyMusic.menu)
     }
 
+    /// SKY-124: the badge collection screen, reached from the home-screen
+    /// trophy icon.
+    func showBadges() {
+        present(BadgeCollectionScene(size: sceneSize()), music: SkyMusic.menu)
+    }
+
     func showHangar() {
         present(HangarScene(size: sceneSize()), music: SkyMusic.menu)
     }

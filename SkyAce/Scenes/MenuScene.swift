@@ -1,7 +1,7 @@
 import SpriteKit
 
 /// Home screen: sky gradient, drifting clouds, a pilot-avatar top bar with
-/// the coin balance + settings gear, the user's selected plane as a tilted
+/// the coin balance + sound toggle + badges trophy, the user's selected plane as a tilted
 /// hero image, a chunky PLAY CTA, a 2-tile bento row (FREE FLIGHT /
 /// UPGRADE), and the persistent bottom nav bar with Home as the active tab.
 final class MenuScene: SKScene {
@@ -449,10 +449,15 @@ final class MenuScene: SKScene {
             var n: SKNode? = node
             while let current = n {
                 switch current.name {
-                case "settingsGear":
+                case "soundToggle":
                     AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
                     SkyHaptics.uiTap()
                     toggleSound()
+                    return
+                case "badgesButton":
+                    AudioManager.shared.playSFX(SkySFX.uiTap, on: self)
+                    SkyHaptics.uiTap()
+                    SkyNavigator.shared.showBadges()
                     return
                 default:
                     break
@@ -482,6 +487,8 @@ final class MenuScene: SKScene {
         if nextState {
             AudioManager.shared.playMusic(SkyMusic.menu)
         }
+        // Flip the speaker glyph to match the new mute state.
+        (childNode(withName: "topBar") as? SkyMenuTopBar)?.refreshSoundToggle()
     }
 }
 

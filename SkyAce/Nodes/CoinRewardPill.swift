@@ -13,6 +13,11 @@ import SpriteKit
 ///   pops it onto the feedback layer after the smooth-landing badge.
 final class CoinRewardPill: SKNode {
 
+    /// Default pill height, exposed so callers positioning content relative to
+    /// the pill (e.g. the Runway Challenge celebration badge) stay in sync if
+    /// the default size changes (SKY-124).
+    static let defaultHeight: CGFloat = 48
+
     /// The rounded-rect gold background.
     private let pill: SKShapeNode
     /// The "+ <amount>" coin glyph + number drawn centered on the pill.
@@ -27,7 +32,7 @@ final class CoinRewardPill: SKNode {
     ///   - fontSize: amount/prefix point size (default matches mission end).
     init(amount: Int,
          prefix: String = "+ ",
-         pillSize: CGSize = CGSize(width: 200, height: 48),
+         pillSize: CGSize = CGSize(width: 200, height: CoinRewardPill.defaultHeight),
          fontSize: CGFloat = 20) {
         pill = SKShapeNode(rectOf: pillSize, cornerRadius: pillSize.height / 2)
         pill.fillColor = SkyColors.skTertiaryContainer

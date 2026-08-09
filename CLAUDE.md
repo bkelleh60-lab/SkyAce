@@ -141,7 +141,7 @@ or purely structural/functional UI with no visual design requirements.
 - The project is a plain Xcode project (`SkyAce.xcodeproj`) with a shared
   `SkyAce` scheme. There is no Swift Package Manager manifest and no CocoaPods.
 - Unit tests live in the `SkyAceTests` target (XCTest). Run them locally with:
-  ```
+  ```sh
   xcodebuild test -scheme SkyAce -destination 'platform=iOS Simulator,name=iPhone 15'
   ```
   (substitute any installed simulator for the destination).
@@ -159,8 +159,9 @@ or purely structural/functional UI with no visual design requirements.
 > `claude/sky-<issue>-<id>` branches and open the PR as a **draft**
 > automatically — when working in that context, use the branch you were assigned
 > rather than creating a new `feature/*` branch. The `feature/sky-*` convention
-> below is for **manual local work**. Either way: branch from the latest `main`,
-> reference the `SKY-X` issue in commits, and open the PR against `main`.
+> below is for **manual local work** (its `[issue-number]` is that same `SKY-X`
+> number). Either way: branch from the latest `main`, include the `SKY-X` issue
+> key in the branch name and the commit messages, and open the PR against `main`.
 
 Follow this workflow for manual local work:
 

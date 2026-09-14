@@ -1,6 +1,9 @@
 # SKY-125 — Race Mode Networking Feasibility Spike
 
 **Date:** 2026-09-14
+**Revised:** 2026-09-14, second research pass on the Game Center question.
+§B6 is rewritten and its conclusion reversed; §A7 gains item (d); the TL;DR and
+§§6-7 are updated to match. The recommendation itself is unchanged.
 **Scope:** Research and codebase review only. No production code, no UI, no
 level design, no Game Center integration. Per the ticket, every question that
 can only be settled by a proof-of-concept build is flagged as such.
@@ -17,12 +20,17 @@ can only be settled by a proof-of-concept build is flagged as such.
    arcade race": **yes**, with high confidence, because the sync problem here
    is far smaller than the ticket assumes (see §3).
 
-2. **Option B has a probable hard blocker for this specific app.**
-   Game Center multiplayer is restricted on Apple child accounts, and multiple
-   user reports say it is effectively unavailable for accounts aged 13 and
-   under. Sky Ace targets **ages 9 to 11**. If that restriction holds, Option B
-   does not serve the target audience at all. This is cheap to verify and
-   should be verified before any further Game Center work.
+2. **Option B is viable for this audience. An earlier version of this report
+   said otherwise, and it was wrong.** Apple's GameKit documentation ties
+   underage status to the removal of *communication* features (voice and
+   personalized invitation text), not to a multiplayer ban, and Apple's Family
+   Privacy Disclosure for Children explicitly describes children playing and
+   interacting through Game Center. The widely-cited "under-13 block" reports
+   both trace to Apple Arcade titles and third-party data collection, not to a
+   platform restriction. See §B6 for the full correction. Multiplayer
+   availability is a parent-controlled **Screen Time** setting, which makes
+   Option B's real risk a product question (how many target households permit
+   it) rather than a feasibility one.
 
 3. **Recommendation: Option A, on Network framework, behind a parental gate,
    with the transport hidden behind a protocol** so Option B can be added later
@@ -287,7 +295,7 @@ in the UI copy.
 
 ### A7. Kids Category implications
 
-Three real items, one of which is a genuine trap.
+Four real items, one of which is a genuine trap.
 
 **(a) The Local Network prompt requires a parental gate.**
 Apple's Kids Category announcement states that apps must "require a parental
@@ -318,6 +326,25 @@ Guideline 5.1.4 pulls in apps that "have the capability to share personal
 information ... [including] the ability to chat." Race Mode must ship with zero
 text entry and zero free-form communication. Preset emotes at most, and even
 those are a v2 conversation.
+
+**(d) Apple treats "nearby multiplayer" as its own parental-control axis.**
+Added on the second research pass. Screen Time carries a distinct **"Allow
+Nearby Multiplayer"** setting, which Apple describes as covering "players on the
+same local network (for example, players connected to the same Wi-Fi network or
+who are located within Bluetooth range)." That is exactly the Option A use case.
+
+The setting is documented as a Game Center control, and there is no public
+mechanism by which Screen Time could police arbitrary UDP or Bonjour traffic
+from a non-GameKit app, so it almost certainly does **not** technically bind a
+custom Network framework implementation. That is an inference, not a documented
+guarantee, and it is listed in §7 as an open question.
+
+The more useful takeaway is normative rather than technical: Apple has decided
+that nearby multiplayer is something parents should be able to switch off. A
+Kids Category app doing local peer-to-peer should behave consistently with that
+expectation even where no API forces it. In practice the parental gate from (a)
+already achieves the same outcome, since a parent who does not want it can
+simply not pass the gate.
 
 On the positive side: no PII is transmitted (14 bytes of y, velocity and
 flags), nothing leaves the local network, no third party is involved, and no
@@ -544,47 +571,144 @@ Random matchmaking pairs a 9-year-old with an unknown stranger. Even with zero
 chat, that is a design decision that invites App Review scrutiny in the Kids
 Category and is a hard conversation to have with parents.
 
-Which sharpens the problem: the compelling version of Option B ("play with your
-cousin in another state") requires Game Center friendship between two children,
-which runs directly into B6.
+Which sets up the real constraint on Option B's reach: the compelling version
+("play with your cousin in another state") requires both children to have Game
+Center accounts and to be Game Center friends, and requires both parents to
+have left multiplayer enabled. That is a reach question, not a feasibility one.
+See §B6.
 
-### B6. Kids Category requirements — the likely blocker
+### B6. Kids Category requirements
 
-**Game Center multiplayer is restricted on Apple child accounts, and multiple
-user reports indicate it is effectively unavailable for accounts aged 13 and
-under.** The cited reason is that data collection is prohibited for children
-under 13, so multiplayer cannot be activated on under-13 profiles. Parents
-report no way to override this on a child account.
+**Revised 2026-09-14 after a second research pass. The first version of this
+section called the under-13 restriction a probable hard blocker. Apple's own
+documentation does not support that, and the section below replaces it.**
 
-Screen Time exposes Game Center controls for Multiplayer Games (Everyone /
-Friends Only / Don't Allow), Adding Friends, Connect with Friends, Private
-Messaging and Profile Privacy, so some of it is configurable. But the under-13
-restriction is reported as tied to account age rather than to a toggle.
+#### What Apple actually documents
 
-Sky Ace is listed in the **Kids Category for ages 9 to 11**. If this restriction
-holds as described, **Option B does not work for the app's actual audience.**
-It would work for a parent's device and for older siblings, and fail for the
-target player.
+GameKit exposes three separate properties on `GKLocalPlayer`, and they are
+commonly conflated. They are not the same thing:
 
-**Important caveat on confidence:** the strongest evidence for this comes from
-Apple Support Community threads, not from Apple's developer documentation.
-Apple's official parental controls page describes the Game Center restriction
-categories without stating under-13 defaults. **This is POC item #2 and it is
-cheap: sign into a real Family Sharing child account aged 11 and attempt a
-`GKMatchmaker` request.** One afternoon, and it either kills Option B outright
-or removes the biggest question mark from it.
+| Property | Since | What it actually reflects |
+| -- | -- | -- |
+| `isUnderage` | iOS 4.1 | The Game Center account's underage status |
+| `isMultiplayerGamingRestricted` | iOS 13.0 | The **Screen Time** multiplayer setting |
+| `isPersonalizedCommunicationRestricted` | iOS 14.0 | The Screen Time communication setting |
 
-Two further Kids Category considerations for Option B:
+Apple's documented consequence of being underage is narrow and specific. From
+the `isPersonalizedCommunicationRestricted` reference:
 
-- SKY-68 asserted `GKLocalPlayer` authentication needs no parental gate. That
-  is plausible, since it is Apple's own system UI rather than a link out, but
-  it was never tested by App Review. Given that Apple's Kids guidance gates
-  "request permissions," a conservative reading puts the sign-in behind the
-  gate too. Worth resolving via a pre-submission question rather than a
-  rejection.
-- Game Center surfaces the opponent's Game Center alias to the player. That is
-  another child's chosen identifier displayed inside a Kids Category app.
-  Option A avoids this entirely by using preset callsigns.
+> "If this property **or the underage property** is `true`, the local player
+> can't include personalized messages on invitations or enable voice
+> communication in multiplayer games."
+
+And from Apple's "Authenticating a player" guide:
+
+> "If the `isPersonalizedCommunicationRestricted` property is `true`, then the
+> player isn't allowed to use voice or messaging features during a multiplayer
+> game. ... **Note that if the player is underage, this property is always
+> true.**"
+
+The `isUnderage` reference itself says only that "Game Center disables some
+features for the local player." **Nowhere in GameKit's documentation does Apple
+state that underage status prevents a player from joining multiplayer matches.**
+The documented effect of underage status is the removal of *communication*
+features: voice chat and personalized invitation text.
+
+Apple's own Family Privacy Disclosure for Children is more direct still. It
+describes children as able to:
+
+> "Play games and interact with other users using Game Center and the Apple
+> Games app, and share information with others, including your child's Game
+> Center nickname, avatar, and friends."
+
+That is Apple's legal disclosure describing child-account Game Center
+interaction as an expected, supported behaviour.
+
+#### Where the "under-13 block" story came from
+
+Both widely-cited community reports turn out to be narrower than they look, and
+neither is evidence of a platform-level ban:
+
+- **Wonderbox** (Apple Arcade). Parents reported multiplayer blocked for a
+  10-year-old. The explanation in the thread is that *the developer* collected
+  personal data during multiplayer and needed consent that cannot be given
+  under 13. A later reply in the same thread reports the developer shipped an
+  update that "solves our problem." That is a third-party data-collection
+  problem, not a Game Center restriction.
+- **Crossy Castle** (Apple Arcade). The developer's reply states "an age
+  restriction for multiplayer mode is required in order to be compliant with
+  **Apple Arcade's policies**." Apple Arcade carries its own additional policy
+  layer. **Sky Ace is not an Apple Arcade title**, so that policy does not
+  apply to it.
+
+Reading both sources carefully, neither establishes that Game Center blocks
+multiplayer for under-13 accounts generally.
+
+#### The real constraint: a parental setting, and an API trap
+
+Multiplayer availability is governed by **Screen Time**, which a parent
+controls, not by account age. Apple's Screen Time settings expose:
+
+- **Allow Multiplayer Games With:** everyone / only Game Center friends / no one
+- **Allow Nearby Multiplayer** (see A7(d) below)
+- Plus Adding Friends, Connect with Friends, Private Messaging, Avatar &
+  Nickname Changes, Profile Privacy Changes
+
+And here is the trap, stated plainly in Apple's own reference for
+`isMultiplayerGamingRestricted`:
+
+> "The `isMultiplayerGamingRestricted` property reflects whether there are
+> *any* restrictions. For example, **when you configure the setting to friends
+> only, this property returns `true`** for restricted."
+
+So the boolean is `true` both when multiplayer is fully disallowed **and** when
+it is set to friends-only, which is exactly the configuration a well-supervised
+9-to-11-year-old is most likely to have, and exactly the mode §B5 recommends.
+
+**If Sky Ace gated Race Mode on `isMultiplayerGamingRestricted == false`, it
+would lock out precisely its intended users.** An Apple reply quoted in the
+developer forums confirms the intended handling:
+
+> "For those who are interested, the 'Multiplayer with Friends Only' option
+> gets handled by Game Center. Apps only need check for whether Disallow All
+> Multiplayer is turned on."
+
+The catch is that the public API cannot distinguish those two states. The
+practical implication: do not pre-gate the UI on this boolean. Let the player
+attempt matchmaking and handle the failure gracefully, or treat `true` as
+"friends-only may still work" rather than "multiplayer is off."
+
+#### Revised verdict on Option B's compliance risk
+
+**Option B is not disqualified for this audience.** The risk is materially
+lower than the first pass concluded. Two points now work *in its favour*:
+
+1. Apple force-disables voice and personalized messaging for underage players.
+   Sky Ace wants no chat anyway, so the platform enforces the app's own safety
+   requirement rather than fighting it.
+2. Matchmaking restricted to Game Center friends is a parent-controlled setting
+   Apple already ships, which is a stronger story to tell parents than anything
+   the app could build itself.
+
+Remaining Option B compliance items, unchanged:
+
+- SKY-68 asserted `GKLocalPlayer` authentication needs no parental gate. Still
+  untested by App Review. At least one shipping Kids-audience app (Fizz) puts
+  Game Center access behind a parental gate, which suggests the conservative
+  reading is the common one. Recommend gating it.
+- Game Center surfaces the opponent's nickname and avatar to the player. Apple's
+  privacy disclosure names this explicitly, so it is sanctioned, but it is still
+  another child's chosen identifier rendered inside a Kids Category app. Option
+  A avoids it entirely with preset callsigns.
+
+#### What still needs verifying
+
+The question is no longer "is Option B possible." It is **"what fraction of the
+target audience has a Screen Time configuration that permits it."** That is a
+product-risk question rather than a feasibility one, and it cannot be answered
+from documentation at all. A real child-account test (POC item #4 in §7, about
+half a day) would confirm the behaviour end to end and show what the failure
+mode actually looks like when a parent has multiplayer set to "no one."
 
 ### B7. Does Option B need a server?
 
@@ -615,8 +739,10 @@ ticket puts out of scope but which are real and probably add 1 to 2 weekends.
 | Playtest, tune, edge cases | 1.5 | 2.0 | mostly |
 | **Total** | **~8** | **~11** | **~60-70% shared** |
 
-Option B also carries an unbounded risk item (B6) that could invalidate the
-whole line of work after the money is spent.
+The first version of this report added an unbounded compliance risk to Option
+B's column. §B6 retracts that. Option B's remaining downside is the ~3 extra
+weekends and its dependence on household Game Center configuration, not a risk
+of the work being invalidated outright.
 
 ---
 
@@ -625,6 +751,11 @@ whole line of work after the money is spent.
 **Build Option A, on Network framework, behind the parental gate, with the
 transport behind a `RaceTransport` protocol.**
 
+**The recommendation is unchanged after the B6 correction, but the reasoning
+is weaker and more honest than in the first version.** Option B is no longer
+disqualified. The case for A-first is now about latency, cost and use-case fit
+rather than about B being unavailable.
+
 Reasoning:
 
 1. **It matches the actual use case.** The ticket's own note says the "sitting
@@ -632,58 +763,66 @@ Reasoning:
    scenario where two 10-year-olds are most likely to play. Kids in the same
    room is the realistic Race Mode session.
 
-2. **Option B's headline advantage may not exist for this audience.** The
-   "play with a friend in another state" pitch depends on two children having
-   functioning Game Center multiplayer, which B6 suggests they do not. Until
-   that is verified, Option B's differentiating value is hypothetical.
+2. **The latency picture favours A by a wide margin, and this is now the
+   strongest argument.** Local Wi-Fi in the tens of milliseconds versus
+   GameKit's reported 300 ms with 15-second reconnects is the difference
+   between "we're neck and neck" and "the other plane keeps teleporting." For a
+   racing game where the entire feel depends on seeing your opponent beside
+   you, that gap is the product.
 
-3. **The latency picture favours A by a wide margin.** Local Wi-Fi in the tens
-   of milliseconds versus GameKit's reported 300 ms with 15-second reconnects
-   is the difference between "we're neck and neck" and "the other plane keeps
-   teleporting."
+3. **Option A costs less and ships sooner.** ~8 weekends versus ~11, and none
+   of Option A's work depends on App Store Connect configuration, Game Center
+   accounts existing on both devices, or a parent having set a Screen Time
+   value correctly.
 
-4. **The compliance surface is smaller and fully controllable.** Option A
+4. **Option A works regardless of household configuration.** This is the
+   inverse of the point the first version got wrong. Option B now has no
+   *feasibility* blocker, but it does have a real *reach* question: it works
+   only for children whose parents have enabled Game Center multiplayer, who
+   have added each other as Game Center friends, and who both have accounts.
+   Option A requires two kids, two devices, and Wi-Fi.
+
+5. **The compliance surface is smaller and fully controllable.** Option A
    transmits 14 bytes of flight data on a local network with no account, no
    stranger, no third party and no identifier, once the callsign trap in A7(b)
-   is handled. Option B involves Apple accounts for children, a visible
-   opponent alias, and an untested parental-gate question.
+   is handled. Option B involves Apple accounts for children and a visible
+   opponent nickname and avatar. Both are workable; A is simply less to defend.
 
-5. **Hybrid is cheap, and A-first is the right order.** ~60 to 70% of the work
+6. **Hybrid is cheap, and A-first is the right order.** ~60 to 70% of the work
    is transport-agnostic. Building A first delivers a shipped, playable mode
    and simultaneously builds most of what B would need. Adding B later costs
    roughly the transport plus matchmaking plus Game Center setup (~4.5
-   weekends), not a rewrite. Doing B first and adding A later has the same
-   arithmetic but bets the schedule on the unverified B6 question.
+   weekends), not a rewrite.
 
-**One caveat on my own recommendation, worth stating plainly:** if the B6
-verification comes back clean, and if remote play with a distant friend is a
-strategic priority for Sky Ace rather than a nice-to-have, then Option B's
-reach is genuinely the more compelling long-term proposition and the latency is
-survivable given the ghost-rendering design. The recommendation above assumes
-B6 is a real blocker, which is the way the evidence currently points but is not
-yet proven. **Run POC #2 before treating this recommendation as final.** It is
-one afternoon of work and it is the highest-information thing anyone can do on
-this question.
-
----
+**Where Option B now looks genuinely attractive, and this is a real change from
+the first version:** Apple force-disables voice and personalized messaging for
+underage players, and parents can restrict matchmaking to Game Center friends
+only. That means Apple's own platform enforces the two safety properties Sky
+Ace would otherwise have to build and defend itself. If remote play with a
+distant friend is a strategic priority rather than a nice-to-have, **Option B
+as a phase 2 is a reasonable and well-supported plan**, not the risky bet the
+first version implied. The ghost-rendering design in §3 is what makes its
+latency survivable, and that design gets built in phase 1 either way.
 
 ## 7. Unknowns requiring a proof-of-concept
 
-Ordered by value per hour spent.
+Ordered by value per hour spent. Reordered after the second research pass:
+item 1 is no longer a feasibility question, so it drops below the latency work.
 
 | # | Question | How to answer | Effort |
 | -- | -- | -- | -- |
-| 1 | Does Game Center multiplayer function at all on a real under-13 child Apple Account? | Sign into a Family Sharing child account aged 11, run a minimal `GKMatchRequest`. Decisive for Option B. | ~0.5 day |
-| 2 | Actual RTT between two iPhones over Network framework peer-to-peer, in real homes | Stub app: ping/pong, log RTT histogram, test across 3 to 4 households including a congested one | ~1 day |
-| 3 | Connection time and reliability of peer-to-peer Wi-Fi when the two devices are *not* on the same network | Same stub, Wi-Fi off the same SSID | included above |
-| 4 | Does peer-to-peer Wi-Fi (AWDL) degrade the household Wi-Fi during a race? | Same stub, watch throughput on a third device | included above |
-| 5 | Does App Review accept a parental gate in front of the Local Network prompt as sufficient? | Pre-submission developer question to App Review, or first submission | days to weeks, external |
-| 6 | Is `GKLocalPlayer` sign-in a "permission request" under Kids guidance? | Same channel as #5 | as above |
-| 7 | How much does SpriteKit physics actually drift between two devices over a 60 s race? | Instrumented build logging own-plane y per race-second on both devices, diffed | ~0.5 day, only needed if we ever want a lockstep guarantee |
+| 1 | Actual RTT between two iPhones over Network framework peer-to-peer, in real homes | Stub app: ping/pong, log RTT histogram, test across 3 to 4 households including a congested one | ~1 day |
+| 2 | Connection time and reliability of peer-to-peer Wi-Fi when the two devices are *not* on the same network | Same stub, Wi-Fi off the same SSID | included above |
+| 3 | Does peer-to-peer Wi-Fi (AWDL) degrade the household Wi-Fi during a race? | Same stub, watch throughput on a third device | included above |
+| 4 | What does Game Center multiplayer actually do end to end on a real under-13 child account, and what is the failure mode when a parent has it set to "no one"? | Family Sharing child account aged 11, minimal `GKMatchRequest`, try each Screen Time value. No longer decisive for Option B, but it sizes Option B's reach. | ~0.5 day |
+| 5 | Does Screen Time's "Allow Nearby Multiplayer" affect a non-GameKit Bonjour / Network framework app? | Child account with the setting off, run the Option A stub. Inference says no; undocumented either way. | ~1 hour, on top of #4 |
+| 6 | Does App Review accept a parental gate in front of the Local Network prompt as sufficient? | Pre-submission developer question to App Review, or first submission | days to weeks, external |
+| 7 | Is `GKLocalPlayer` sign-in a "permission request" under Kids guidance? | Same channel as #6. Shipping precedent (Fizz) gates it, so gating is the safe default regardless. | as above |
+| 8 | How much does SpriteKit physics actually drift between two devices over a 60 s race? | Instrumented build logging own-plane y per race-second on both devices, diffed | ~0.5 day, only needed if we ever want a lockstep guarantee |
 
-Items 1 and 2 together are about a day and a half and would convert almost all
-of this document's uncertainty into settled fact. Everything else can wait
-until a build direction is chosen.
+Items 1 and 4 together are about a day and a half. Item 1 is now the one that
+could still change the engineering plan; item 4 only changes how much Option B
+is worth as a phase 2.
 
 ---
 
@@ -699,6 +838,14 @@ until a build direction is chosen.
 - [GKMatch.SendDataMode.unreliable — Apple Developer Documentation](https://developer.apple.com/documentation/gamekit/gkmatch/senddatamode/unreliable)
 - [Bad network latency when using GameKit — Apple Developer Forums](https://forums.developer.apple.com/forums/thread/744192)
 - [Use parental controls to manage your child's iPhone or iPad — Apple Support](https://support.apple.com/en-us/105121)
+- [GKLocalPlayer.isUnderage — Apple Developer Documentation](https://developer.apple.com/documentation/gamekit/gklocalplayer/isunderage)
+- [GKLocalPlayer.isMultiplayerGamingRestricted — Apple Developer Documentation](https://developer.apple.com/documentation/gamekit/gklocalplayer/ismultiplayergamingrestricted)
+- [GKLocalPlayer.isPersonalizedCommunicationRestricted — Apple Developer Documentation](https://developer.apple.com/documentation/gamekit/gklocalplayer/ispersonalizedcommunicationrestricted)
+- [Authenticating a player — GameKit, Apple Developer Documentation](https://developer.apple.com/documentation/gamekit/authenticating-a-player)
+- [Family Privacy Disclosure for Children — Apple Legal](https://www.apple.com/legal/privacy/en-ww/parent-disclosure/)
+- [Change App Store, Media, Web & Games settings in Screen Time on Mac — Apple Support](https://support.apple.com/guide/mac-help/mchlbcf0dfe2/mac)
+- [isMultiplayerGamingRestricted not covering all scenarios — Apple Developer Forums](https://developer.apple.com/forums/thread/748537)
+- [My child's iPad will not allow her to play multiplayer games (Wonderbox) — Apple Support Communities](https://discussions.apple.com/thread/252625807)
 - [Crossy Castle, Kids Account, Game Center — Apple Support Communities](https://discussions.apple.com/thread/251157295)
 - [P2P Bluetooth not working in iOS 11 — Apple Developer Forums](https://developer.apple.com/forums/thread/88104)
 - [Advances in Networking, Part 2 — WWDC19 Session 713](https://developer.apple.com/videos/play/wwdc2019/713/)

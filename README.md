@@ -14,24 +14,23 @@ Sky Ace is an independent project, designed and developed at the kitchen table b
 - **Two open-world Free Flight modes** with no fail state: City World ("Skyline Tour") and Mountain World ("Mountain Expedition"). Both have landmarks to circle and rings that grant a temporary speed boost.
 - **A Hangar of unlockable planes**, each with distinct speed, armor, and handling stats.
 - **A Shop with upgradeable systems** (Armor Plating, Engine Boost) using earned in-game currency.
-- **One-time $2.99 in-app purchase** unlocks all 10 levels and Mountain World Free Flight. Levels 1 through 3 and City World Free Flight are free.
+- **Completely free.** All 10 levels, City and Mountain Free Flight, Landing Practice, hangar planes, and upgrades. No ads. No in-app purchases. No subscriptions.
 
 ## Compliance and data posture
 
 - **No advertisements** of any kind. No banners, interstitials, rewarded video, or offer walls.
-- **No subscriptions and no consumable purchases.** A single non-consumable IAP, $2.99, one-time, restorable.
-- **No third-party SDKs.** No analytics, no ad networks, no tracking, no social. The only frameworks linked are Apple's own (UIKit, SpriteKit, StoreKit, AVFoundation).
+- **No in-app purchases of any kind.** No unlock fee, no subscriptions, no consumables.
+- **No third-party SDKs.** No analytics, no ad networks, no tracking, no social. The only frameworks linked are Apple's own (UIKit, SpriteKit, AVFoundation).
 - **No data collection.** The app does not collect, store, or transmit any user or device data. There is no backend server. Game progress is saved locally in `UserDefaults` and is removed when the app is deleted.
 - **No external links** without a parental gate.
 - **`PrivacyInfo.xcprivacy`** declares `NSPrivacyTracking = false`.
-- **Parental gate** is required before any in-app purchase or external link. Two-step arithmetic problem with randomized operands. No skip, no hint, no recovery shortcut.
+- **Parental gate** is required before any external link out of the app. Two-step arithmetic problem with randomized operands. No skip, no hint, no recovery shortcut.
 
 ## Tech stack
 
 - Swift 5
 - SpriteKit (game scenes and physics)
 - UIKit (root view controller, parental gate)
-- StoreKit (single non-consumable IAP)
 - AVFoundation (game audio)
 - iOS 16.0+ deployment target
 - Universal: iPhone (portrait) and iPad (all orientations)
@@ -42,11 +41,10 @@ Sky Ace is an independent project, designed and developed at the kitchen table b
 SkyAce/
 ├── AppDelegate.swift
 ├── GameViewController.swift
-├── ParentalGateViewController.swift
 ├── Colors.swift
 ├── Info.plist
 ├── PrivacyInfo.xcprivacy
-├── Managers/          ProgressManager, AudioManager, IAPManager
+├── Managers/          ProgressManager, AudioManager, CurrencyManager
 ├── Models/            Player, Upgrade, Challenge, GameState
 ├── Nodes/             PlaneNode, CoinNode, ObstacleNode, RingNode, FinishLineNode
 ├── Scenes/            Menu, Map, Game, Shop, Hangar, Results,

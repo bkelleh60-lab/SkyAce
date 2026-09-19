@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Sky Ace is a freemium iOS arcade flying game for kids ages 8–13, built with Swift and SpriteKit.
+Sky Ace is a free iOS arcade flying game for kids ages 8–13, built with Swift and SpriteKit.
 It is listed in the **Apple App Store Kids Category (ages 9–11)** and must remain compliant with all
 Apple Kids Category guidelines at all times.
 
@@ -13,17 +13,17 @@ Apple Kids Category guidelines at all times.
 - **Language:** Swift
 - **Framework:** SpriteKit
 - **Platform:** iOS
-- **Payments:** StoreKit (in-app purchases)
+- **Payments:** none (no StoreKit / no IAP in the shipping product)
 - **Version control:** Git / GitHub
 
 ---
 
 ## Monetization Model
 
-- Free tier: Levels 1–3 and City world Free Flight
-- Paid tier ($2.99 one-time IAP): All 10 levels and Mountain world Free Flight
-- No ads. No subscriptions. No consumable purchases.
-- All IAP must be gated behind the parental gate before StoreKit is invoked.
+- The shipping product is completely free: all 10 levels, City and Mountain Free Flight, Landing Practice, hangar, and upgrades.
+- No ads. No subscriptions. No in-app purchases. No real-money unlocks.
+- In-game coins unlock planes and upgrades. Coins are earned by playing only.
+- If IAP is ever added later, it must sit behind a parental gate and follow Kids Category rules. That is not the current product.
 
 ---
 
@@ -31,7 +31,8 @@ Apple Kids Category guidelines at all times.
 
 These are non-negotiable and must be respected in every change:
 
-- All in-app purchases must be behind a parental gate before any StoreKit call is made.
+- There are currently no in-app purchases. Do not add StoreKit purchase flows unless Brian explicitly asks for them.
+- If IAP is ever added, it must sit behind a parental gate before any StoreKit call is made.
 - The parental gate may not be disabled, bypassed, or have any recovery/hint path.
 - No links out of the app without a parental gate.
 - No third-party analytics or advertising SDKs.
@@ -66,19 +67,20 @@ These are non-negotiable and must be respected in every change:
 - Progress and level unlock state is managed via `ProgressManager`.
 - Free Flight availability is derived from unlock state — do not duplicate that logic.
 
-### Monetization / parental gate (planned — not yet in the codebase)
+### Monetization / parental gate
 
-The IAP and parental-gate infrastructure described in the compliance rules is
-**not yet implemented** — there is currently no `IAPManager`,
-`ParentalGateViewController`, or `import StoreKit` anywhere in the repo. Do not
-assume these files exist. When this work is built, it MUST follow these rules:
+The shipping product has **no IAP**. There is currently no `IAPManager` or
+`import StoreKit` for purchases in the repo. Do not assume paid unlock code
+exists, and do not document the app as freemium.
+
+Parental-gate behavior for external links must follow Kids Category rules when
+present. If Brian later asks to add IAP, it MUST follow these rules:
 
 - IAP logic MUST live in `Managers/IAPManager.swift` and use StoreKit. The
   purchase trigger point MUST present the parental gate modally and only invoke
   StoreKit from its success callback.
-- The parental gate (planned `ParentalGateViewController`) owns all gate logic.
-  Its operands (e.g. `numberA`, `numberB`) and expected answer MUST remain
-  `private` and MUST never be exposed via accessors, notifications, or
+- The parental gate owns all gate logic. Its operands and expected answer MUST
+  remain `private` and MUST never be exposed via accessors, notifications, or
   `print`/`os_log` output.
 
 ---
